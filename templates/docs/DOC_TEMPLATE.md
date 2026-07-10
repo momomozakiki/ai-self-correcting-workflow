@@ -27,6 +27,25 @@ estimated_tokens: <int>
   - JSON / code files can't hold frontmatter — use a sidecar <file>.prov.md instead (GUIDE.md §6.2).
   - If this doc grows past its layer's token budget or covers more than one question,
     split it per docs/Progressive Disclosure Documentation Guide.md (§2, §5).
+
+  FOLDING INTO A FOLDER + RELOCATING HISTORY (GUIDE.md §6.4)
+  When this doc splits, OR its Revision History exceeds ~8 rows (history now rivals
+  content), fold `<name>.md` into `<name>/` and move the history out:
+    1. Replace the full Revision History table in `index.md` with this lean format
+       (latest ≤3 rows + a link — nothing older stays in index.md):
+         ## Revision History
+         | Version | Date | Change |
+         |---------|------|--------|
+         | 2.5     | ...  | Latest |
+         | 2.4     | ...  | ...    |
+         | 2.3     | ...  | ...    |
+         [Full history in `CHANGELOG.md`](CHANGELOG.md)
+    2. The sibling `CHANGELOG.md` (copy templates/docs/CHANGELOG_TEMPLATE.md) holds
+       the full, un-truncated Revision History table. It is a SIBLING PEER of
+       index.md, not a split-child (no `parent:` link, not in the child index).
+    3. Recalculate index.md's `estimated_tokens` DOWNWARD (it drops substantially).
+       The CHANGELOG.md tokens are EXCLUDED from the active token budget (it carries
+       `exclude_from_ai: true`); only index.md counts.
 -->
 
 # <Title>

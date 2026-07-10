@@ -30,6 +30,11 @@ first `**Next action:**` line below and surfaces it at session start.
       against its Progressive Disclosure layer limit (GUIDE §6.4 / Progressive Disclosure
       Guide §2, §8 — e.g. Procedural ≤ 2,000, Semantic knowledge file ≤ 5,000). Stdlib-only
       (no PyYAML dependency); reuse the frontmatter-fence parser rather than importing yaml.
+      Also: (a) flag docs whose in-file Revision History exceeds ~8 rows as fold
+      candidates (GUIDE §6.4); (b) **skip any file carrying `exclude_from_ai: true`**
+      (a doc's sibling `CHANGELOG.md`) from both the token-budget assertion and any
+      context-assembly path — mirror the guard already in the Progressive Disclosure
+      retrieval script's `load_md_files()`.
 - [ ] Ledger summarizer: roll a week's entries into a release note.
 - [ ] PreToolUse guard to warn before editing files flagged `official: unknown`.
 

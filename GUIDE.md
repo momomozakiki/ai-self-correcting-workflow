@@ -1,6 +1,6 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 4.2
+version: 4.3
 last_validated: 2026-07-10
 official: true
 source: agent-generated
@@ -10,13 +10,14 @@ estimated_tokens: 6500
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 4.2 – Centralized, Configurable, Self‑Improving*
+*Version 4.3 – Centralized, Configurable, Self‑Improving*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
 ## Revision History
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
+| 4.3     | 2026-07-10 | §6.3/§6.4: added the lazy **doc-folding** convention — bound the in-file Revision History (~8 rows / ≤3 kept) and relocate full history to a sibling Episodic `CHANGELOG.md` (`exclude_from_ai: true`). Renamed §6.4 to "Folding a document into a folder". |
 | 4.2     | 2026-07-10 | §6 recast as the unified Documentation Standard (frontmatter provenance + versioning + Progressive Disclosure splitting); added this frontmatter/Revision History. |
 | 4.1     | (prior)    | Centralized, configurable, self‑improving baseline (pre‑frontmatter).                       |
 
@@ -361,16 +362,39 @@ refresh `last_validated`, add a Revision History row, and log the change to the 
 ledger. Version namespaces are **per‑document and independent** — two docs sharing a
 number (e.g. `v4.x`) are unrelated lineages, not a shared series.
 
-### 6.4 Splitting large documents
+**Bounding the Revision History (so it never becomes the growth vector).** The
+in‑file table is a convenience, not the system of record — `git log` and the weekly
+ledger are. Keep it small. When the table exceeds **~8 rows**, or when the doc folds
+into a folder for any reason (§6.4), relocate the full history to a sibling
+`CHANGELOG.md` and leave only the latest **≤3 rows plus a link** in the live doc.
+
+### 6.4 Folding a document into a folder
 Do not restate a line threshold here — defer to the **Progressive Disclosure
-Documentation Guide** (`docs/Progressive Disclosure Documentation Guide.md`). Split a
-doc when it violates that guide's **"Rule of One Question"** (§5) or exceeds its
-layer's **token budget** (§2, e.g. Procedural ≤ 2,000, Semantic knowledge file
-≤ 5,000). Split into an indexed folder where the `index.md` holds the canonical
-frontmatter and each child carries its own lightweight frontmatter plus a link back.
+Documentation Guide** (`docs/Progressive Disclosure Documentation Guide.md`). A doc
+**folds** from a flat `docs/<name>.md` into a `docs/<name>/` folder when either
+trigger fires:
+1. it **splits** — it violates that guide's **"Rule of One Question"** (§5) or
+   exceeds its layer's **token budget** (§2, e.g. Procedural ≤ 2,000, Semantic
+   knowledge file ≤ 5,000); or
+2. its in‑file **Revision History** grows past **~8 rows** (history now rivals the
+   content it documents).
+
+On folding: `index.md` holds the canonical frontmatter and current truth; each split
+child carries its own lightweight frontmatter plus a link back. The doc's full
+history moves to a sibling **`CHANGELOG.md`** (copy `templates/docs/CHANGELOG_TEMPLATE.md`),
+and `index.md` keeps only the latest **≤3 Revision History rows plus a link** to it.
+
+The `CHANGELOG.md` is a **sibling peer** of `index.md`, *not* a split‑child: it is
+not listed in `index.md`'s child index and carries no `parent:` link — it only
+relocates history. It is Episodic (never loaded): it carries `applies_when: "Never
+load…"` **and** the machine‑readable `exclude_from_ai: true` flag, which the
+Progressive Disclosure retrieval script honours by skipping the file before scoring.
+Its `estimated_tokens` therefore stay **outside** the active token budget; only
+`index.md` counts. Recalculate `index.md`'s `estimated_tokens` downward after folding.
 
 ### 6.5 When to add / update
-- Document created or updated → apply §6.1–6.3 (and split per §6.4 if oversized).
+- Document created or updated → apply §6.1–6.3 (and fold into a folder per §6.4 if it
+  outgrows one question / its token budget, or its Revision History passes ~8 rows).
 - External document introduced → ask for confirmation, then set `official`/`source`.
 - Agent‑generated documentation → `official: false` + today's `last_validated`.
 - Existing files without frontmatter → flagged during Phase 0, filled later (non‑blocking).

@@ -1,6 +1,6 @@
 ---
 title: The Progressive Disclosure Documentation Guide
-version: 4.0
+version: 4.1
 last_validated: 2026-07-10
 official: true
 source: agent-generated
@@ -9,12 +9,13 @@ applies_when: "Designing, reviewing, or refactoring documentation structure for 
 estimated_tokens: 3000
 ---
 
-# The Progressive Disclosure Documentation Guide (v4.0)
+# The Progressive Disclosure Documentation Guide (v4.1)
 ### A Complete, Production-Ready Standard for AI-Assisted Projects
 
 ## Revision History
 | Version | Date       | Change                                                                                          |
 |---------|------------|-------------------------------------------------------------------------------------------------|
+| 4.1     | 2026-07-10 | Added the per-doc **`CHANGELOG.md`** convention: relocated Revision History as an Episodic sibling (§4 taxonomy row, §9); `load_md_files()` now skips `exclude_from_ai: true` files before scoring. |
 | 4.0     | 2026-07-10 | Adopted as the repo's canonical splitting standard (GUIDE.md §6.4 references it); added this frontmatter + Revision History; §7 templates aligned to the unified Documentation Standard fields. |
 
 ---
@@ -63,6 +64,7 @@ Not all documentation is created equal. Separate content based on its *expiratio
 | **ADRs (Decisions)** | Permanent historical record. | `.docs/decisions/` | Keep indefinitely. |
 | **Checkpoints** | Feature lifetime. | `.docs/checkpoints/` | Review when feature ships. Promote to ADR if structural; otherwise, delete. |
 | **Incidents (Bug Fixes)** | Short-lived (≤ 3 months). | `.docs/incidents/` | Auto-delete after expiry using a cron job or manual purge. |
+| **Per-doc changelog** | Append-only for the doc's life. | `<doc>/CHANGELOG.md` (sibling of `index.md`) | Never loaded (Episodic — see §9); keep for human audit. Relocated here when a doc folds into a folder. |
 
 ---
 
@@ -127,6 +129,11 @@ def load_md_files(directory=".docs", scope=None):
                     clean_content = parts[2].strip()
                 except yaml.YAMLError:
                     pass  # Graceful fallback for malformed YAML
+        
+        # Episodic tier: never load files explicitly flagged out of AI context
+        # (e.g. a doc's sibling CHANGELOG.md). See §4, §9, and GUIDE.md §6.4.
+        if frontmatter.get('exclude_from_ai'):
+            continue
         
         docs.append({
             "path": file,
@@ -310,6 +317,18 @@ The `.docs/sessions/archive/` folder stores raw chat transcripts.
 - **Purpose:** Human post-mortem analysis and onboarding new team members.
 - **Rule:** These logs are **never** loaded into the AI's context. They are for forensic reference only. Summarize them into Checkpoints if they contain reusable insights.
 
+### Per-document changelogs belong here too
+
+When a document folds into a folder (see `GUIDE.md` §6.4 — triggered by a split or
+by its in-file **Revision History** table outgrowing its content), the full history
+is relocated to a sibling `CHANGELOG.md` next to `index.md`. That changelog is
+Episodic: it carries `applies_when: "Never load…"` **and** the machine-readable
+`exclude_from_ai: true` flag. The retrieval script in §6 skips any file carrying
+that flag *before scoring*, so a doc's history never competes for the active token
+budget — only its lean `index.md` does. The `CHANGELOG.md` is a **sibling peer** of
+`index.md` (not a split-child): it is not listed in `index.md`'s child index and
+carries no `parent:` link; it only holds history.
+
 ---
 
 ## 10. Final Directory Tree
@@ -329,6 +348,9 @@ project-root/
 │   │   └── 2026-07-10_payment-webhook.md
 │   ├── incidents/          # Bug fixes (Auto-delete after 3 months)
 │   │   └── 2026-07-10_auth-bug.md
+│   ├── knowledge/db-tuning/ # A doc that FOLDED into a folder (GUIDE.md §6.4)
+│   │   ├── index.md        #   canonical, lean; keeps only the latest ≤3 history rows
+│   │   └── CHANGELOG.md    #   Episodic sibling: full history, exclude_from_ai: true
 │   └── sessions/           # Episodic (Human auditing ONLY)
 │       ├── raw_logs/
 │       └── archive/

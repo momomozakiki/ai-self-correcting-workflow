@@ -57,7 +57,7 @@ plan, await approval, continue.
 | New pattern / rule / gotcha | Append to `.ai/best_practices.md` (with example). |
 | New naming convention | Append to `.ai/naming_conventions.md`. |
 | Change to public API / architecture / data flow | Update `docs/*.md` (dated). |
-| Doc created / updated | Apply the Documentation Standard: frontmatter (provenance + version) + `last_validated` refresh + a Revision History row; split per the Progressive Disclosure Guide if oversized. |
+| Doc created / updated | Apply the Documentation Standard: frontmatter (provenance + version) + `last_validated` refresh + a Revision History row; fold into a folder per §6.4 if it outgrows one question / its token budget, or its Revision History passes ~8 rows (relocate history to a sibling `CHANGELOG.md`). |
 | Non-obvious technical decision | Decision log in `plans/archive/<slug>/execution_log.md`. |
 | Repeatable mistake | Warning in best practices / retro note. |
 | **Any intentional change** (not a trivial typo/whitespace edit) | **Append a ledger entry** to `history/YYYY-Www.md`. |
@@ -127,9 +127,14 @@ Sidecar (for JSON/code) — `config.json` → `config.json.prov.md`:
 - notes: ...
 ```
 
-**Splitting:** when a doc breaks the "Rule of One Question" or exceeds its layer's
-token budget, split per `docs/Progressive Disclosure Documentation Guide.md`
-(index holds canonical frontmatter; children carry lightweight frontmatter + a link back).
+**Folding into a folder (GUIDE.md §6.4):** a flat `docs/<name>.md` folds into
+`docs/<name>/` when it breaks the "Rule of One Question" / exceeds its layer's token
+budget (split per `docs/Progressive Disclosure Documentation Guide.md` — `index.md`
+holds canonical frontmatter; children carry lightweight frontmatter + a link back),
+**or** when its in-file Revision History passes ~8 rows. On folding, relocate the full
+history to a sibling `CHANGELOG.md` (copy `templates/docs/CHANGELOG_TEMPLATE.md`);
+keep only the latest ≤3 rows + a link in `index.md`. That `CHANGELOG.md` is a sibling
+peer marked `exclude_from_ai: true`, so it stays out of the active token budget.
 
 ## Contributing improvements upstream
 
