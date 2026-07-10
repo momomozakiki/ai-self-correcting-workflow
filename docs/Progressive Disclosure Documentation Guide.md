@@ -1,0 +1,327 @@
+# The Progressive Disclosure Documentation Guide (v4.0)
+### A Complete, Production-Ready Standard for AI-Assisted Projects
+
+---
+
+## 1. Core Philosophy
+
+Disk space is infinite. **Context windows are not.** 
+
+If you load a monolithic document into every prompt, the AI suffers from the "lost-in-the-middle" effect—its adherence to every rule degrades uniformly. 
+
+**The Paradigm Shift:** Move from *Memorization* (loading everything) to *Retrieval* (loading exactly what is needed for the current task).
+
+**The Golden Rule:** Your *active* documentation—the core files loaded for a standard task—must fit comfortably within **6,000 to 8,000 tokens**.
+
+---
+
+## 2. The Four-Layer Architecture (Hard Token Budgets)
+
+Organize your knowledge into four distinct layers. Each has a strict purpose and a maximum token limit.
+
+| Layer | Purpose | Max Tokens | Example File |
+| :--- | :--- | :--- | :--- |
+| **1. Working Memory** | *Dynamic.* Current session state, active goals, and immediate blockers. | ≤ **1,500** | `CONTEXT.md` |
+| **2. Procedural Memory** | *Static.* Immutable global rules, coding standards, and master navigation. | ≤ **2,000** | `AGENTS.md` |
+| **3. Semantic Memory** | *Modular.* Long-term facts (architecture, data models, API specs). Loaded on-demand. | ≤ **5,000** *per file* | `.docs/knowledge/*.md` |
+| **4. Episodic Memory** | *Archived.* Raw chat logs for human auditing. **Never loaded into AI context.** | N/A | `.docs/sessions/archive/` |
+
+---
+
+## 3. The Static vs. Dynamic Boundary
+
+To prevent overlap and bloat, enforce a rigid separation:
+
+- **`AGENTS.md` (Static):** Contains your Top 5 non-negotiable rules, the master navigation table, and high-level architectural tenets. **Update this only when the project's foundation changes** (e.g., switching from REST to GraphQL).
+- **`CONTEXT.md` (Dynamic):** Contains the current Sprint Goal, live task checklist (`[x]`/`[ ]`), and decisions made *during the ongoing session*. **Update this at the end of every major AI interaction.**
+
+---
+
+## 4. Content Strategy: The Lifespan Taxonomy
+
+Not all documentation is created equal. Separate content based on its *expiration date*:
+
+| Category | Lifespan | Location | Action on Expiry |
+| :--- | :--- | :--- | :--- |
+| **Knowledge** | Permanent until refactored. | `.docs/knowledge/` | Keep indefinitely. |
+| **ADRs (Decisions)** | Permanent historical record. | `.docs/decisions/` | Keep indefinitely. |
+| **Checkpoints** | Feature lifetime. | `.docs/checkpoints/` | Review when feature ships. Promote to ADR if structural; otherwise, delete. |
+| **Incidents (Bug Fixes)** | Short-lived (≤ 3 months). | `.docs/incidents/` | Auto-delete after expiry using a cron job or manual purge. |
+
+---
+
+## 5. Atomicity: The "Rule of One Question"
+
+How do you know when to split a giant doc or merge tiny ones?
+
+- **The Rule:** A single note must fully answer **one specific "How-to" or "What-is" question** without requiring a second note, *unless* that second note is a clearly linked dependency (e.g., "To understand API pagination, you must first view the Data Model").
+- **The Merge Signal:** If you consistently copy-paste the *same 3 notes* together for every single task, merge them into one comprehensive "Combo" note to save retrieval overhead.
+
+---
+
+## 6. The Retrieval Mechanism
+
+**Crucial:** Do not assume the AI can "browse" your file system. You must explicitly fetch the right files before sending the prompt.
+
+### Strategy A: Manual Workflow
+The developer reads `AGENTS.md`, finds the relevant link (e.g., `db-indexing.md`), and manually pastes that file's content into the chat alongside their query.
+
+### Strategy B: Automated Retrieval (Recommended)
+Use the script below. It scans YAML frontmatter and content, scores relevance using weighted signals (tag matches = 3x, keyword matches = 1x), enforces token caps, and supports monorepo scoping.
+
+```python
+#!/usr/bin/env python3
+"""
+Progressive Disclosure Retrieval Script (v4.0)
+Usage: python retrieve.py --query "optimize postgres" --tags postgres performance --scope backend
+"""
+import os
+import glob
+import yaml
+import re
+import argparse
+
+# --- For CI Linting (Precise Token Counting) ---
+# Uncomment for production CI enforcement:
+# import tiktoken
+# enc = tiktoken.encoding_for_model("gpt-4")
+
+# --- Optional: For Semantic Search ---
+# Uncomment for embedding-based retrieval (adds ~5ms latency per doc):
+# from sentence_transformers import SentenceTransformer, util
+# model = SentenceTransformer('all-MiniLM-L6-v2')
+
+def load_md_files(directory=".docs", scope=None):
+    """Load all markdown files, gracefully handling missing or malformed YAML."""
+    docs = []
+    search_path = f"{directory}/{scope}/**/*.md" if scope else f"{directory}/**/*.md"
+    
+    for file in glob.glob(search_path, recursive=True):
+        with open(file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        frontmatter = {}
+        clean_content = content
+        
+        if content.startswith('---'):
+            parts = content.split('---', 2)
+            if len(parts) >= 3:
+                try:
+                    frontmatter = yaml.safe_load(parts[1]) or {}
+                    clean_content = parts[2].strip()
+                except yaml.YAMLError:
+                    pass  # Graceful fallback for malformed YAML
+        
+        docs.append({
+            "path": file,
+            "content": clean_content,
+            "meta": frontmatter,
+            "tokens": frontmatter.get('estimated_tokens', 500)
+        })
+    return docs
+
+def retrieve_relevant(query, tags=None, docs=None, top_k=3, max_tokens=5000):
+    """Score, rank, and select documents based on relevance and token budget."""
+    if docs is None:
+        docs = load_md_files()
+    if tags is None:
+        tags = []
+    
+    scored = []
+    query_terms = set(re.findall(r'\w+', query.lower()))
+    
+    for doc in docs:
+        score = 0
+        meta = doc['meta']
+        
+        # 1. Tag Overlap (Weight: 3x) - Highest precision
+        doc_tags = set(meta.get('tags', []))
+        score += len(doc_tags.intersection(set(tags))) * 3
+        
+        # 2. Applies_When Context (Weight: 2x)
+        applies = meta.get('applies_when', '').lower()
+        if any(term in applies for term in query_terms):
+            score += 2
+        
+        # 3. Term Frequency (Weight: 1x) - Baseline fallback
+        content_words = set(re.findall(r'\w+', doc['content'].lower()))
+        score += len(content_words.intersection(query_terms)) * 1
+        
+        # 4. Semantic Similarity (Weight: 5x) - Opt-in
+        # Uncomment the block below and ensure 'model' is loaded.
+        # if 'model' in globals() and query_terms:
+        #     query_emb = model.encode(query)
+        #     doc_emb = model.encode(doc['content'][:500])
+        #     score += util.cos_sim(query_emb, doc_emb).item() * 5
+        
+        scored.append((score, doc))
+    
+    # Sort by score descending, then by token size ascending (cheapest first)
+    scored.sort(key=lambda x: (-x[0], x[1]['tokens']))
+    
+    # Select top_k while enforcing total token limit
+    selected, total_tokens = [], 0
+    for _, doc in scored[:top_k]:
+        if total_tokens + doc['tokens'] <= max_tokens:
+            selected.append(doc)
+            total_tokens += doc['tokens']
+        else:
+            break
+    
+    return selected
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Retrieve relevant documentation for AI context.")
+    parser.add_argument("--query", required=True, help="The user's question or task description.")
+    parser.add_argument("--tags", nargs="+", default=[], help="Target tags for high-precision filtering.")
+    parser.add_argument("--scope", default=None, help="Subdirectory scope for monorepos (e.g., 'backend').")
+    parser.add_argument("--top_k", type=int, default=3, help="Maximum number of files to retrieve.")
+    args = parser.parse_args()
+    
+    docs = load_md_files(scope=args.scope)
+    results = retrieve_relevant(args.query, args.tags, docs, top_k=args.top_k)
+    
+    print("\n📄 Documents to load into AI context:\n")
+    for r in results:
+        print(f"  • {r['path']} (Tokens: {r['tokens']})")
+    
+    total = sum(r['tokens'] for r in results)
+    print(f"\n✅ Total tokens: {total} (Limit: 5000)")
+```
+
+---
+
+## 7. Templates for Every File Type
+
+Copy and paste these templates to standardize your documentation.
+
+### A. Knowledge Note (`.docs/knowledge/backend/db-indexing.md`)
+```yaml
+---
+category: Database
+tags: [postgres, indexing, performance]
+applies_when: "Creating new tables or troubleshooting slow queries"
+estimated_tokens: 450
+last_verified: 2026-07-10
+---
+# Postgres Indexing Strategy
+[Full, detailed content answering "How do we index?"]
+```
+
+### B. Incident Note (`.docs/incidents/2026-07-10_auth-null.md`)
+```yaml
+---
+type: incident
+tags: [auth, bugfix]
+expires_on: 2026-10-10
+estimated_tokens: 200
+---
+# Auth Null Pointer Fix
+**Symptom:** Login failed with 500 error.
+**Root Cause:** Missing validation on `req.user.id`.
+**Fix:** Added validation in line 42 of `auth.ts`.
+```
+
+### C. Checkpoint (`.docs/checkpoints/feature-payment.md`)
+```yaml
+---
+type: checkpoint
+feature: Payment Webhook
+status: Completed
+estimated_tokens: 300
+---
+**Goal:** Implement Stripe retry logic.
+**Attempted:** Approach A (setTimeout) → Failed due to process death.
+**Chosen:** Approach B (BullMQ).
+**Open Questions:** Should we alert Slack on final failure?
+```
+
+### D. Decision Record / ADR (`.docs/decisions/adr-004-redis-cache.md`)
+```yaml
+---
+type: adr
+status: Accepted
+date: 2026-07-10
+estimated_tokens: 400
+---
+# ADR-004: Adopt Redis for Session Caching
+**Context:** Postgres was hitting connection limits under load.
+**Decision:** Use Redis for ephemeral session storage.
+**Consequences:** Reduced DB load by 40%; requires new Redis cluster setup.
+```
+
+---
+
+## 8. Automation & Garbage Collection Routines
+
+Documentation rots if not pruned. Implement these routines:
+
+1.  **Checkpoint Automation:** At the end of every major session, prompt the AI: *"Summarize this session into a Checkpoint. Update CONTEXT.md with our current progress."*
+2.  **The Friday Purge (Cron job or manual):**
+    - Run a script that deletes all `/incidents` files where `expires_on` is older than today.
+    - Review `/checkpoints` for shipped features. If the checkpoint contains a breakthrough insight, promote it to an ADR. If not, delete it.
+3.  **PR Linting:** Add a CI step that runs a token-count linter on `AGENTS.md`. If it exceeds 2,000 tokens, the PR fails with: *"AGENTS.md is overloaded. Split this into modular knowledge files."*
+    - *Implementation hint:* Use the `tiktoken` library (`enc.encode(content)`) for precise counting in CI.
+
+---
+
+## 9. Episodic Memory: What to Do with Raw Logs
+
+The `.docs/sessions/archive/` folder stores raw chat transcripts. 
+
+- **Purpose:** Human post-mortem analysis and onboarding new team members.
+- **Rule:** These logs are **never** loaded into the AI's context. They are for forensic reference only. Summarize them into Checkpoints if they contain reusable insights.
+
+---
+
+## 10. Final Directory Tree
+
+```text
+project-root/
+├── AGENTS.md               # Static Procedural (≤ 2,000 tokens)
+├── CONTEXT.md              # Dynamic Working Memory (≤ 1,500 tokens)
+├── .docs/
+│   ├── knowledge/          # Semantic Memory (Permanent facts)
+│   │   ├── architecture/
+│   │   ├── api-specs/
+│   │   └── coding-standards/
+│   ├── decisions/          # Permanent ADRs
+│   │   └── adr-xxx-title.md
+│   ├── checkpoints/        # Temporary AI reasoning snapshots
+│   │   └── 2026-07-10_payment-webhook.md
+│   ├── incidents/          # Bug fixes (Auto-delete after 3 months)
+│   │   └── 2026-07-10_auth-bug.md
+│   └── sessions/           # Episodic (Human auditing ONLY)
+│       ├── raw_logs/
+│       └── archive/
+└── README.md               # For humans, not the AI
+```
+
+---
+
+## 11. Migration Path (Rolling This Out)
+
+You don't need to refactor everything on Day 1. Follow this 3-week rollout:
+
+- **Week 1:** Create `AGENTS.md` with your Top 5 rules. Stop writing long documents; start writing small atomic notes for *new* features only.
+- **Week 2:** When you need to touch an old, monolithic document, *split it* at that moment. Apply the "Leave it better than you found it" principle.
+- **Week 3:** Enable the Friday Purge for `/incidents` and stale `/checkpoints`. Enforce the PR linter.
+
+---
+
+## 12. IDE & Tooling Integration
+
+- **Cursor / Windsurf:** Use the `@` symbol to explicitly reference a specific knowledge file when asking a question (e.g., `@db-indexing How do I add a composite key?`).
+- **Git Hooks:** Add a pre-commit hook that blocks commits containing any `.md` file over 5,000 tokens, forcing developers to atomize early.
+
+---
+
+## 13. Final Rule of Thumb
+
+If you cannot load your entire active documentation folder (`AGENTS.md` + `CONTEXT.md` + the 2–3 reference files retrieved for a task) into a standard 8k-token model context, **your documentation is too bloated**.
+
+Treat your documentation like code: refactor it regularly, prune dead branches (incidents), and promote successful experiments (checkpoints to ADRs). This is not a set-it-and-forget-it archive; it is a **living knowledge system** that grows smarter and leaner alongside your project.
+
+---
+
+**End of Guide.**

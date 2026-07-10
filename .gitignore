@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Workflow hook per-session state lives in the OS temp dir, not the repo,
+# but ignore any stray copies just in case.
+workflow_hook_state_*.json
+
+# Editors / OS
+.DS_Store
+Thumbs.db
