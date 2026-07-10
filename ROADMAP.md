@@ -24,10 +24,14 @@ first `**Next action:**` line below and surfaces it at session start.
 
 ## Backlog
 
-- [ ] Provenance linter: scan `documentation_directories` for missing
-      `SOURCE-PROVENANCE` and report as a batch.
+- [ ] Documentation-Standard linter: scan `documentation_directories` and batch-report
+      docs missing frontmatter or the required `version` / `last_validated` fields.
+      Add a token-budget check that reads each doc's `estimated_tokens` and asserts it
+      against its Progressive Disclosure layer limit (GUIDE §6.4 / Progressive Disclosure
+      Guide §2, §8 — e.g. Procedural ≤ 2,000, Semantic knowledge file ≤ 5,000). Stdlib-only
+      (no PyYAML dependency); reuse the frontmatter-fence parser rather than importing yaml.
 - [ ] Ledger summarizer: roll a week's entries into a release note.
-- [ ] PreToolUse guard to warn before editing files flagged `Official: Unknown`.
+- [ ] PreToolUse guard to warn before editing files flagged `official: unknown`.
 
 ## Completed Epics
 

@@ -14,7 +14,8 @@ Hooks provide ambient reminders — treat them as helpful nudges, not blockers.
 - **F1 Git sync:** `git fetch && git pull --rebase`. If the tree is dirty, ask
   the user how to proceed before changing anything.
 - **F2 Environment:** verify the tools in `workflow_config.json → env_check`.
-- **F3 Living docs:** load configured docs; flag any missing `SOURCE-PROVENANCE`.
+- **F3 Living docs:** load configured docs; flag any missing doc frontmatter
+  (provenance + version).
 - **F4 Unfinished plan / roadmap:** if `plans/UNFINISHED.md` exists, surface it
   immediately; note the next unchecked roadmap item.
 - **F5 Daily workflow update check:** once per day, check `.claude/workflow-core`
@@ -25,8 +26,8 @@ Hooks provide ambient reminders — treat them as helpful nudges, not blockers.
   updates, ledger entries, provenance, and roadmap impact.
 - **Execute (Phase 2):** implement → run linter/tests → apply conditional
   triggers. **Log every intentional change** to the weekly ledger
-  `history/YYYY-Www.md` (skip only trivial typo/whitespace-only edits). Add
-  `SOURCE-PROVENANCE` to any new external document.
+  `history/YYYY-Www.md` (skip only trivial typo/whitespace-only edits). Add doc
+  frontmatter (provenance + version) to any new or updated document.
 - **Close (Phase 3):** archive the plan, write the final ledger entry, update
   the roadmap, then commit & push. You are **not done** until `UNFINISHED.md`
   is cleared, the ledger entry is written, and the commit is pushed.

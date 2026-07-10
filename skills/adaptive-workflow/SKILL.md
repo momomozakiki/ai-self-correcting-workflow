@@ -22,9 +22,9 @@ this project's actual paths.
 - **F2 Environment.** For each tool in `env_check.tool_paths`: run
   `<path> <version_flag>` for a version, or — if `version_flag` is `null`/empty —
   only verify the path exists. Report versions or found/not-found. Empty config → skip.
-- **F3 Living docs.** Load the configured docs. For each, check for a
-  `SOURCE-PROVENANCE` block (or sidecar `.prov.md`). If missing, **flag but do
-  not block**: "Document [file] has no source-provenance — is it official?"
+- **F3 Living docs.** Load the configured docs. For each, check for the doc
+  frontmatter (provenance + version fields, or sidecar `.prov.md`). If missing,
+  **flag but do not block**: "Document [file] has no frontmatter — is it official?"
 - **F4 Unfinished plan / roadmap.** If `plans/UNFINISHED.md` exists, surface it
   immediately and ask whether to continue or archive. Note the next unchecked
   item from the first active roadmap epic.
@@ -57,10 +57,11 @@ plan, await approval, continue.
 | New pattern / rule / gotcha | Append to `.ai/best_practices.md` (with example). |
 | New naming convention | Append to `.ai/naming_conventions.md`. |
 | Change to public API / architecture / data flow | Update `docs/*.md` (dated). |
+| Doc created / updated | Apply the Documentation Standard: frontmatter (provenance + version) + `last_validated` refresh + a Revision History row; split per the Progressive Disclosure Guide if oversized. |
 | Non-obvious technical decision | Decision log in `plans/archive/<slug>/execution_log.md`. |
 | Repeatable mistake | Warning in best practices / retro note. |
 | **Any intentional change** (not a trivial typo/whitespace edit) | **Append a ledger entry** to `history/YYYY-Www.md`. |
-| External doc without provenance | Ask for the official URL, then insert `SOURCE-PROVENANCE`. |
+| External doc without provenance | Ask for the official URL, then add the doc frontmatter (provenance fields). |
 | Completed task affects roadmap | Update the roadmap. |
 | Epic finished | Move it to `## Completed Epics`. |
 
@@ -69,12 +70,14 @@ plan, await approval, continue.
 trivial/routine → one-line note. Tags: `[design] [doc] [code] [workflow]
 [config] [decision] [data]`. Reference commit SHA and/or plan slug.
 
-**Provenance (mandatory for external docs).** On introducing an external
-document, ask "Is this from an official/authoritative source? URL?" Then insert
-a `SOURCE-PROVENANCE` comment at the top (after frontmatter), or a sidecar
-`.prov.md` for non-commentable formats (JSON, code). Agent-generated docs get
-`Official: No` + generation date automatically. If unconfirmed, mark
-`Official: Unknown`.
+**Documentation Standard (mandatory for every doc).** On creating or updating a
+doc, add the YAML frontmatter block (provenance + version) and a Revision History
+row; bump `version` and refresh `last_validated` on each non-trivial edit. For an
+external doc, ask "Is this from an official/authoritative source? URL?" and set
+`official`/`source` accordingly. Agent-generated docs get `official: false` +
+today's `last_validated` automatically. If unconfirmed, mark `official: unknown`.
+Non-commentable formats (JSON, code) use a sidecar `.prov.md`. Split oversized docs
+per the Progressive Disclosure Guide. Full spec: `GUIDE.md` §6.
 
 ## Phase 3 — Closure
 
@@ -90,26 +93,43 @@ a `SOURCE-PROVENANCE` comment at the top (after frontmatter), or a sidecar
 
 ---
 
-## Source-Provenance blocks
+## Documentation frontmatter
 
-Markdown / HTML (insert at top, after any frontmatter):
+Markdown / HTML (place at the very top of the file):
 ```markdown
-<!-- SOURCE-PROVENANCE:
-  - Official: Yes/No/Unknown
-  - Source: <URL or "agent-generated" or "user-provided, origin unknown">
-  - Verified by user: YYYY-MM-DD
-  - Notes: optional
--->
+---
+title: <Title>
+version: 1.0                     # bump MINOR for content, MAJOR for restructure
+last_validated: YYYY-MM-DD       # refresh on every non-trivial edit
+official: false                  # true | false | unknown
+source: agent-generated          # URL | agent-generated | user-provided, origin unknown
+tags: [<retrieval tags>]
+applies_when: "<when this doc is relevant>"
+estimated_tokens: <int>
+---
+
+# <Title>
+**Version 1.0** — *<one-line scope>*
+
+## Revision History
+| Version | Date       | Change   |
+|---------|------------|----------|
+| 1.0     | YYYY-MM-DD | Initial. |
 ```
 
 Sidecar (for JSON/code) — `config.json` → `config.json.prov.md`:
 ```markdown
 # Provenance for config.json
-- Official: No
-- Source: agent-generated
-- Generated: YYYY-MM-DD
-- Notes: ...
+- version: 1.0
+- last_validated: YYYY-MM-DD
+- official: false
+- source: agent-generated
+- notes: ...
 ```
+
+**Splitting:** when a doc breaks the "Rule of One Question" or exceeds its layer's
+token budget, split per `docs/Progressive Disclosure Documentation Guide.md`
+(index holds canonical frontmatter; children carry lightweight frontmatter + a link back).
 
 ## Contributing improvements upstream
 

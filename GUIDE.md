@@ -1,7 +1,24 @@
+---
+title: Adaptive Self-Correcting Workflow for AI Coding Agents
+version: 4.2
+last_validated: 2026-07-10
+official: true
+source: agent-generated
+tags: [workflow, governance, reference, hooks, provenance]
+applies_when: "Understanding, adopting, or modifying the Adaptive Self-Correcting Workflow itself."
+estimated_tokens: 6500
+---
+
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 4.1 – Centralized, Configurable, Self‑Improving*
+*Version 4.2 – Centralized, Configurable, Self‑Improving*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
+
+## Revision History
+| Version | Date       | Change                                                                                     |
+|---------|------------|--------------------------------------------------------------------------------------------|
+| 4.2     | 2026-07-10 | §6 recast as the unified Documentation Standard (frontmatter provenance + versioning + Progressive Disclosure splitting); added this frontmatter/Revision History. |
+| 4.1     | (prior)    | Centralized, configurable, self‑improving baseline (pre‑frontmatter).                       |
 
 ---
 
@@ -120,8 +137,8 @@ The agent creates a **task‑specific checklist** after understanding the user�
 ### 3.3 Change‑History Ledger
 A weekly chronological record of every **intentional** change (not every keystroke). Stored under `history/YYYY-Www.md`. The hook reminds the agent to write an entry before committing, and the closure phase enforces it.
 
-### 3.4 Source Provenance
-Every external document (and agent‑generated documentation) carries an inline comment block (or a sidecar file) stating its origin, official status, and verification date. This prevents blind trust in unverified information.
+### 3.4 Documentation Standard
+Every document (external or agent‑generated) carries a single **YAML frontmatter block** stating its origin, official status, version, and validation date, plus a visible **Revision History** table. This prevents blind trust in unverified information and keeps version history readable. Large documents are split per the Progressive Disclosure Guide. See §6 for the full specification.
 
 ### 3.5 Hooks
 A single Python dispatcher (`workflow_hook.py`) is triggered by `SessionStart`, `PostToolUse`, and `Stop` events. It maintains per‑session state to provide ambient reminders without being intrusive.
@@ -147,8 +164,8 @@ Items marked with `[ ]` are actionable steps; the agent should tick them off men
 
 - [ ] **F3 – Load & verify living documents**  
   Read all living documents defined in config (e.g., `.ai/best_practices.md`, `docs/architecture.md`).  
-  For **every** loaded documentation file, check for a `SOURCE‑PROVENANCE` block (or sidecar `.prov.md`).  
-  - If missing, flag the file: *“Document [file] has no source‑provenance. Is it from an official source? I will add the tag once confirmed.”*  
+  For **every** loaded documentation file, check for the doc frontmatter (provenance + version fields per §6), or a sidecar `.prov.md` for non‑commentable formats.  
+  - If missing, flag the file: *“Document [file] has no frontmatter (provenance/version). Is it from an official source? I will add the block once confirmed.”*  
   - Do **not** block the session; just note for later.
 
 - [ ] **F4 – Unfinished plan & Roadmap**  
@@ -201,10 +218,11 @@ For each bullet in the task‑specific plan, **implement, validate, and apply co
 | **New pattern / rule / gotcha** | Append to `.ai/best_practices.md` (with example). |
 | **New naming convention** | Append to `.ai/naming_conventions.md`. |
 | **Change to public API, architecture, or data flow** | Update corresponding `docs/*.md` with dated annotation. |
+| **Document created or updated** | Apply the Documentation Standard (§6): frontmatter provenance + version bump + `last_validated` refresh + a Revision History row. Split per the Progressive Disclosure Guide if oversized. |
 | **Non‑obvious technical decision** | Write decision log in `plans/archive/<slug>/execution_log.md`. |
 | **Mistake that could be repeated** | Add warning to best practices or retro note. |
 | **Any intentional change** that modifies repository content (design, doc, code, config) and is **not** a trivial typo fix in a comment or a whitespace‑only change | **Append an entry to the current weekly ledger** `history/YYYY-Www.md`. Substantial changes get `What/Why/Refs`; minor changes get a one‑line note. |
-| **External document introduced or found without provenance** | Ask user: *“Is this from an official website? If yes, provide URL and I’ll mark it verified with today’s date.”* After confirmation, insert `SOURCE‑PROVENANCE` (inline comment or sidecar). |
+| **External document introduced or found without provenance** | Ask user: *“Is this from an official website? If yes, provide URL and I’ll mark it verified with today’s date.”* After confirmation, add the frontmatter block (or sidecar `.prov.md`) per §6. |
 | **Completed task affects future roadmap items** | Update the roadmap. |
 | **Epic finished** | Move it to `## Completed Epics`. |
 
@@ -222,11 +240,11 @@ Log everything else that a reviewer would care about.
   - Reference commit SHA or archive plan slug if available.
 - [ ] At task closure, append a **summary entry** for the completed task.
 
-#### Source Provenance (mandatory for external documents)
-- [ ] When an external document is first introduced:
-  - Ask the user: *“Is this documentation from an official website or authoritative source? If yes, please provide the URL.”*
-  - Once confirmed, insert at the very top of the file (after any frontmatter) the appropriate block (see Appendix A). If the file format doesn’t support comments, create a sidecar `.prov.md`.
-- [ ] For existing docs lacking provenance, **flag during Phase 0** and plan a future verification task; do not block the current task.
+#### Documentation Standard (mandatory for every doc)
+- [ ] When a document is created or updated, apply the frontmatter block (§6): provenance (`official`, `source`), versioning (`version`, `last_validated`), and a Revision History row. Agent‑generated docs default to `official: false`.
+- [ ] When an **external** document is first introduced, ask the user: *“Is this documentation from an official website or authoritative source? If yes, please provide the URL.”* Set `official`/`source` from the answer (`unknown` if unconfirmed).
+- [ ] For non‑commentable formats (JSON, code), create a sidecar `.prov.md` instead.
+- [ ] For existing docs lacking frontmatter, **flag during Phase 0** and plan a future verification task; do not block the current task.
 
 ### Phase 3 – Closure
 
@@ -282,42 +300,81 @@ The `Stop` hook uses a per‑session state file to track whether source files we
 
 ---
 
-## 6. Source Provenance Specification
+## 6. Documentation Standard
 
-### 6.1 Inline Provenance (for Markdown and HTML)
-Insert a comment block at the very top of the file (after any YAML/TOML frontmatter).
+Every document created or updated under the configured `documentation_directories`
+carries a single **YAML frontmatter block** (provenance + versioning + retrieval
+metadata) and a visible **Revision History** table. This unifies what were once two
+mechanisms (an HTML `SOURCE-PROVENANCE` comment for provenance and an ad‑hoc version
+header) into one machine‑readable block that the Progressive Disclosure retrieval
+script already parses. A reusable skeleton lives at `templates/docs/DOC_TEMPLATE.md`.
 
-**Markdown:**
+### 6.1 Frontmatter block (for Markdown / HTML docs)
+Place at the very top of the file:
+
 ```markdown
-<!-- SOURCE-PROVENANCE:
-  - Official: Yes/No
-  - Source: <URL or "agent-generated" or "user-provided, origin unknown">
-  - Verified by user: YYYY-MM-DD
-  - Notes: optional
--->
+---
+title: <Title>
+version: 1.0                     # bump MINOR for content, MAJOR for restructure
+last_validated: YYYY-MM-DD       # refresh on every non-trivial edit
+official: false                  # true | false | unknown
+source: agent-generated          # URL | agent-generated | user-provided, origin unknown
+tags: [<retrieval tags>]
+applies_when: "<when this doc is relevant>"
+estimated_tokens: <int>          # keep honest; feeds retrieval + the token-budget lint
+---
 ```
 
-**HTML:**
-```html
-<!-- SOURCE-PROVENANCE: ... -->
-```
+**The `official` field:** set `official: true` only for documents reviewed and
+approved via the project's governance process (e.g. `GUIDE.md`, ADRs). Use
+`official: false` for drafts, agent‑generated docs, personal notes, or exploratory
+checkpoints. Use `official: unknown` when the origin cannot be confirmed yet.
 
-### 6.2 Sidecar Provenance (for JSON, code files, and other non‑commentable formats)
-Create a companion file with extension `.prov.md` in the same directory. Example `config.json` → `config.json.prov.md`:
+### 6.2 Sidecar frontmatter (for JSON, code, and other non‑commentable formats)
+Frontmatter is impossible in these formats → create a companion `.prov.md` in the
+same directory carrying the same fields. Example `config.json` → `config.json.prov.md`:
 
 ```markdown
 # Provenance for config.json
-- Official: No
-- Source: agent-generated
-- Generated: 2026-07-10
-- Notes: Production database credentials – should be reviewed
+- version: 1.0
+- last_validated: 2026-07-10
+- official: false
+- source: agent-generated
+- notes: Production database credentials – should be reviewed
 ```
 
-### 6.3 When to Add
-- External document introduced → agent asks for confirmation, then inserts provenance.
-- Agent‑generated documentation → automatically inserts with `Official: No` and generation date.
-- Existing files without provenance → flagged during Phase 0, plan to fill later (non‑blocking).
-- **Defer option:** If the user cannot confirm immediately, mark as `Official: Unknown`.
+### 6.3 Versioning & Revision History
+Directly under the title, restate the version and keep a visible changelog table:
+
+```markdown
+# <Title>
+**Version 1.0** — *<one-line scope>*
+
+## Revision History
+| Version | Date       | Change   |
+|---------|------------|----------|
+| 1.0     | 2026-07-10 | Initial. |
+```
+
+On any non‑trivial edit: bump `version` (MINOR for content, MAJOR for restructure),
+refresh `last_validated`, add a Revision History row, and log the change to the weekly
+ledger. Version namespaces are **per‑document and independent** — two docs sharing a
+number (e.g. `v4.x`) are unrelated lineages, not a shared series.
+
+### 6.4 Splitting large documents
+Do not restate a line threshold here — defer to the **Progressive Disclosure
+Documentation Guide** (`docs/Progressive Disclosure Documentation Guide.md`). Split a
+doc when it violates that guide's **"Rule of One Question"** (§5) or exceeds its
+layer's **token budget** (§2, e.g. Procedural ≤ 2,000, Semantic knowledge file
+≤ 5,000). Split into an indexed folder where the `index.md` holds the canonical
+frontmatter and each child carries its own lightweight frontmatter plus a link back.
+
+### 6.5 When to add / update
+- Document created or updated → apply §6.1–6.3 (and split per §6.4 if oversized).
+- External document introduced → ask for confirmation, then set `official`/`source`.
+- Agent‑generated documentation → `official: false` + today's `last_validated`.
+- Existing files without frontmatter → flagged during Phase 0, filled later (non‑blocking).
+- **Defer option:** if the user cannot confirm origin immediately, mark `official: unknown`.
 
 ---
 
@@ -497,14 +554,26 @@ The following is a condensed, one‑page checklist for the AI agent. It mirrors 
 ### ISO‑Week Filename
 `history/YYYY-Www.md` (e.g., `history/2026-W28.md`)
 
-### Source Provenance Block (Markdown)
+### Documentation Frontmatter (Markdown) — see §6 and `templates/docs/DOC_TEMPLATE.md`
 ```markdown
-<!-- SOURCE-PROVENANCE:
-  - Official: Yes/No
-  - Source: <URL or "agent-generated">
-  - Verified by user: YYYY-MM-DD
-  - Notes: optional
--->
+---
+title: <Title>
+version: 1.0
+last_validated: YYYY-MM-DD
+official: false            # true | false | unknown
+source: agent-generated   # URL | agent-generated | user-provided, origin unknown
+tags: [<retrieval tags>]
+applies_when: "<when this doc is relevant>"
+estimated_tokens: <int>
+---
+
+# <Title>
+**Version 1.0** — *<one-line scope>*
+
+## Revision History
+| Version | Date       | Change   |
+|---------|------------|----------|
+| 1.0     | YYYY-MM-DD | Initial. |
 ```
 
 ### Ledger Entry (Full)

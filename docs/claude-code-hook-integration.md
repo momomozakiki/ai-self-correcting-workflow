@@ -1,20 +1,26 @@
-<!-- SOURCE-PROVENANCE:
-  - Official: No (project-specific integration guide)
-  - Source: agent-generated, describing this repo's own hooks/workflow_hook.py.
-    Hook-contract facts cross-checked against the official Claude Code Hooks
-    reference: https://code.claude.com/docs/en/hooks
-  - Verified by user: 2026-07-10
-  - Notes: v1.7 realigns the guide with the real Python dispatcher and this
-    repo's actual .claude/workflow_config.json. It also serves as a golden
-    reference for other repos adopting the workflow (see "Adapting for your
-    repo"). Versions ≤ 1.3 described a hypothetical Node.js design; v1.6 briefly
-    described a different (Flutter/Dart) project — both are superseded.
--->
+---
+title: Claude Code Hook Integration
+version: 1.8
+last_validated: 2026-07-10
+official: false
+source: agent-generated, describing this repo's own hooks/workflow_hook.py; hook-contract facts cross-checked against https://code.claude.com/docs/en/hooks
+tags: [hooks, claude-code, integration, workflow, dispatcher]
+applies_when: "Wiring up, understanding, or adapting the workflow hook dispatcher for a Claude Code project."
+estimated_tokens: 5000
+---
 
 # Claude Code Hook Integration
 *Adaptive Self‑Correcting Workflow – Implementation Guide*
-**Version 1.7** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
-**Last Validation Date**: 2026‑07‑10
+**Version 1.8** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
+**Last Validated**: 2026‑07‑10
+
+## Revision History
+| Version | Date       | Change                                                                                                 |
+|---------|------------|--------------------------------------------------------------------------------------------------------|
+| 1.8     | 2026-07-10 | Migrated to the unified Documentation Standard: SOURCE-PROVENANCE comment → YAML frontmatter; changelog moved from the comment's `Notes:` field into this table. |
+| 1.7     | 2026-07-10 | Realigned the guide with the real Python dispatcher and this repo's actual `.claude/workflow_config.json`; established as the golden reference for adopters. |
+| 1.6     | (prior)    | Described a different (Flutter/Dart) project — superseded.                                              |
+| ≤ 1.3   | (prior)    | Described a hypothetical Node.js design — superseded.                                                   |
 
 > This guide describes the **real** implementation in this repository — a single
 > stdlib‑Python dispatcher, [`hooks/workflow_hook.py`](../hooks/workflow_hook.py),
@@ -128,7 +134,8 @@ The dispatcher emits `additionalContext` + a static `sessionTitle`:
    (repo‑root `ROADMAP.md` here). The marker must start the line (after optional
    whitespace, `>` or a list bullet) so inline prose can't false‑match.
 5. Flags `plans/UNFINISHED.md` if present (F4).
-6. Appends a static reminder about the weekly ledger and `SOURCE-PROVENANCE`.
+6. Appends a static reminder about the weekly ledger and adding doc frontmatter
+   (provenance + version) to new docs.
 
 `sessionTitle` is the constant string `"Adaptive Workflow session"`.
 
@@ -420,4 +427,4 @@ the dispatcher and contract stay the same:
 
 ---
 
-*End of Document – Implementation Guide v1.7*
+*End of Document – Implementation Guide v1.8*

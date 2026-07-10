@@ -1,5 +1,21 @@
+---
+title: The Progressive Disclosure Documentation Guide
+version: 4.0
+last_validated: 2026-07-10
+official: true
+source: agent-generated
+tags: [documentation, progressive-disclosure, ai-context, token-budget, retrieval]
+applies_when: "Designing, reviewing, or refactoring documentation structure for AI-assisted projects."
+estimated_tokens: 3000
+---
+
 # The Progressive Disclosure Documentation Guide (v4.0)
 ### A Complete, Production-Ready Standard for AI-Assisted Projects
+
+## Revision History
+| Version | Date       | Change                                                                                          |
+|---------|------------|-------------------------------------------------------------------------------------------------|
+| 4.0     | 2026-07-10 | Adopted as the repo's canonical splitting standard (GUIDE.md §6.4 references it); added this frontmatter + Revision History; §7 templates aligned to the unified Documentation Standard fields. |
 
 ---
 
@@ -193,16 +209,23 @@ if __name__ == "__main__":
 
 ## 7. Templates for Every File Type
 
-Copy and paste these templates to standardize your documentation.
+Copy and paste these templates to standardize your documentation. Each carries the
+unified **Documentation Standard** fields (`version`, `last_validated`, `official`,
+`source`) from `GUIDE.md` §6 **plus** the retrieval/lifespan fields specific to its
+type. Bump `version` and refresh `last_validated` on every non-trivial edit.
 
 ### A. Knowledge Note (`.docs/knowledge/backend/db-indexing.md`)
 ```yaml
 ---
+title: Postgres Indexing Strategy
+version: 1.0
+last_validated: 2026-07-10
+official: false
+source: agent-generated
 category: Database
 tags: [postgres, indexing, performance]
 applies_when: "Creating new tables or troubleshooting slow queries"
 estimated_tokens: 450
-last_verified: 2026-07-10
 ---
 # Postgres Indexing Strategy
 [Full, detailed content answering "How do we index?"]
@@ -211,6 +234,11 @@ last_verified: 2026-07-10
 ### B. Incident Note (`.docs/incidents/2026-07-10_auth-null.md`)
 ```yaml
 ---
+title: Auth Null Pointer Fix
+version: 1.0
+last_validated: 2026-07-10
+official: false
+source: agent-generated
 type: incident
 tags: [auth, bugfix]
 expires_on: 2026-10-10
@@ -225,6 +253,11 @@ estimated_tokens: 200
 ### C. Checkpoint (`.docs/checkpoints/feature-payment.md`)
 ```yaml
 ---
+title: Payment Webhook — Checkpoint
+version: 1.0
+last_validated: 2026-07-10
+official: false
+source: agent-generated
 type: checkpoint
 feature: Payment Webhook
 status: Completed
@@ -239,6 +272,11 @@ estimated_tokens: 300
 ### D. Decision Record / ADR (`.docs/decisions/adr-004-redis-cache.md`)
 ```yaml
 ---
+title: "ADR-004: Adopt Redis for Session Caching"
+version: 1.0
+last_validated: 2026-07-10
+official: true
+source: agent-generated
 type: adr
 status: Accepted
 date: 2026-07-10

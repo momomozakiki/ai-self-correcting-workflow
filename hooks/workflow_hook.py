@@ -338,7 +338,7 @@ def handle_session_start(event: Dict[str, Any], config: Dict[str, Any],
                      "F4: surface it and ask whether to continue or archive.")
 
     parts.append("Reminders: log intentional changes to the weekly ledger "
-                 "(history/YYYY-Www.md); add SOURCE-PROVENANCE to new external docs.")
+                 "(history/YYYY-Www.md); add doc frontmatter (provenance + version) to new docs.")
 
     emit(session_context("SessionStart", "\n\n".join(parts),
                          session_title="Adaptive Workflow session"))
