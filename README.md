@@ -23,6 +23,7 @@ workflow-core/
 ├── hooks/workflow_hook.py       # Fail-soft hook dispatcher (stdlib only)
 ├── skills/adaptive-workflow/    # Agent process manual (SKILL.md)
 ├── schemas/                     # config_schema.json + hook_contract.md
+├── docs/                        # Documentation Standard refs (Progressive Disclosure Guide, etc.)
 ├── templates/                   # What adopting projects copy in
 │   └── docs/                    #   DOC · CHANGELOG · SCOPE templates
 └── tests/test_hook.py           # Synthetic-event tests (unittest)
