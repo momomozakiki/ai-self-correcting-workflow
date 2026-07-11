@@ -10,6 +10,11 @@ first `**Next action:**` line below and surfaces it at session start.
 ## Active Epic: Harden the hook dispatcher
 
 - [x] Add CI (GitHub Actions) running the test suite on Linux + Windows.
+- [x] Stop-hook Phase-3 auto-breadcrumb: on a dirty tree, record
+      `plans/UNFINISHED.md` (marker-guarded, never clobbers a human plan) so an
+      interrupted closure survives a force-close.
+- [x] Opt-in F5 daily update check in `SessionStart` (`workflow_update_check`
+      config; detection-only, once/day, off by default).
 - [ ] Optional `main_branch` auto-detection via `git remote show origin`
       (currently defaults to `main`, overridable in config).
 - [ ] `--self-test` subcommand that validates config against

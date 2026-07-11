@@ -13,10 +13,14 @@ When you (agent or human) find a flaw, missing trigger, or improvement:
 
 | Criticality | Definition | Immediate action? |
 |-------------|------------|-------------------|
-| **High** | Fails to enforce invariants, risks data loss, session-breaking bug, security hole. | **Yes** — fix locally now, submit PR. |
+| **High** (a.k.a. **Critical**) | Fails to enforce invariants, risks data loss, session-breaking bug, security hole. | **Yes** — fix locally now, submit PR. |
 | **Medium** | Missing trigger, inefficient process, ambiguity, non-critical logic error. | No — propose a plan; don't apply until approved. |
 | **Low** | Cosmetic, wording, minor edge case. | No — open an issue or low-priority branch. |
 | **Non-critical** | Observation, suggestion, future enhancement. | No — open an issue only. |
+
+> **On the word "critical":** the top tier is named **High**. Some teams call it
+> **Critical** — they mean the same level (data loss / security / session-breaking).
+> There is no separate tier above High.
 
 3. **Log the discovery** in the project's own `history/YYYY-Www.md` with a
    `[workflow]` tag.
@@ -47,6 +51,20 @@ merge. Notify the user.
 gh issue create --title "..." --body "..." --label low   # or non-critical
 ```
 Optionally push a draft branch, but leave PR creation to the maintainer.
+
+### Reporting without a submodule (vendored copies)
+
+If you adopted the workflow by **copying the files** rather than adding
+`.claude/workflow-core` as a submodule, you have no upstream remote to push a
+`fix/` or `proposal/` branch to. Report the flaw as a GitHub issue instead:
+
+- Use the **Workflow bug / flaw report** issue template (it captures criticality,
+  your adoption model, and the affected **version** from the doc's frontmatter).
+- Or run `gh issue create --label workflow` against this repository.
+
+This is the entry point for the same closed loop — a maintainer triages by
+criticality and folds the fix upstream, and you pick it up on your next sync.
+It complements, and does not replace, the submodule PR flow above.
 
 ## 5. Proposing a new checklist item (trigger / step)
 

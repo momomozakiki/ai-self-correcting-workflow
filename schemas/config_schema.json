@@ -89,6 +89,33 @@
           "default": "main"
         }
       }
+    },
+    "workflow_update_check": {
+      "type": "object",
+      "description": "F5 daily update check for the vendored workflow-core submodule. Opt-in and notification-only: when enabled, SessionStart fetches the submodule at most once per day and reports if it is behind upstream. Never auto-applies the update.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Master switch. When false (default) the check is skipped entirely and no git fetch runs.",
+          "default": false
+        },
+        "submodule_path": {
+          "type": "string",
+          "description": "Path (relative to project_root) to the vendored workflow-core git submodule.",
+          "default": ".claude/workflow-core"
+        },
+        "remote": {
+          "type": "string",
+          "description": "Git remote of the submodule to fetch and compare against.",
+          "default": "origin"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Upstream branch to compare the submodule HEAD against.",
+          "default": "main"
+        }
+      }
     }
   }
 }

@@ -29,7 +29,17 @@ Per-session state lives at
 
 **Behaviour:** purge stale state (>24h), reset session state, gather git
 status, run `env_check` tool checks, parse the roadmap `**Next action:**`,
-flag an unfinished plan.
+flag an unfinished plan, and — when `workflow_update_check.enabled` is true —
+run the F5 daily update check.
+
+**F5 update check (opt-in, default off):** no-op unless
+`workflow_update_check.enabled`. When on, and the `submodule_path` (default
+`.claude/workflow-core`) is a linked git repo, it is fetched at most once per
+day (gated by the project-persistent `.ai/.workflow_check_date` file) and
+compared against `{remote}/{branch}`. If the submodule is behind, a
+`🔄 Workflow updates available (N new commits)` line is appended to the injected
+context. **Detection & notification only — never auto-applies the update.**
+Fail-soft: any git/network error leaves the check silent.
 
 **Output:**
 ```json
@@ -83,10 +93,22 @@ Otherwise: no output.
   → exit 0, no output (allow the session to end).
 - Dirty working tree on a non-`main_branch` branch → commit reminder.
 - `source_changed` && !`ledger_touched` → ledger reminder.
+- **Dirty working tree on _any_ branch → write a Phase-3 breadcrumb** to
+  `plans/UNFINISHED.md` (see below). This happens whether or not the hook blocks.
 - If any reminder: increment `stop_block_count`, emit a block decision.
 
-Detection uses the **session state file**, not `git diff HEAD` (which would
-include pre-session changes).
+Detection of the ledger reminder uses the **session state file**, not
+`git diff HEAD` (which would include pre-session changes). The breadcrumb and the
+commit reminder use live `git status`.
+
+**Phase-3 breadcrumb:** on a dirty tree the hook writes/refreshes
+`plans/UNFINISHED.md` (timestamp, branch, `git status --porcelain` file list, and
+the pending reminders) so the next `SessionStart` (F4) surfaces the unfinished
+work — durable even if the reminder is ignored or the session is force-closed.
+The file begins with the marker `<!-- workflow-hook: auto-breadcrumb -->`; the
+hook overwrites only its own marked breadcrumb and **never** clobbers a
+human-authored `UNFINISHED.md` (one lacking the marker). Fail-soft: write errors
+never break session close.
 
 **Output (only when blocking):**
 ```json

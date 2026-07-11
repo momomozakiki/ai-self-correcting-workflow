@@ -174,6 +174,110 @@ def git_status(project_root: Path) -> Dict[str, Any]:
 
 
 # --------------------------------------------------------------------------- #
+# F5: daily workflow-core update check (opt-in)
+# --------------------------------------------------------------------------- #
+def check_workflow_updates(config: Dict[str, Any], project_root: Path) -> Optional[str]:
+    """Return an F5 update notice if the vendored ``workflow-core`` is behind.
+
+    Opt-in and fail-soft: returns ``None`` (silent) unless
+    ``workflow_update_check.enabled`` is true, the submodule is actually linked,
+    and a once-per-day fetch finds new upstream commits. Never auto-applies the
+    update -- detection & notification only (the agent asks the user per F5).
+    """
+    cfg = config.get("workflow_update_check") or {}
+    if not cfg.get("enabled"):
+        return None
+
+    submodule_rel = cfg.get("submodule_path", ".claude/workflow-core")
+    remote = cfg.get("remote", "origin")
+    branch = cfg.get("branch", "main")
+
+    submodule = (project_root / submodule_rel).resolve()
+    if not (submodule / ".git").exists():
+        return None  # not linked -- nothing to check
+
+    # Once-per-day gate via a project-persistent state file (survives sessions).
+    today = time.strftime("%Y-%m-%d")
+    date_file = project_root / ".ai" / ".workflow_check_date"
+    try:
+        if date_file.read_text(encoding="utf-8").strip() == today:
+            return None  # already checked today
+    except Exception:
+        pass  # missing/unreadable -> proceed with the check
+
+    if _git(submodule, "fetch", "--depth=1", remote, branch) is None:
+        return None  # offline or fetch failed -- stay silent
+
+    count = _git(submodule, "rev-list", "--count", f"HEAD..{remote}/{branch}")
+
+    # Record today's check regardless of the outcome, so we don't refetch today.
+    try:
+        date_file.parent.mkdir(parents=True, exist_ok=True)
+        date_file.write_text(today + "\n", encoding="utf-8")
+    except Exception:
+        pass
+
+    if count and count.strip().isdigit() and int(count) > 0:
+        return (
+            f"🔄 Workflow updates available ({count} new commits) in "
+            f"`{submodule_rel}`. F5: I can run `git submodule update --remote` "
+            "and re-validate any new mandatory steps."
+        )
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# Phase-3 breadcrumb (Stop hook)
+# --------------------------------------------------------------------------- #
+BREADCRUMB_MARKER = "<!-- workflow-hook: auto-breadcrumb -->"
+
+
+def write_unfinished_breadcrumb(project_root: Path, gs: Dict[str, Any],
+                                reminders: List[str]) -> None:
+    """Record an interrupted Phase-3 closure to ``plans/UNFINISHED.md``.
+
+    Durable safety net: if a session ends with a dirty tree, the next
+    ``SessionStart`` (F4) surfaces this file. Fail-soft and idempotent -- it
+    overwrites only its own marked breadcrumb and never clobbers a
+    human-authored plan (a file lacking ``BREADCRUMB_MARKER`` is left untouched).
+    """
+    try:
+        target = project_root / "plans" / "UNFINISHED.md"
+        if target.is_file():
+            try:
+                existing = target.read_text(encoding="utf-8")
+            except Exception:
+                existing = ""
+            if BREADCRUMB_MARKER not in existing:
+                return  # genuine, human-authored plan -- do not overwrite
+
+        porcelain = _git(project_root, "status", "--porcelain") or ""
+        files = "\n".join(f"  {line}" for line in porcelain.splitlines()) or "  (none reported)"
+        stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        branch = gs.get("branch") or "(unknown)"
+        pending = "\n".join(f"- {r}" for r in reminders) or "- Commit & push pending work."
+
+        body = (
+            f"{BREADCRUMB_MARKER}\n"
+            f"# Unfinished session — auto-recorded {stamp}\n\n"
+            "> This breadcrumb was written by the workflow Stop hook because the\n"
+            "> working tree was dirty at session end (Phase 3 not completed).\n"
+            "> Review, finish closure, then delete this file. It will be\n"
+            "> overwritten by the hook while it remains a breadcrumb, but a\n"
+            "> human-authored plan placed here is never overwritten.\n\n"
+            f"**Branch:** `{branch}`\n\n"
+            "**Pending closure steps:**\n"
+            f"{pending}\n\n"
+            "**Uncommitted files (`git status --porcelain`):**\n\n"
+            f"```\n{files}\n```\n"
+        )
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(body, encoding="utf-8")
+    except Exception:
+        pass  # fail-soft: never break session close
+
+
+# --------------------------------------------------------------------------- #
 # Path helpers
 # --------------------------------------------------------------------------- #
 def _norm(p: str) -> str:
@@ -337,6 +441,10 @@ def handle_session_start(event: Dict[str, Any], config: Dict[str, Any],
         parts.append("⚠️ Unfinished plan detected (plans/UNFINISHED.md) — "
                      "F4: surface it and ask whether to continue or archive.")
 
+    update_notice = check_workflow_updates(config, project_root)
+    if update_notice:
+        parts.append(update_notice)
+
     parts.append("Reminders: log intentional changes to the weekly ledger "
                  "(history/YYYY-Www.md); add doc frontmatter (provenance + version) to new docs.")
 
@@ -403,6 +511,12 @@ def handle_stop(event: Dict[str, Any], config: Dict[str, Any],
             "(history/YYYY-Www.md) wasn't updated. Add an entry "
             "(What / Why / Refs) before closing."
         )
+
+    # Durable safety net: any dirty tree at Stop leaves a breadcrumb (on any
+    # branch, so main-branch closures are covered too). This happens whether or
+    # not we block, so the record survives an ignored reminder or a force-close.
+    if gs.get("dirty"):
+        write_unfinished_breadcrumb(project_root, gs, reminders)
 
     if reminders:
         state["stop_block_count"] = state.get("stop_block_count", 0) + 1

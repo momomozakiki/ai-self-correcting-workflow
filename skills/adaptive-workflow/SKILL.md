@@ -35,6 +35,10 @@ this project's actual paths.
   submodule is absent, skip (and don't create the date file). Otherwise, if
   `.ai/.workflow_check_date` ≠ today: `git fetch` in the submodule, compare with
   `origin/main`; if behind, offer to update. Write today's date afterward.
+  When `workflow_update_check.enabled` is set in `workflow_config.json`, the
+  SessionStart hook performs this fetch/compare for you and injects a
+  `🔄 Workflow updates available` notice — it never auto-applies; you still ask
+  the user before running `git submodule update --remote`.
 
 ## Phase 1 — Meta-Planning
 
@@ -145,11 +149,15 @@ peer marked `exclude_from_ai: true`, so it stays out of the active token budget.
 When you find a flaw or missing trigger in the workflow itself, classify it and
 log the discovery in the project ledger with a `[workflow]` tag:
 
-- **High** (breaks invariants / data loss / security): fix locally on
-  `fix/<desc>` now, push, open a PR; may use the fix immediately.
+- **High** (a.k.a. **Critical** — breaks invariants / data loss / security): fix
+  locally on `fix/<desc>` now, push, open a PR; may use the fix immediately.
 - **Medium** (missing trigger, ambiguity, non-critical bug): open a
   `proposal/<desc>` PR with a plan; **do not** apply locally until merged.
 - **Low / non-critical**: open an issue; optionally a draft branch, no PR.
+
+"High" is the top tier; "Critical" is just another name for it, not a level above.
+If you vendored the files (no submodule to push to), file a GitHub issue via the
+**Workflow bug / flaw report** template instead of pushing a branch.
 
 See `.claude/workflow-core/CONTRIBUTING.md` for the full process.
 
