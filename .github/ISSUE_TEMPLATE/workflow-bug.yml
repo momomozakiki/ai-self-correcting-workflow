@@ -1,0 +1,64 @@
+name: Workflow bug / flaw report
+description: Report a bug, missing trigger, or flaw in the Adaptive Self-Correcting Workflow.
+title: "[workflow] <short summary>"
+labels: ["workflow"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping the workflow self-improve. This template is for adopters
+        who **cannot push a `fix/` branch directly** (e.g. you vendored/copied the
+        files rather than using a submodule). If you *can* open a PR, prefer the
+        process in [`CONTRIBUTING.md`](../blob/main/CONTRIBUTING.md).
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is wrong, missing, or confusing?
+      placeholder: The Stop hook does not ... / GUIDE §X is ambiguous about ...
+    validations:
+      required: true
+  - type: dropdown
+    id: criticality
+    attributes:
+      label: Criticality
+      description: See the rubric in CONTRIBUTING.md / GUIDE §10.1. "High" is the top tier (a.k.a. Critical).
+      options:
+        - "High (a.k.a. Critical) — fails to enforce invariants, data loss, session-breaking, security"
+        - "Medium — missing trigger, inefficient process, ambiguity, non-critical logic error"
+        - "Low — cosmetic, wording, minor edge case"
+        - "Non-critical — observation, suggestion, future enhancement"
+    validations:
+      required: true
+  - type: dropdown
+    id: adoption-model
+    attributes:
+      label: How did you adopt workflow-core?
+      options:
+        - "Git submodule (.claude/workflow-core)"
+        - "Vendored / copied the files (no submodule)"
+        - "Other / not sure"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Workflow version
+      description: From the affected doc's frontmatter (`version:` / revision history), or the submodule commit SHA.
+      placeholder: "GUIDE.md v1.4 / commit 91a4163"
+    validations:
+      required: false
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce / where it happens
+      description: File + section, or the sequence that triggers it.
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What should happen instead?
+    validations:
+      required: false

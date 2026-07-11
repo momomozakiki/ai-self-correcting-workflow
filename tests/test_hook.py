@@ -247,6 +247,172 @@ class TestStop(BaseCase):
         self.assertIsNone(out)  # already at cap -> allow stop
 
 
+class TestStopBreadcrumb(BaseCase):
+    """Workstream A: the Phase-3 auto-breadcrumb on a dirty tree."""
+
+    def _seed_state(self, **kw):
+        state = workflow_hook.default_state()
+        state.update(kw)
+        workflow_hook.save_state(self.session_id, state)
+
+    def _run_stop_with_status(self, status):
+        """Drive a Stop event with git_status/_git stubbed to `status`."""
+        orig_git_status = workflow_hook.git_status
+        orig_git = workflow_hook._git
+        workflow_hook.git_status = lambda project_root: status
+        # _git is used inside the breadcrumb for `status --porcelain`.
+        workflow_hook._git = lambda root, *args: (
+            " M src/a.py\n?? new.txt" if args[:1] == ("status",) else None)
+        try:
+            return run_hook(
+                {"hookEventName": "Stop", "session_id": self.session_id},
+                project_dir=self.project)
+        finally:
+            workflow_hook.git_status = orig_git_status
+            workflow_hook._git = orig_git
+
+    def test_dirty_tree_writes_breadcrumb_on_feature_branch(self):
+        self._seed_state()
+        self._run_stop_with_status(
+            {"branch": "feat/x", "dirty": True, "ahead": None, "behind": None})
+        bc = self.project / "plans" / "UNFINISHED.md"
+        self.assertTrue(bc.is_file())
+        text = bc.read_text(encoding="utf-8")
+        self.assertIn(workflow_hook.BREADCRUMB_MARKER, text)
+        self.assertIn("feat/x", text)
+        self.assertIn("src/a.py", text)  # porcelain file list included
+
+    def test_dirty_tree_writes_breadcrumb_on_main(self):
+        self._seed_state()
+        self._run_stop_with_status(
+            {"branch": "main", "dirty": True, "ahead": None, "behind": None})
+        self.assertTrue((self.project / "plans" / "UNFINISHED.md").is_file())
+
+    def test_clean_tree_writes_no_breadcrumb(self):
+        self._seed_state()
+        self._run_stop_with_status(
+            {"branch": "feat/x", "dirty": False, "ahead": None, "behind": None})
+        self.assertFalse((self.project / "plans" / "UNFINISHED.md").exists())
+
+    def test_human_unfinished_is_not_overwritten(self):
+        self._seed_state()
+        plans = self.project / "plans"
+        plans.mkdir()
+        human = plans / "UNFINISHED.md"
+        human.write_text("# My real handoff plan\nstep 1\n", encoding="utf-8")
+        self._run_stop_with_status(
+            {"branch": "feat/x", "dirty": True, "ahead": None, "behind": None})
+        self.assertEqual(human.read_text(encoding="utf-8"),
+                         "# My real handoff plan\nstep 1\n")
+
+    def test_own_breadcrumb_is_overwritten_idempotently(self):
+        self._seed_state()
+        plans = self.project / "plans"
+        plans.mkdir()
+        bc = plans / "UNFINISHED.md"
+        bc.write_text(workflow_hook.BREADCRUMB_MARKER + "\nold content\n",
+                      encoding="utf-8")
+        self._run_stop_with_status(
+            {"branch": "feat/x", "dirty": True, "ahead": None, "behind": None})
+        text = bc.read_text(encoding="utf-8")
+        self.assertIn(workflow_hook.BREADCRUMB_MARKER, text)
+        self.assertNotIn("old content", text)  # refreshed, not appended
+
+
+class TestF5UpdateCheck(BaseCase):
+    """Workstream B: opt-in daily workflow-core update check."""
+
+    def _cfg(self, **overrides):
+        base = {
+            "project_root": ".",
+            "source_directories": ["src"],
+            "documentation_directories": ["docs"],
+            "ledger": {"directory": "history"},
+            "env_check": {"tool_paths": {}},
+        }
+        if overrides:
+            base["workflow_update_check"] = overrides
+        return base
+
+    def test_disabled_is_noop_and_makes_no_git_calls(self):
+        calls = []
+        orig = workflow_hook._git
+        workflow_hook._git = lambda root, *a: calls.append(a) or None
+        try:
+            notice = workflow_hook.check_workflow_updates(
+                self._cfg(enabled=False), self.project)
+        finally:
+            workflow_hook._git = orig
+        self.assertIsNone(notice)
+        self.assertEqual(calls, [])
+
+    def test_missing_submodule_is_noop(self):
+        notice = workflow_hook.check_workflow_updates(
+            self._cfg(enabled=True), self.project)
+        self.assertIsNone(notice)
+
+    def test_same_day_check_is_skipped(self):
+        # Link a fake submodule so we pass the .git existence gate.
+        sub = self.project / ".claude" / "workflow-core"
+        sub.mkdir(parents=True)
+        (sub / ".git").write_text("gitdir: x", encoding="utf-8")
+        ai = self.project / ".ai"
+        ai.mkdir()
+        import time as _t
+        (ai / ".workflow_check_date").write_text(
+            _t.strftime("%Y-%m-%d"), encoding="utf-8")
+        called = []
+        orig = workflow_hook._git
+        workflow_hook._git = lambda root, *a: called.append(a) or None
+        try:
+            notice = workflow_hook.check_workflow_updates(
+                self._cfg(enabled=True), self.project)
+        finally:
+            workflow_hook._git = orig
+        self.assertIsNone(notice)
+        self.assertEqual(called, [])  # date-gated: no fetch today
+
+    def test_behind_submodule_emits_notice_and_writes_date(self):
+        sub = self.project / ".claude" / "workflow-core"
+        sub.mkdir(parents=True)
+        (sub / ".git").write_text("gitdir: x", encoding="utf-8")
+
+        def fake_git(root, *args):
+            if args[:1] == ("fetch",):
+                return ""
+            if args[:1] == ("rev-list",):
+                return "3"
+            return None
+        orig = workflow_hook._git
+        workflow_hook._git = fake_git
+        try:
+            notice = workflow_hook.check_workflow_updates(
+                self._cfg(enabled=True), self.project)
+        finally:
+            workflow_hook._git = orig
+        self.assertIsNotNone(notice)
+        self.assertIn("3 new commits", notice)
+        import time as _t
+        self.assertEqual(
+            (self.project / ".ai" / ".workflow_check_date").read_text(
+                encoding="utf-8").strip(), _t.strftime("%Y-%m-%d"))
+
+    def test_up_to_date_submodule_is_silent(self):
+        sub = self.project / ".claude" / "workflow-core"
+        sub.mkdir(parents=True)
+        (sub / ".git").write_text("gitdir: x", encoding="utf-8")
+        workflow_hook_git = lambda root, *a: "" if a[:1] == ("fetch",) else (
+            "0" if a[:1] == ("rev-list",) else None)
+        orig = workflow_hook._git
+        workflow_hook._git = workflow_hook_git
+        try:
+            notice = workflow_hook.check_workflow_updates(
+                self._cfg(enabled=True), self.project)
+        finally:
+            workflow_hook._git = orig
+        self.assertIsNone(notice)
+
+
 class TestDryRun(BaseCase):
     def test_dry_run_does_not_mutate_state(self):
         rc, out = run_hook(self.edit_event("src/a.py"), argv=["--dry-run"],

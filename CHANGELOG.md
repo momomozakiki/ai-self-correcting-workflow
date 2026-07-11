@@ -8,11 +8,31 @@ and are called out so adopting projects can adjust their `workflow_config.json`.
 ## [Unreleased]
 
 ### Added
+- **Stop-hook Phase-3 auto-breadcrumb.** When the working tree is dirty at
+  session end (any branch), the `Stop` hook records `plans/UNFINISHED.md`
+  (branch, uncommitted files, pending closure steps) so an interrupted closure
+  survives a force-close and is surfaced by the next `SessionStart` (F4). It is
+  marker-guarded (`<!-- workflow-hook: auto-breadcrumb -->`) and never overwrites
+  a human-authored `UNFINISHED.md`.
+- **Opt-in F5 daily update check** in `SessionStart`. New
+  `workflow_update_check` config block (`enabled` default **false**,
+  `submodule_path`, `remote`, `branch`): when enabled, fetches the vendored
+  `workflow-core` submodule at most once/day (gated by `.ai/.workflow_check_date`)
+  and injects a `🔄 Workflow updates available` notice if behind. Detection-only —
+  never runs `git submodule update`. Added to `schemas/config_schema.json` and
+  the config templates.
+- `.github/ISSUE_TEMPLATE/workflow-bug.yml` + `config.yml` — a bug-report path
+  for adopters who vendored the files (no submodule/PR access), with a
+  criticality dropdown and version field.
 - `.github/workflows/tests.yml` — GitHub Actions CI running
   `python -m unittest discover -s tests` on every push and pull request across a
   matrix of `ubuntu-latest` + `windows-latest` × Python 3.9 and 3.12. No install
   step: the suite is dependency-free (stdlib only), so CI runs exactly what
   adopters run locally. README carries a live status badge.
+
+### Changed
+- Clarified severity vocabulary: the top tier **High** is a.k.a. **Critical**
+  (there is no tier above it) — `CONTRIBUTING.md`, `GUIDE.md` §10, `SKILL.md`.
 
 ## [4.1.0] — 2026-07-10
 

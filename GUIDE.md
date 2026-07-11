@@ -298,7 +298,7 @@ One file per ISO week: `history/YYYY-Www.md`. Example: `history/2026-W28.md`. Th
 - **Do not log** trivial typo fixes in comments, formatting-only changes (unless part of a larger intentional formatting PR), or updates to `.gitignore` that don’t affect the project’s logic. Use judgement: if a reviewer would care, log it.
 
 ### 5.4 Hook Detection (Stop Hook)
-The `Stop` hook uses a per‑session state file to track whether source files were modified and whether the ledger was touched. If the session changed tracked files under `source_directories` but the ledger file wasn’t modified, it emits a reminder. The closure phase (Phase 3) **mandates** the ledger entry for all intentional changes, regardless of directory; the Stop hook’s reminder is a safety net primarily for source‑code modifications. The hook never blocks the session.
+The `Stop` hook uses a per‑session state file to track whether source files were modified and whether the ledger was touched. If the session changed tracked files under `source_directories` but the ledger file wasn’t modified, it emits a reminder. The closure phase (Phase 3) **mandates** the ledger entry for all intentional changes, regardless of directory; the Stop hook’s reminder is a safety net primarily for source‑code modifications. Additionally, whenever the working tree is dirty at Stop the hook records a Phase‑3 breadcrumb in `plans/UNFINISHED.md` (§7.3) so an interrupted closure is never lost. The reminder may block a bounded number of times (`stop_hook.max_blocks`), but always yields afterward so a session can end.
 
 ---
 
@@ -429,6 +429,7 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 - Reads git branch, dirty status, ahead/behind info.
 - Runs environment checks using paths and version flags from config (respecting `null` version_flag to only verify existence).
 - Parses the `**Next action:**` line from the configured roadmap file.
+- **F5 update check (opt-in):** when `workflow_update_check.enabled` is true and the configured `submodule_path` is a linked git repo, fetches it at most once per day (gated by `.ai/.workflow_check_date`) and, if it is behind `{remote}/{branch}`, appends a `🔄 Workflow updates available` notice. Detection only — never auto-applies. Off by default; see §9.
 - Outputs: `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "..."}}` and optionally a `sessionTitle`.
 
 #### PostToolUse
@@ -445,9 +446,12 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 - Otherwise, checks conditions:
   - If working tree is dirty on a non‑main branch, prepare a commit reminder.
   - If `source_changed` is true but `ledger_touched` is false, prepare a ledger reminder (for source‑code changes only; closure still mandates logging everything).
+  - If the working tree is dirty on **any** branch, write a Phase‑3 breadcrumb to `plans/UNFINISHED.md` (see below) — this happens whether or not the hook blocks.
 - If any reminder is needed, increments `stop_block_count` in state, outputs `{"decision": "block", "reason": "..."}`, and exits 0. If no reminders, exits 0 with no output (allowing the session to end).
 
-**Important:** The Stop hook’s detection relies on the session state file, not `git diff` against HEAD (which would include pre‑session changes). This ensures we only nag for things done *this session*.
+**Phase‑3 breadcrumb:** on a dirty tree the hook writes/refreshes `plans/UNFINISHED.md` (timestamp, branch, `git status --porcelain` file list, pending closure steps) so the next `SessionStart` (F4) surfaces the unfinished work — durable even if the reminder is ignored or the session is force‑closed. The file starts with the marker `<!-- workflow-hook: auto-breadcrumb -->`; the hook overwrites only its own marked breadcrumb and **never** clobbers a human‑authored `UNFINISHED.md`. This directly closes the failure mode where a session ends mid‑closure leaving a dirty tree and no trace.
+
+**Important:** The Stop hook’s *ledger* detection relies on the session state file, not `git diff` against HEAD (which would include pre‑session changes). This ensures we only nag for things done *this session*. The dirty‑tree commit reminder and breadcrumb use live `git status`.
 
 ---
 
@@ -484,6 +488,8 @@ Projects can override hook functionality without forking the workflow:
 
 Embedded in Phase 0 (F5), but detailed here for reference.
 
+**Automation (opt-in):** setting `workflow_update_check.enabled: true` in `workflow_config.json` makes the `SessionStart` hook perform steps 1–3 and 6 below automatically (fetching at most once per day and injecting the notice). It is **off by default** and **detection-only** — the hook never runs `git submodule update`. When disabled (the default), the agent performs the check manually as described. Config keys: `enabled`, `submodule_path` (default `.claude/workflow-core`), `remote` (default `origin`), `branch` (default `main`).
+
 - **State file:** `.ai/.workflow_check_date` contains the date of the last check (format `YYYY-MM-DD`). Create it only after the submodule is present.
 - **Procedure:**
   1. If `.claude/workflow-core` directory is missing, skip check (note the workflow is not yet linked).
@@ -508,14 +514,18 @@ When the agent (or user) discovers a flaw, missing trigger, or potential improve
 
 | Criticality | Definition | Immediate action required? |
 |-------------|------------|-----------------------------|
-| **High** | Workflow fails to enforce invariants, may cause data loss, session‑breaking bug, security hole. | Yes – fix locally now, submit PR. |
+| **High** (a.k.a. **Critical**) | Workflow fails to enforce invariants, may cause data loss, session‑breaking bug, security hole. | Yes – fix locally now, submit PR. |
 | **Medium** | Missing trigger, inefficient process, documentation ambiguity, non‑critical logic error. | No – propose a plan, do not apply until approved. |
 | **Low** | Cosmetic, wording, minor edge‑case improvement. | No – create issue or low‑priority branch. |
 | **Non‑critical** | Observation, suggestion, future enhancement. | No – create issue only. |
 
+> **On the word “critical”:** the top tier is named **High**. Some teams call it
+> **Critical** — they mean the same level (data loss / security / session‑breaking).
+> There is no separate tier above High.
+
 - [ ] **Log the discovery** in the project’s own `history/YYYY-Www.md` (tag `[workflow]`).
 
-### 10.2 High‑Criticality – Immediate Fix
+### 10.2 High‑Criticality (a.k.a. Critical) – Immediate Fix
 - **Local fix:**  
   `cd .claude/workflow-core && git checkout -b fix/<short-description> && git commit -m "fix(high): <description>" && git push origin fix/<short-description>`
 - **Open a Pull Request** in the central workflow repo. PR must explain the flaw, why it’s high, and the fix.
