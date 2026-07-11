@@ -1,5 +1,7 @@
 # Adaptive Self-Correcting Workflow (`workflow-core`)
 
+[![tests](https://github.com/momomozakiki/ai-self-correcting-workflow/actions/workflows/tests.yml/badge.svg)](https://github.com/momomozakiki/ai-self-correcting-workflow/actions/workflows/tests.yml)
+
 A disciplined meta-framework for AI-assisted development. It combines **fixed
 safety invariants**, **per-task dynamic planning**, **conditional documentation
 updates**, a **filesystem-native change-history ledger**, **source provenance**,
@@ -62,6 +64,10 @@ session. Contract: [`schemas/hook_contract.md`](schemas/hook_contract.md).
 ```bash
 python -m unittest discover -s tests
 ```
+
+The same suite runs in CI on every push and pull request across Linux and
+Windows (Python 3.9 and 3.12) — see
+[`.github/workflows/tests.yml`](.github/workflows/tests.yml).
 
 ## Contributing
 

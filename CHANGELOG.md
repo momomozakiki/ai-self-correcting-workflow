@@ -5,6 +5,15 @@ All notable changes to the workflow itself are recorded here. The workflow uses
 contract, config schema, or mandatory invariants bump the major/minor version
 and are called out so adopting projects can adjust their `workflow_config.json`.
 
+## [Unreleased]
+
+### Added
+- `.github/workflows/tests.yml` — GitHub Actions CI running
+  `python -m unittest discover -s tests` on every push and pull request across a
+  matrix of `ubuntu-latest` + `windows-latest` × Python 3.9 and 3.12. No install
+  step: the suite is dependency-free (stdlib only), so CI runs exactly what
+  adopters run locally. README carries a live status badge.
+
 ## [4.1.0] — 2026-07-10
 
 Initial implementation of the v4.1 design as a working `workflow-core` repository.

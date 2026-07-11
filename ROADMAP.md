@@ -3,13 +3,13 @@
 Planned improvements to the workflow itself. The `SessionStart` hook parses the
 first `**Next action:**` line below and surfaces it at session start.
 
-**Next action:** Wire up CI to run `python -m unittest discover -s tests` on every push.
+**Next action:** Optional `main_branch` auto-detection via `git remote show origin` (currently defaults to `main`, overridable in config).
 
 ---
 
 ## Active Epic: Harden the hook dispatcher
 
-- [ ] Add CI (GitHub Actions) running the test suite on Linux + Windows.
+- [x] Add CI (GitHub Actions) running the test suite on Linux + Windows.
 - [ ] Optional `main_branch` auto-detection via `git remote show origin`
       (currently defaults to `main`, overridable in config).
 - [ ] `--self-test` subcommand that validates config against
