@@ -1,22 +1,23 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 4.3
-last_validated: 2026-07-10
+version: 4.4
+last_validated: 2026-07-11
 official: true
 source: agent-generated
 tags: [workflow, governance, reference, hooks, provenance]
 applies_when: "Understanding, adopting, or modifying the Adaptive Self-Correcting Workflow itself."
-estimated_tokens: 6500
+estimated_tokens: 6600
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 4.3 – Centralized, Configurable, Self‑Improving*
+*Version 4.4 – Centralized, Configurable, Self‑Improving*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
 ## Revision History
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
+| 4.4     | 2026-07-11 | §6.4: added a pointer to the Progressive Disclosure Guide's new §3.1 (optional distributed `SCOPE.md` scaling tier) and §5.1 (content-quality rules), harvested from an incoming AI-documentation guide. |
 | 4.3     | 2026-07-10 | §6.3/§6.4: added the lazy **doc-folding** convention — bound the in-file Revision History (~8 rows / ≤3 kept) and relocate full history to a sibling Episodic `CHANGELOG.md` (`exclude_from_ai: true`). Renamed §6.4 to "Folding a document into a folder". |
 | 4.2     | 2026-07-10 | §6 recast as the unified Documentation Standard (frontmatter provenance + versioning + Progressive Disclosure splitting); added this frontmatter/Revision History. |
 | 4.1     | (prior)    | Centralized, configurable, self‑improving baseline (pre‑frontmatter).                       |
@@ -391,6 +392,12 @@ load…"` **and** the machine‑readable `exclude_from_ai: true` flag, which the
 Progressive Disclosure retrieval script honours by skipping the file before scoring.
 Its `estimated_tokens` therefore stay **outside** the active token budget; only
 `index.md` counts. Recalculate `index.md`'s `estimated_tokens` downward after folding.
+
+> **See also (Progressive Disclosure Guide):** for large/monorepo projects, that
+> guide's **§3.1** documents an optional distributed **`SCOPE.md`** scaling tier
+> (per‑directory *static* scope — distinct from the single root dynamic
+> `CONTEXT.md`), and **§5.1** adds content‑quality rules (Show‑Don't‑Tell code
+> pairs, textual‑twin diagrams). Both sit under this same §6 Documentation Standard.
 
 ### 6.5 When to add / update
 - Document created or updated → apply §6.1–6.3 (and fold into a folder per §6.4 if it

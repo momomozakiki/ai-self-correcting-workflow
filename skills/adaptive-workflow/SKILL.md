@@ -25,6 +25,9 @@ this project's actual paths.
 - **F3 Living docs.** Load the configured docs. For each, check for the doc
   frontmatter (provenance + version fields, or sidecar `.prov.md`). If missing,
   **flag but do not block**: "Document [file] has no frontmatter — is it official?"
+  If a `SCOPE.md` exists in a directory you are about to work in, load it as
+  supplementary **static** context (per-directory scope — see the Progressive
+  Disclosure Guide §3.1). This is an optional scaling tier; most projects have none.
 - **F4 Unfinished plan / roadmap.** If `plans/UNFINISHED.md` exists, surface it
   immediately and ask whether to continue or archive. Note the next unchecked
   item from the first active roadmap epic.
@@ -59,6 +62,7 @@ plan, await approval, continue.
 | Change to public API / architecture / data flow | Update `docs/*.md` (dated). |
 | Doc created / updated | Apply the Documentation Standard: frontmatter (provenance + version) + `last_validated` refresh + a Revision History row; fold into a folder per §6.4 if it outgrows one question / its token budget, or its Revision History passes ~8 rows (relocate history to a sibling `CHANGELOG.md`). |
 | Non-obvious technical decision | Decision log in `plans/archive/<slug>/execution_log.md`. |
+| New significant directory with a distinct responsibility (large/monorepo projects) | Optionally add a `SCOPE.md` describing its role + DO/DON'T rules; link it from the parent's `SCOPE.md` (Progressive Disclosure Guide §3.1). Skip for small projects. |
 | Repeatable mistake | Warning in best practices / retro note. |
 | **Any intentional change** (not a trivial typo/whitespace edit) | **Append a ledger entry** to `history/YYYY-Www.md`. |
 | External doc without provenance | Ask for the official URL, then add the doc frontmatter (provenance fields). |

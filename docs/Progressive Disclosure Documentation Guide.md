@@ -1,20 +1,21 @@
 ---
 title: The Progressive Disclosure Documentation Guide
-version: 4.1
-last_validated: 2026-07-10
+version: 4.2
+last_validated: 2026-07-11
 official: true
 source: agent-generated
 tags: [documentation, progressive-disclosure, ai-context, token-budget, retrieval]
 applies_when: "Designing, reviewing, or refactoring documentation structure for AI-assisted projects."
-estimated_tokens: 3000
+estimated_tokens: 3900
 ---
 
-# The Progressive Disclosure Documentation Guide (v4.1)
+# The Progressive Disclosure Documentation Guide (v4.2)
 ### A Complete, Production-Ready Standard for AI-Assisted Projects
 
 ## Revision History
 | Version | Date       | Change                                                                                          |
 |---------|------------|-------------------------------------------------------------------------------------------------|
+| 4.2     | 2026-07-11 | Harvested net-new content from an incoming "AI-Oriented Documentation" guide: §3.1 optional distributed **`SCOPE.md`** scaling tier; §5.1 content-quality rules (Show-Don't-Tell, textual-twin diagrams); §7.E Module Doc / `SCOPE.md` template. Additive subsections only — top-level numbering unchanged. |
 | 4.1     | 2026-07-10 | Added the per-doc **`CHANGELOG.md`** convention: relocated Revision History as an Episodic sibling (§4 taxonomy row, §9); `load_md_files()` now skips `exclude_from_ai: true` files before scoring. |
 | 4.0     | 2026-07-10 | Adopted as the repo's canonical splitting standard (GUIDE.md §6.4 references it); added this frontmatter + Revision History; §7 templates aligned to the unified Documentation Standard fields. |
 
@@ -52,6 +53,34 @@ To prevent overlap and bloat, enforce a rigid separation:
 - **`AGENTS.md` (Static):** Contains your Top 5 non-negotiable rules, the master navigation table, and high-level architectural tenets. **Update this only when the project's foundation changes** (e.g., switching from REST to GraphQL).
 - **`CONTEXT.md` (Dynamic):** Contains the current Sprint Goal, live task checklist (`[x]`/`[ ]`), and decisions made *during the ongoing session*. **Update this at the end of every major AI interaction.**
 
+### 3.1 Optional scaling tier: the distributed `SCOPE.md` network
+
+§3 draws the static/dynamic line; `SCOPE.md` is the **static, per-directory
+extension** of it. Root `CONTEXT.md` describes the whole project's working context.
+As a project grows, one file can no longer honestly describe every major subtree, so
+per-directory `SCOPE.md` files carry static context for those large-scale cases.
+
+| File | Nature | Scope | Answers |
+| :--- | :--- | :--- | :--- |
+| Root `CONTEXT.md` | **Dynamic** working memory | Whole project, current session | "What are we doing *right now*?" |
+| Per-dir `SCOPE.md` | **Static** structural scope | One directory's responsibility | "What is *this directory* for, and what are its boundaries?" |
+
+A `SCOPE.md` sits in a significant directory and states that directory's purpose, its
+key files/responsibilities, and links to any child `SCOPE.md` files — forming a
+navigable tree the agent can crawl to scope a change without loading the whole repo.
+
+**When to scale (qualitative — no hard thresholds):** Default to the root
+`CONTEXT.md` alone. Introduce `SCOPE.md` files **only** when a single root file can no
+longer honestly describe each major subtree — typically monorepos or repos with
+several independently-owned packages/services. For small-to-medium projects, adding
+them is premature and just more surface to keep current. A `SCOPE.md` is static: update
+it when a directory's *responsibility* changes, not on every task.
+
+> **Naming discipline.** The distributed file is `SCOPE.md`, never `CONTEXT.md`.
+> `CONTEXT.md` is reserved for the single root dynamic working-memory file (§2, §3);
+> reusing that name per-directory would give one filename two opposite meanings and
+> confuse both readers and the retrieval script.
+
 ---
 
 ## 4. Content Strategy: The Lifespan Taxonomy
@@ -74,6 +103,34 @@ How do you know when to split a giant doc or merge tiny ones?
 
 - **The Rule:** A single note must fully answer **one specific "How-to" or "What-is" question** without requiring a second note, *unless* that second note is a clearly linked dependency (e.g., "To understand API pagination, you must first view the Data Model").
 - **The Merge Signal:** If you consistently copy-paste the *same 3 notes* together for every single task, merge them into one comprehensive "Combo" note to save retrieval overhead.
+
+### 5.1 Content quality rules (writing for AI accuracy)
+
+Atomicity governs a doc's *size*; these rules govern its *content*. They make a note
+legible to an AI, not just short.
+
+- **Show, don't just tell.** Prefer a concrete example over prose. When a rule has a
+  right and a wrong way, show **both**, and anchor each to the **real file path** where
+  it lives so the AI can locate the pattern:
+
+  ~~~markdown
+  ## Auth middleware (`src/middleware/auth.ts`)
+  ✅ Correct
+  ```ts
+  // Validates JWT and attaches user to request
+  export const auth = /* … */
+  ```
+  ❌ Incorrect
+  ```ts
+  // Never skip token verification
+  export const auth = (req, res, next) => next()
+  ```
+  ~~~
+
+- **Diagrams need a textual twin.** An AI cannot reliably read a raster image. Prefer
+  **Mermaid** (plain text the model parses directly). If you must embed an image,
+  place a detailed alt-text or a bulleted summary of the flow directly beneath it, so
+  the information survives even when the visual does not.
 
 ---
 
@@ -293,6 +350,33 @@ estimated_tokens: 400
 **Context:** Postgres was hitting connection limits under load.
 **Decision:** Use Redis for ephemeral session storage.
 **Consequences:** Reduced DB load by 40%; requires new Redis cluster setup.
+```
+
+### E. Module Doc / `SCOPE.md` (`src/payment/SCOPE.md`)
+A directory's static scope file (§3.1). It states the directory's purpose, its
+boundaries, and an explicit **DO/DON'T block** the agent must honour. On conflict,
+global rules in the project's `CLAUDE.md` / `AGENTS.md` win.
+```yaml
+---
+title: Payment Module — Scope
+version: 1.0
+last_validated: 2026-07-10
+official: false
+source: agent-generated
+type: scope
+tags: [payment, module]
+applies_when: "Editing anything under src/payment/"
+estimated_tokens: 250
+---
+# Payment Module (`src/payment/`)
+**Purpose:** All payment-processing logic and provider integrations.
+**Key files:** `service.ts` (public interface), `stripe.ts` (provider adapter).
+**Child scopes:** [webhooks/SCOPE.md](./webhooks/SCOPE.md)
+
+## 🤖 AI Rules for This Module
+- ✅ DO use the `PaymentService` interface for all payment logic.
+- ❌ DON'T import `Stripe` directly outside `src/payment/`.
+- ❌ DON'T add fields to `User` without updating the privacy audit.
 ```
 
 ---

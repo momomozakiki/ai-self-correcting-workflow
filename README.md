@@ -17,13 +17,14 @@ Full reference: **[`GUIDE.md`](GUIDE.md)** · Agent manual:
 
 ```
 workflow-core/
-├── GUIDE.md                     # Full workflow reference (v4.1)
+├── GUIDE.md                     # Full workflow reference (v4.4)
 ├── CHANGELOG.md · ROADMAP.md · CONTRIBUTING.md
 ├── history/FORMAT.md            # This repo's own change-history ledger
 ├── hooks/workflow_hook.py       # Fail-soft hook dispatcher (stdlib only)
 ├── skills/adaptive-workflow/    # Agent process manual (SKILL.md)
 ├── schemas/                     # config_schema.json + hook_contract.md
 ├── templates/                   # What adopting projects copy in
+│   └── docs/                    #   DOC · CHANGELOG · SCOPE templates
 └── tests/test_hook.py           # Synthetic-event tests (unittest)
 ```
 
