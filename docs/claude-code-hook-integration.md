@@ -255,7 +255,9 @@ include pre‑session changes). It short‑circuits (exit `0`) if `stop_hook_act
 is set or `stop_block_count >= max_blocks`. Otherwise it assembles reminders when:
 
 1. the working tree is **dirty on a non‑`main_branch` branch** → commit & push
-   (`git add -A && git commit && git push`), and/or
+   (`git add -A && git commit -m "<msg>" && git push`; the reminder uses the `-m`
+   form so an agent copying it can't hit a bare‑`git commit` editor hang or a
+   stdin/heredoc rejection), and/or
 2. `source_changed` **and not** `ledger_touched` → add a weekly‑ledger entry
    (`history/YYYY-Www.md`, What / Why / Refs).
 

@@ -265,7 +265,11 @@ Log everything else that a reviewer would care about.
 - [ ] **Commit & push**  
   `git add -A`  
   `git commit -m "Plan: <slug> – <summary>"`  
-  `git push`
+  `git push`  
+  For a multi‑paragraph message use repeated `-m` flags or `git commit -F <file>`.
+  **Avoid heredocs / `-F -` from stdin** (Claude Code's Bash safety layer can
+  reject stdin‑fed commands) **and a bare `git commit`** with no `-m` (it can open
+  an editor and hang in a non‑interactive shell).
 
 - [ ] **Self‑check:** The agent is **not done** until `UNFINISHED.md` is cleared, the ledger entry is written, and the commit is pushed.
 
