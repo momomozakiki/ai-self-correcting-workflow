@@ -1,6 +1,6 @@
 ---
 title: Claude Code Hook Integration
-version: 1.9
+version: 1.10
 last_validated: 2026-07-18
 official: false
 source: agent-generated, describing this repo's own hooks/workflow_hook.py; hook-contract facts cross-checked against https://code.claude.com/docs/en/hooks
@@ -11,12 +11,13 @@ estimated_tokens: 5000
 
 # Claude Code Hook Integration
 *Adaptive Self‑Correcting Workflow – Implementation Guide*
-**Version 1.9** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
+**Version 1.10** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
 **Last Validated**: 2026‑07‑18
 
 ## Revision History
 | Version | Date       | Change                                                                                                 |
 |---------|------------|--------------------------------------------------------------------------------------------------------|
+| 1.10    | 2026-07-18 | §5.1.1: added read-only `gh` commands to the allowlist example and a note that writes (`gh pr merge`) stay gated and compound commands can still prompt. |
 | 1.9     | 2026-07-18 | Added §5.1.1 documenting the `permissions.allow` allowlist that stops plan mode from prompting on every read-only `Bash` command. |
 | 1.8     | 2026-07-10 | Migrated to the unified Documentation Standard: SOURCE-PROVENANCE comment → YAML frontmatter; changelog moved from the comment's `Notes:` field into this table. |
 | 1.7     | 2026-07-10 | Realigned the guide with the real Python dispatcher and this repo's actual `.claude/workflow_config.json`; established as the golden reference for adopters. |
@@ -351,7 +352,9 @@ runs, added alongside `hooks` in [`.claude/settings.json`](../.claude/settings.j
       "Bash(git fetch:*)", "Bash(git pull:*)", "Bash(git branch:*)",
       "Bash(git remote:*)", "Bash(git rev-parse:*)", "Bash(git show:*)",
       "Bash(python -m unittest:*)", "Bash(python --version)",
-      "Bash(cat:*)", "Bash(ls:*)"
+      "Bash(cat:*)", "Bash(ls:*)",
+      "Bash(gh pr view:*)", "Bash(gh pr list:*)", "Bash(gh pr status:*)",
+      "Bash(gh pr checks:*)", "Bash(gh repo view:*)"
     ]
   },
   "hooks": { "…": "…" }
@@ -360,6 +363,12 @@ runs, added alongside `hooks` in [`.claude/settings.json`](../.claude/settings.j
 
 - All entries are read‑only except `git fetch`/`git pull` — the workflow's
   sanctioned Phase‑0 sync (F1), safe to allow.
+- Only **read‑only** `gh` subcommands are listed (`gh pr view/list/status/
+  checks`, `gh repo view`). Do **not** allowlist writes like `gh pr merge`,
+  `gh pr close`, or `gh pr create` — keep PR mutations gated. Note also that a
+  *compound* command (`cd … && gh pr view … | head`) can still prompt even when
+  `gh pr view:*` is allowed, because Claude Code evaluates the whole command
+  line; run the allowlisted command on its own to avoid the prompt.
 - **Extend it** with your project's own read‑only commands (linters, test
   runners, package managers). Run the `/fewer-permission-prompts` skill to
   auto‑scan transcripts and generate an allowlist from commands you actually use.
