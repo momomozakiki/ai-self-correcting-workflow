@@ -1,7 +1,7 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 4.4
-last_validated: 2026-07-11
+version: 4.5
+last_validated: 2026-07-18
 official: true
 source: agent-generated
 tags: [workflow, governance, reference, hooks, provenance]
@@ -10,13 +10,14 @@ estimated_tokens: 6600
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 4.4 – Centralized, Configurable, Self‑Improving*
+*Version 4.5 – Centralized, Configurable, Self‑Improving*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
 ## Revision History
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
+| 4.5     | 2026-07-18 | §6.3/§6.5: clarified `last_validated` semantics — it records the last **content** review, not the last edit. A mechanical/frontmatter-only edit bumps `version` + adds a history row but leaves `last_validated` unchanged. Resolves an internal contradiction; mirrored in `DOC_TEMPLATE.md` + `SKILL.md`. |
 | 4.4     | 2026-07-11 | §6.4: added a pointer to the Progressive Disclosure Guide's new §3.1 (optional distributed `SCOPE.md` scaling tier) and §5.1 (content-quality rules), harvested from an incoming AI-documentation guide. |
 | 4.3     | 2026-07-10 | §6.3/§6.4: added the lazy **doc-folding** convention — bound the in-file Revision History (~8 rows / ≤3 kept) and relocate full history to a sibling Episodic `CHANGELOG.md` (`exclude_from_ai: true`). Renamed §6.4 to "Folding a document into a folder". |
 | 4.2     | 2026-07-10 | §6 recast as the unified Documentation Standard (frontmatter provenance + versioning + Progressive Disclosure splitting); added this frontmatter/Revision History. |
@@ -318,7 +319,7 @@ Place at the very top of the file:
 ---
 title: <Title>
 version: 1.0                     # bump MINOR for content, MAJOR for restructure
-last_validated: YYYY-MM-DD       # refresh on every non-trivial edit
+last_validated: YYYY-MM-DD       # date you last re-confirmed the CONTENT is correct
 official: false                  # true | false | unknown
 source: agent-generated          # URL | agent-generated | user-provided, origin unknown
 tags: [<retrieval tags>]
@@ -359,9 +360,14 @@ Directly under the title, restate the version and keep a visible changelog table
 ```
 
 On any non‑trivial edit: bump `version` (MINOR for content, MAJOR for restructure),
-refresh `last_validated`, add a Revision History row, and log the change to the weekly
-ledger. Version namespaces are **per‑document and independent** — two docs sharing a
-number (e.g. `v4.x`) are unrelated lineages, not a shared series.
+add a Revision History row, and log the change to the weekly ledger. Refresh
+`last_validated` **only when you re-confirm the content itself is correct** — it
+records the last content review, not the last keystroke. A mechanical or
+frontmatter-only edit (e.g. backfilling provenance fields, fixing a typo, retagging)
+still bumps `version` and adds a history row, but leaves `last_validated` unchanged so
+the field never overstates how recently the content was validated. Version namespaces
+are **per‑document and independent** — two docs sharing a number (e.g. `v4.x`) are
+unrelated lineages, not a shared series.
 
 **Bounding the Revision History (so it never becomes the growth vector).** The
 in‑file table is a convenience, not the system of record — `git log` and the weekly
@@ -403,7 +409,9 @@ Its `estimated_tokens` therefore stay **outside** the active token budget; only
 - Document created or updated → apply §6.1–6.3 (and fold into a folder per §6.4 if it
   outgrows one question / its token budget, or its Revision History passes ~8 rows).
 - External document introduced → ask for confirmation, then set `official`/`source`.
-- Agent‑generated documentation → `official: false` + today's `last_validated`.
+- Agent‑generated documentation → `official: false`; set `last_validated` to today
+  only when the content is genuinely authored/reviewed now (not for a mechanical
+  frontmatter backfill on pre‑existing content — see §6.3).
 - Existing files without frontmatter → flagged during Phase 0, filled later (non‑blocking).
 - **Defer option:** if the user cannot confirm origin immediately, mark `official: unknown`.
 
