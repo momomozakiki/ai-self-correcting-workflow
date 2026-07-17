@@ -80,10 +80,14 @@ trivial/routine → one-line note. Tags: `[design] [doc] [code] [workflow]
 
 **Documentation Standard (mandatory for every doc).** On creating or updating a
 doc, add the YAML frontmatter block (provenance + version) and a Revision History
-row; bump `version` and refresh `last_validated` on each non-trivial edit. For an
-external doc, ask "Is this from an official/authoritative source? URL?" and set
-`official`/`source` accordingly. Agent-generated docs get `official: false` +
-today's `last_validated` automatically. If unconfirmed, mark `official: unknown`.
+row; bump `version` on each non-trivial edit. Refresh `last_validated` **only when
+you re-confirm the content is correct** (a content review) — a mechanical or
+frontmatter-only edit leaves it unchanged, so it never overstates when the content was
+last validated. For an external doc, ask "Is this from an official/authoritative
+source? URL?" and set `official`/`source` accordingly. Agent-generated docs get
+`official: false` + today's `last_validated` when the content is authored/reviewed now
+(not for a frontmatter backfill on pre-existing content). If unconfirmed, mark
+`official: unknown`.
 Non-commentable formats (JSON, code) use a sidecar `.prov.md`. Split oversized docs
 per the Progressive Disclosure Guide. Full spec: `GUIDE.md` §6.
 
@@ -108,7 +112,7 @@ Markdown / HTML (place at the very top of the file):
 ---
 title: <Title>
 version: 1.0                     # bump MINOR for content, MAJOR for restructure
-last_validated: YYYY-MM-DD       # refresh on every non-trivial edit
+last_validated: YYYY-MM-DD       # date you last re-confirmed the CONTENT is correct
 official: false                  # true | false | unknown
 source: agent-generated          # URL | agent-generated | user-provided, origin unknown
 tags: [<retrieval tags>]

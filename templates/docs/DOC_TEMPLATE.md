@@ -23,7 +23,9 @@ estimated_tokens: <int>
       tags            Lowercase retrieval tags used by the Progressive Disclosure script.
       applies_when    When this doc should be pulled into context.
       estimated_tokens  Honest token estimate; feeds retrieval + the token-budget lint.
-  - On every non-trivial edit: bump version, refresh last_validated, add a Revision History row.
+  - On every non-trivial edit: bump version and add a Revision History row.
+  - Refresh last_validated ONLY when you re-confirm the content is correct (a content
+    review) — not for a mechanical / frontmatter-only edit. See GUIDE.md §6.3.
   - JSON / code files can't hold frontmatter — use a sidecar <file>.prov.md instead (GUIDE.md §6.2).
   - If this doc grows past its layer's token budget or covers more than one question,
     split it per docs/Progressive Disclosure Documentation Guide.md (§2, §5).
