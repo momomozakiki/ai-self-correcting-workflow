@@ -1,7 +1,7 @@
 ---
 title: Claude Code Hook Integration
-version: 1.8
-last_validated: 2026-07-10
+version: 1.9
+last_validated: 2026-07-18
 official: false
 source: agent-generated, describing this repo's own hooks/workflow_hook.py; hook-contract facts cross-checked against https://code.claude.com/docs/en/hooks
 tags: [hooks, claude-code, integration, workflow, dispatcher]
@@ -11,12 +11,13 @@ estimated_tokens: 5000
 
 # Claude Code Hook Integration
 *Adaptive Self‑Correcting Workflow – Implementation Guide*
-**Version 1.8** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
-**Last Validated**: 2026‑07‑10
+**Version 1.9** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
+**Last Validated**: 2026‑07‑18
 
 ## Revision History
 | Version | Date       | Change                                                                                                 |
 |---------|------------|--------------------------------------------------------------------------------------------------------|
+| 1.9     | 2026-07-18 | Added §5.1.1 documenting the `permissions.allow` allowlist that stops plan mode from prompting on every read-only `Bash` command. |
 | 1.8     | 2026-07-10 | Migrated to the unified Documentation Standard: SOURCE-PROVENANCE comment → YAML frontmatter; changelog moved from the comment's `Notes:` field into this table. |
 | 1.7     | 2026-07-10 | Realigned the guide with the real Python dispatcher and this repo's actual `.claude/workflow_config.json`; established as the golden reference for adopters. |
 | 1.6     | (prior)    | Described a different (Flutter/Dart) project — superseded.                                              |
@@ -327,6 +328,45 @@ each entry containing a `hooks` array of `{ type, command }` handlers. A flat
 - The `matcher` sits on the **group object**, not the handler. `PostToolUse`
   filters to `Edit|Write|MultiEdit`; `SessionStart` and `Stop` have no matcher
   (`Stop` doesn't support one).
+
+#### 5.1.1 Permissions — reducing plan‑mode approval prompts
+
+With **no `permissions` block**, Claude Code prompts for approval on every
+`Bash` command by default. Plan mode blocks the `Edit`/`Write`/`MultiEdit`
+tools but does **not** auto‑approve `Bash` — the harness can't know an arbitrary
+shell command is read‑only (a `Bash` call can redirect to a file, `sed -i`,
+`rm`, …), so it deliberately still asks. The result is that Phase‑0/planning
+commands (`git status`, `git log`, `git fetch`, `python -m unittest`) each
+trigger a prompt.
+
+The fix is an **allowlist** of the read‑only commands the workflow actually
+runs, added alongside `hooks` in [`.claude/settings.json`](../.claude/settings.json):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Read", "Grep", "Glob",
+      "Bash(git status:*)", "Bash(git log:*)", "Bash(git diff:*)",
+      "Bash(git fetch:*)", "Bash(git pull:*)", "Bash(git branch:*)",
+      "Bash(git remote:*)", "Bash(git rev-parse:*)", "Bash(git show:*)",
+      "Bash(python -m unittest:*)", "Bash(python --version)",
+      "Bash(cat:*)", "Bash(ls:*)"
+    ]
+  },
+  "hooks": { "…": "…" }
+}
+```
+
+- All entries are read‑only except `git fetch`/`git pull` — the workflow's
+  sanctioned Phase‑0 sync (F1), safe to allow.
+- **Extend it** with your project's own read‑only commands (linters, test
+  runners, package managers). Run the `/fewer-permission-prompts` skill to
+  auto‑scan transcripts and generate an allowlist from commands you actually use.
+- Do **not** use `bypassPermissions` to silence prompts — it removes them in
+  *every* mode, not just planning, and defeats plan mode's safety. Prefer
+  project `.claude/settings.json` for team‑shared rules, or
+  `.claude/settings.local.json` for personal, un‑committed ones.
 
 ### 5.2 `.claude/workflow_config.json`
 
