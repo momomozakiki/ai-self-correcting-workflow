@@ -100,6 +100,9 @@ per the Progressive Disclosure Guide. Full spec: `GUIDE.md` §6.
   closure summary.
 - **Update roadmap** if triggered.
 - **Commit & push:** `git add -A && git commit -m "Plan: <slug> – <summary>" && git push`.
+  Multi‑paragraph message → repeated `-m` flags or `git commit -F <file>`. Avoid
+  heredocs / `-F -` (the Bash safety layer can reject stdin‑fed commands) and a
+  bare `git commit` (it can open an editor and hang).
 - **Self-check:** not done until `UNFINISHED.md` is cleared, the ledger entry is
   written, and the commit is pushed.
 

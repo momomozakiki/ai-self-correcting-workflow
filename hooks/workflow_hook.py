@@ -502,7 +502,9 @@ def handle_stop(event: Dict[str, Any], config: Dict[str, Any],
         reminders.append(
             f"Working tree is dirty on branch `{gs['branch']}`. "
             "Phase 3 closure: commit & push before ending "
-            "(`git add -A && git commit && git push`)."
+            "(`git add -A && git commit -m \"<msg>\" && git push`; avoid a bare "
+            "`git commit`, which can open an editor and hang, and avoid heredocs "
+            "/ `-F -`)."
         )
 
     if state.get("source_changed") and not state.get("ledger_touched"):
