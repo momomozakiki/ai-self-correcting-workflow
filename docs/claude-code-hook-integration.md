@@ -1,6 +1,6 @@
 ---
 title: Claude Code Hook Integration
-version: 1.10
+version: 1.11
 last_validated: 2026-07-18
 official: false
 source: agent-generated, describing this repo's own hooks/workflow_hook.py; hook-contract facts cross-checked against https://code.claude.com/docs/en/hooks
@@ -11,12 +11,13 @@ estimated_tokens: 5000
 
 # Claude Code Hook Integration
 *Adaptive Self‑Correcting Workflow – Implementation Guide*
-**Version 1.10** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
+**Version 1.11** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
 **Last Validated**: 2026‑07‑18
 
 ## Revision History
 | Version | Date       | Change                                                                                                 |
 |---------|------------|--------------------------------------------------------------------------------------------------------|
+| 1.11    | 2026-07-18 | §3.2 Stop-reminder mirror: use the `git commit -m "<msg>"` form so an agent copying it can't hit a bare-`git commit` editor hang or a stdin/heredoc rejection. |
 | 1.10    | 2026-07-18 | §5.1.1: added read-only `gh` commands to the allowlist example and a note that writes (`gh pr merge`) stay gated and compound commands can still prompt. |
 | 1.9     | 2026-07-18 | Added §5.1.1 documenting the `permissions.allow` allowlist that stops plan mode from prompting on every read-only `Bash` command. |
 | 1.8     | 2026-07-10 | Migrated to the unified Documentation Standard: SOURCE-PROVENANCE comment → YAML frontmatter; changelog moved from the comment's `Notes:` field into this table. |

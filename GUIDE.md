@@ -1,6 +1,6 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 4.5
+version: 4.6
 last_validated: 2026-07-18
 official: true
 source: agent-generated
@@ -10,13 +10,14 @@ estimated_tokens: 6600
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 4.5 – Centralized, Configurable, Self‑Improving*
+*Version 4.6 – Centralized, Configurable, Self‑Improving*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
 ## Revision History
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
+| 4.6     | 2026-07-18 | §4 Phase-3 commit step: standardized on `git commit -m` and cautioned against heredocs / `-F -` (Bash-safety-layer rejection) and a bare `git commit` (editor hang). Mirrored in `hooks/workflow_hook.py`, `docs/claude-code-hook-integration.md`, and `SKILL.md`. |
 | 4.5     | 2026-07-18 | §6.3/§6.5: clarified `last_validated` semantics — it records the last **content** review, not the last edit. A mechanical/frontmatter-only edit bumps `version` + adds a history row but leaves `last_validated` unchanged. Resolves an internal contradiction; mirrored in `DOC_TEMPLATE.md` + `SKILL.md`. |
 | 4.4     | 2026-07-11 | §6.4: added a pointer to the Progressive Disclosure Guide's new §3.1 (optional distributed `SCOPE.md` scaling tier) and §5.1 (content-quality rules), harvested from an incoming AI-documentation guide. |
 | 4.3     | 2026-07-10 | §6.3/§6.4: added the lazy **doc-folding** convention — bound the in-file Revision History (~8 rows / ≤3 kept) and relocate full history to a sibling Episodic `CHANGELOG.md` (`exclude_from_ai: true`). Renamed §6.4 to "Folding a document into a folder". |
