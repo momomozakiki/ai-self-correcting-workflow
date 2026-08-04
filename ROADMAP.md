@@ -3,7 +3,7 @@
 Planned improvements to the workflow itself. The `SessionStart` hook parses the
 first `**Next action:**` line below and surfaces it at session start.
 
-**Next action:** Optional `main_branch` auto-detection via `git remote show origin` (currently defaults to `main`, overridable in config).
+**Next action:** `--self-test` subcommand that validates config against `schemas/config_schema.json` and prints a health report.
 
 ---
 
@@ -15,8 +15,10 @@ first `**Next action:**` line below and surfaces it at session start.
       interrupted closure survives a force-close.
 - [x] Opt-in F5 daily update check in `SessionStart` (`workflow_update_check`
       config; detection-only, once/day, off by default).
-- [ ] Optional `main_branch` auto-detection via `git remote show origin`
-      (currently defaults to `main`, overridable in config).
+- [x] `main_branch` auto-detection: resolve the default branch from the local
+      `refs/remotes/<remote>/HEAD` ref (no network), with an opt-in
+      `git remote show` fallback and an explicit `stop_hook.main_branch` pin
+      still taking precedence.
 - [ ] `--self-test` subcommand that validates config against
       `schemas/config_schema.json` and prints a health report.
 - [ ] Structured logging to a rotating debug file when `WORKFLOW_HOOK_DEBUG=1`.

@@ -84,9 +84,24 @@
           "default": 2
         },
         "main_branch": {
-          "type": "string",
-          "description": "Name of the main/protected branch. The dirty-tree commit reminder is suppressed when on this branch.",
+          "type": ["string", "null"],
+          "description": "Name of the main/protected branch. The dirty-tree commit reminder is suppressed when on this branch. An explicit non-empty value always wins over auto-detection; omit it (or set null/\"\") to let main_branch_autodetect resolve it.",
           "default": "main"
+        },
+        "main_branch_autodetect": {
+          "type": "boolean",
+          "description": "When main_branch is unset, detect the default branch from the repo instead of assuming 'main'. Reads the local ref refs/remotes/<main_branch_remote>/HEAD (no network); falls back to DEFAULT 'main' if that ref is absent.",
+          "default": true
+        },
+        "main_branch_remote": {
+          "type": "string",
+          "description": "Remote whose HEAD is consulted by main_branch_autodetect.",
+          "default": "origin"
+        },
+        "main_branch_probe_remote": {
+          "type": "boolean",
+          "description": "Allow auto-detection to fall back to `git remote show <main_branch_remote>`, which CONTACTS THE REMOTE. Off by default so the Stop hook never makes a network call.",
+          "default": false
         }
       }
     },

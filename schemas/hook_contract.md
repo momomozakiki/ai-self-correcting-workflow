@@ -19,7 +19,7 @@ See `GUIDE.md` §7 for the full behavioural spec.
 Per-session state lives at
 `{tempdir}/workflow_hook_state_{sanitized_session_id}.json` and holds
 `source_changed`, `ledger_touched`, `stop_block_count`, `doc_nudged`,
-`session_start_ts`.
+`main_branch_detected`, `session_start_ts`.
 
 ---
 
@@ -100,6 +100,23 @@ Otherwise: no output.
 Detection of the ledger reminder uses the **session state file**, not
 `git diff HEAD` (which would include pre-session changes). The breadcrumb and the
 commit reminder use live `git status`.
+
+**Main-branch resolution** (for the commit reminder), in precedence order:
+
+1. A non-empty `stop_hook.main_branch` — an explicit pin always wins.
+2. Auto-detection, unless `stop_hook.main_branch_autodetect` is false (default
+   true): `git symbolic-ref --short refs/remotes/{main_branch_remote}/HEAD`
+   (local ref, **no network**).
+3. `git remote show {main_branch_remote}` → its `HEAD branch:` line — **only**
+   when `stop_hook.main_branch_probe_remote` is true, because it contacts the
+   remote. A `(unknown)` HEAD is ignored.
+4. `main`.
+
+Resolution happens **after** the `stop_hook_active` / block-cap short-circuit, so
+a suppressed Stop makes no git calls, and the result is memoised in
+`main_branch_detected` (persisted even when the hook does not block) so one
+session probes at most once. Fail-soft: any git error falls through to the next
+candidate.
 
 **Phase-3 breadcrumb:** on a dirty tree the hook writes/refreshes
 `plans/UNFINISHED.md` (timestamp, branch, `git status --porcelain` file list, and

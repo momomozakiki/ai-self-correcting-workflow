@@ -103,6 +103,7 @@ def default_state() -> Dict[str, Any]:
         "ledger_touched": False,
         "stop_block_count": 0,
         "doc_nudged": False,
+        "main_branch_detected": None,  # memoised by resolve_main_branch() on first Stop
         "session_start_ts": time.time(),
     }
 
@@ -171,6 +172,83 @@ def git_status(project_root: Path) -> Dict[str, Any]:
         if len(parts) == 2:
             behind, ahead = parts[0], parts[1]
     return {"branch": branch, "dirty": dirty, "ahead": ahead, "behind": behind}
+
+
+def detect_main_branch(project_root: Path, remote: str = "origin",
+                       probe_remote: bool = False) -> Optional[str]:
+    """Best-effort detection of the repository's default branch.
+
+    Two probes, cheapest first:
+
+    1. ``git symbolic-ref refs/remotes/<remote>/HEAD`` -- a purely local ref
+       read (no network), set by ``git clone`` and refreshable with
+       ``git remote set-head <remote> --auto``.
+    2. ``git remote show <remote>`` -- authoritative but **contacts the
+       remote**, so it only runs when ``probe_remote`` is true.
+
+    Returns the branch name, or ``None`` when neither probe yields one (caller
+    falls back to :data:`DEFAULT_MAIN_BRANCH`). Never raises.
+    """
+    ref = _git(project_root, "symbolic-ref", "--short", f"refs/remotes/{remote}/HEAD")
+    if ref:
+        # "origin/main" -> "main"; a bare "main" (no prefix) is used as-is.
+        name = ref.split("/", 1)[1] if ref.startswith(remote + "/") else ref
+        if name and name != "HEAD":
+            return name
+
+    if not probe_remote:
+        return None
+
+    shown = _git(project_root, "remote", "show", remote)
+    for line in (shown or "").splitlines():
+        line = line.strip()
+        if line.startswith("HEAD branch:"):
+            name = line.split(":", 1)[1].strip()
+            # git prints "(unknown)" when the remote HEAD is not resolvable.
+            if name and not name.startswith("("):
+                return name
+    return None
+
+
+def resolve_main_branch(config: Dict[str, Any], project_root: Path,
+                        state: Optional[Dict[str, Any]] = None) -> str:
+    """Return the branch treated as "main" for the dirty-tree Stop reminder.
+
+    Precedence:
+
+    1. An explicit, non-empty ``stop_hook.main_branch`` -- always wins, so a
+       pinned config is never overridden by detection.
+    2. Auto-detection via :func:`detect_main_branch`, unless
+       ``stop_hook.main_branch_autodetect`` is false.
+    3. :data:`DEFAULT_MAIN_BRANCH`.
+
+    When ``state`` is supplied the detected value is memoised in it under
+    ``main_branch_detected`` so repeated Stop events in one session re-use the
+    first probe instead of shelling out to git again.
+    """
+    stop_cfg = config.get("stop_hook") or {}
+
+    explicit = stop_cfg.get("main_branch")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()
+
+    if not stop_cfg.get("main_branch_autodetect", True):
+        return DEFAULT_MAIN_BRANCH
+
+    if state is not None:
+        cached = state.get("main_branch_detected")
+        if isinstance(cached, str) and cached:
+            return cached
+
+    detected = detect_main_branch(
+        project_root,
+        remote=stop_cfg.get("main_branch_remote") or "origin",
+        probe_remote=bool(stop_cfg.get("main_branch_probe_remote")),
+    ) or DEFAULT_MAIN_BRANCH
+
+    if state is not None:
+        state["main_branch_detected"] = detected
+    return detected
 
 
 # --------------------------------------------------------------------------- #
@@ -490,10 +568,15 @@ def handle_stop(event: Dict[str, Any], config: Dict[str, Any],
     state = load_state(session_id)
 
     max_blocks = (config.get("stop_hook") or {}).get("max_blocks", DEFAULT_MAX_BLOCKS)
-    main_branch = (config.get("stop_hook") or {}).get("main_branch", DEFAULT_MAIN_BRANCH)
 
     if event.get("stop_hook_active") or state.get("stop_block_count", 0) >= max_blocks:
         return  # exit 0, no output
+
+    # Resolved after the short-circuit so a capped/re-entrant Stop costs no git calls.
+    cached_main = state.get("main_branch_detected")
+    main_branch = resolve_main_branch(config, project_root, state)
+    if state.get("main_branch_detected") != cached_main:
+        save_state(session_id, state)  # persist the probe even if we don't block
 
     reminders: List[str] = []
 

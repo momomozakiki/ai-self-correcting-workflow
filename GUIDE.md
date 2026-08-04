@@ -1,6 +1,6 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 4.6
+version: 4.7
 last_validated: 2026-07-18
 official: true
 source: agent-generated
@@ -10,13 +10,14 @@ estimated_tokens: 6600
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 4.6 – Centralized, Configurable, Self‑Improving*
+*Version 4.7 – Centralized, Configurable, Self‑Improving*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
 ## Revision History
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
+| 4.7     | 2026-08-04 | New §7.4: `main_branch` resolution order (explicit pin → local `refs/remotes/<remote>/HEAD` autodetect → opt-in `git remote show` probe → `main`), plus the `main_branch_detected` state key in §7.2. Adds `stop_hook.main_branch_autodetect` / `main_branch_remote` / `main_branch_probe_remote`. |
 | 4.6     | 2026-07-18 | §4 Phase-3 commit step: standardized on `git commit -m` and cautioned against heredocs / `-F -` (Bash-safety-layer rejection) and a bare `git commit` (editor hang). Mirrored in `hooks/workflow_hook.py`, `docs/claude-code-hook-integration.md`, and `SKILL.md`. |
 | 4.5     | 2026-07-18 | §6.3/§6.5: clarified `last_validated` semantics — it records the last **content** review, not the last edit. A mechanical/frontmatter-only edit bumps `version` + adds a history row but leaves `last_validated` unchanged. Resolves an internal contradiction; mirrored in `DOC_TEMPLATE.md` + `SKILL.md`. |
 | 4.4     | 2026-07-11 | §6.4: added a pointer to the Progressive Disclosure Guide's new §3.1 (optional distributed `SCOPE.md` scaling tier) and §5.1 (content-quality rules), harvested from an incoming AI-documentation guide. |
@@ -432,6 +433,7 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 - `source_changed` (bool) – any edit to a configured source directory this session.
 - `ledger_touched` (bool) – the current week’s ledger file was created or modified during the session.
 - `stop_block_count` (int) – how many times the Stop hook has blocked.
+- `main_branch_detected` (str | null) – the auto-detected default branch, memoised on the first `Stop` so one session probes git at most once (see §7.4).
 - Timestamp of session start (for stale cleanup).
 
 `SessionStart` clears stale state files older than 24 hours and resets flags.
@@ -457,7 +459,7 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 - Reads current state file.
 - If `stop_block_count >= max_blocks` (from config, default 2) or if `stop_hook_active` is true in the event payload, exits without blocking.
 - Otherwise, checks conditions:
-  - If working tree is dirty on a non‑main branch, prepare a commit reminder.
+  - If working tree is dirty on a branch other than the resolved main branch (§7.4), prepare a commit reminder.
   - If `source_changed` is true but `ledger_touched` is false, prepare a ledger reminder (for source‑code changes only; closure still mandates logging everything).
   - If the working tree is dirty on **any** branch, write a Phase‑3 breadcrumb to `plans/UNFINISHED.md` (see below) — this happens whether or not the hook blocks.
 - If any reminder is needed, increments `stop_block_count` in state, outputs `{"decision": "block", "reason": "..."}`, and exits 0. If no reminders, exits 0 with no output (allowing the session to end).
@@ -465,6 +467,19 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 **Phase‑3 breadcrumb:** on a dirty tree the hook writes/refreshes `plans/UNFINISHED.md` (timestamp, branch, `git status --porcelain` file list, pending closure steps) so the next `SessionStart` (F4) surfaces the unfinished work — durable even if the reminder is ignored or the session is force‑closed. The file starts with the marker `<!-- workflow-hook: auto-breadcrumb -->`; the hook overwrites only its own marked breadcrumb and **never** clobbers a human‑authored `UNFINISHED.md`. This directly closes the failure mode where a session ends mid‑closure leaving a dirty tree and no trace.
 
 **Important:** The Stop hook’s *ledger* detection relies on the session state file, not `git diff` against HEAD (which would include pre‑session changes). This ensures we only nag for things done *this session*. The dirty‑tree commit reminder and breadcrumb use live `git status`.
+
+### 7.4 Resolving the main branch
+
+The dirty‑tree commit reminder needs to know which branch is “home”, because a dirty tree there is expected rather than a missed Phase‑3 closure. Assuming `main` mis‑fires on the many repositories whose default branch is `master`, `trunk`, or `develop`, so the hook resolves it in this order:
+
+1. **Explicit pin** — a non‑empty `stop_hook.main_branch` always wins. Detection never overrides a deliberate config value.
+2. **Auto‑detection** (`stop_hook.main_branch_autodetect`, default **true**) — reads the local ref `refs/remotes/<main_branch_remote>/HEAD` via `git symbolic-ref`. This is a local ref read with **no network access**, written by `git clone` and refreshable with `git remote set-head origin --auto`.
+3. **Optional remote probe** — only when `stop_hook.main_branch_probe_remote` is true, falls back to `git remote show <remote>` and parses its `HEAD branch:` line. This **contacts the remote**, so it is off by default: the Stop hook must never stall session close on a network round‑trip.
+4. **Default** — `main`.
+
+The resolved value is memoised in the session state (`main_branch_detected`), so a session probes at most once even across repeated `Stop` events, and the probe is skipped entirely when `Stop` short‑circuits on `stop_hook_active` / the block cap. Fail‑soft throughout: a git error at any step falls through to the next candidate.
+
+> **Edge case:** a repo with no remote (or a stale `origin/HEAD`) yields no detection and lands on `main`. If such a project's default branch is `master`, pin `stop_hook.main_branch` explicitly — or run `git remote set-head origin --auto` once to populate the ref.
 
 ---
 

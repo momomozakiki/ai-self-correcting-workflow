@@ -413,6 +413,140 @@ class TestF5UpdateCheck(BaseCase):
         self.assertIsNone(notice)
 
 
+class TestMainBranchDetection(BaseCase):
+    """`stop_hook.main_branch` auto-detection (explicit pin > detect > 'main')."""
+
+    def _cfg(self, **stop_hook):
+        return {
+            "project_root": ".",
+            "source_directories": ["src"],
+            "documentation_directories": ["docs"],
+            "ledger": {"directory": "history"},
+            "env_check": {"tool_paths": {}},
+            "stop_hook": stop_hook,
+        }
+
+    def _stub_git(self, responses):
+        """Patch ``_git`` with a dict of arg-tuple-prefix -> return value."""
+        calls = []
+
+        def fake_git(root, *args):
+            calls.append(args)
+            for prefix, value in responses.items():
+                if args[:len(prefix)] == prefix:
+                    return value
+            return None
+
+        orig = workflow_hook._git
+        workflow_hook._git = fake_git
+        self.addCleanup(lambda: setattr(workflow_hook, "_git", orig))
+        return calls
+
+    def test_explicit_main_branch_wins_and_skips_detection(self):
+        calls = self._stub_git({("symbolic-ref",): "origin/master"})
+        branch = workflow_hook.resolve_main_branch(
+            self._cfg(main_branch="trunk"), self.project)
+        self.assertEqual(branch, "trunk")
+        self.assertEqual(calls, [])  # no probe at all
+
+    def test_blank_main_branch_falls_through_to_detection(self):
+        self._stub_git({("symbolic-ref",): "origin/master"})
+        branch = workflow_hook.resolve_main_branch(
+            self._cfg(main_branch="   "), self.project)
+        self.assertEqual(branch, "master")
+
+    def test_detects_from_local_remote_head_ref(self):
+        self._stub_git({("symbolic-ref",): "origin/develop"})
+        self.assertEqual(
+            workflow_hook.resolve_main_branch(self._cfg(), self.project), "develop")
+
+    def test_detection_makes_no_network_call_by_default(self):
+        calls = self._stub_git({})  # every probe fails
+        branch = workflow_hook.resolve_main_branch(self._cfg(), self.project)
+        self.assertEqual(branch, workflow_hook.DEFAULT_MAIN_BRANCH)
+        self.assertNotIn(("remote", "show", "origin"), calls)
+
+    def test_remote_show_fallback_only_when_opted_in(self):
+        self._stub_git({("remote", "show"): (
+            "* remote origin\n  Fetch URL: x\n  HEAD branch: master\n")})
+        self.assertEqual(
+            workflow_hook.resolve_main_branch(
+                self._cfg(main_branch_probe_remote=True), self.project),
+            "master")
+
+    def test_remote_show_unknown_head_falls_back_to_default(self):
+        self._stub_git({("remote", "show"): "  HEAD branch: (unknown)\n"})
+        self.assertEqual(
+            workflow_hook.resolve_main_branch(
+                self._cfg(main_branch_probe_remote=True), self.project),
+            workflow_hook.DEFAULT_MAIN_BRANCH)
+
+    def test_autodetect_disabled_uses_default(self):
+        calls = self._stub_git({("symbolic-ref",): "origin/master"})
+        self.assertEqual(
+            workflow_hook.resolve_main_branch(
+                self._cfg(main_branch_autodetect=False), self.project),
+            workflow_hook.DEFAULT_MAIN_BRANCH)
+        self.assertEqual(calls, [])
+
+    def test_custom_remote_name_is_used(self):
+        calls = self._stub_git({("symbolic-ref",): "upstream/trunk"})
+        self.assertEqual(
+            workflow_hook.resolve_main_branch(
+                self._cfg(main_branch_remote="upstream"), self.project), "trunk")
+        self.assertEqual(
+            calls[0], ("symbolic-ref", "--short", "refs/remotes/upstream/HEAD"))
+
+    def test_result_is_memoised_in_state(self):
+        calls = self._stub_git({("symbolic-ref",): "origin/master"})
+        state = workflow_hook.default_state()
+        cfg = self._cfg()
+        self.assertEqual(workflow_hook.resolve_main_branch(cfg, self.project, state),
+                         "master")
+        self.assertEqual(state["main_branch_detected"], "master")
+        # Second call re-uses the cache instead of probing again.
+        self.assertEqual(workflow_hook.resolve_main_branch(cfg, self.project, state),
+                         "master")
+        self.assertEqual(len(calls), 1)
+
+    def test_stop_suppresses_commit_reminder_on_detected_main(self):
+        """Dirty tree on `master` must not nag when master is the detected default."""
+        self.write_config(self._cfg())  # no explicit main_branch
+        workflow_hook.save_state(self.session_id, workflow_hook.default_state())
+
+        orig_status = workflow_hook.git_status
+        workflow_hook.git_status = lambda root: {
+            "branch": "master", "dirty": True, "ahead": None, "behind": None}
+        self.addCleanup(lambda: setattr(workflow_hook, "git_status", orig_status))
+        self._stub_git({("symbolic-ref",): "origin/master",
+                        ("status",): " M src/a.py"})
+
+        rc, out = run_hook({"hookEventName": "Stop", "session_id": self.session_id},
+                           project_dir=self.project)
+        self.assertIsNone(out)  # no commit reminder: master *is* main here
+        # ...but the breadcrumb still lands, and the probe is persisted.
+        self.assertTrue((self.project / "plans" / "UNFINISHED.md").is_file())
+        self.assertEqual(
+            workflow_hook.load_state(self.session_id)["main_branch_detected"],
+            "master")
+
+    def test_stop_still_reminds_on_feature_branch_with_detection(self):
+        self.write_config(self._cfg())
+        workflow_hook.save_state(self.session_id, workflow_hook.default_state())
+
+        orig_status = workflow_hook.git_status
+        workflow_hook.git_status = lambda root: {
+            "branch": "feat/x", "dirty": True, "ahead": None, "behind": None}
+        self.addCleanup(lambda: setattr(workflow_hook, "git_status", orig_status))
+        self._stub_git({("symbolic-ref",): "origin/master",
+                        ("status",): " M src/a.py"})
+
+        rc, out = run_hook({"hookEventName": "Stop", "session_id": self.session_id},
+                           project_dir=self.project)
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("feat/x", out["reason"])
+
+
 class TestDryRun(BaseCase):
     def test_dry_run_does_not_mutate_state(self):
         rc, out = run_hook(self.edit_event("src/a.py"), argv=["--dry-run"],
