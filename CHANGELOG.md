@@ -8,6 +8,18 @@ and are called out so adopting projects can adjust their `workflow_config.json`.
 ## [Unreleased]
 
 ### Added
+- **`main_branch` auto-detection.** The `Stop` hook no longer assumes the default
+  branch is `main`: `resolve_main_branch()` reads the local ref
+  `refs/remotes/<remote>/HEAD` (via `git symbolic-ref` — no network), so
+  `master`/`trunk`/`develop` repos stop getting a spurious commit reminder on
+  every close. New `stop_hook` keys: `main_branch_autodetect` (default **true**),
+  `main_branch_remote` (default `origin`), and `main_branch_probe_remote`
+  (default **false** — opt-in `git remote show` fallback, which contacts the
+  remote). An explicit `stop_hook.main_branch` still wins over detection, so
+  existing configs behave exactly as before; the result is memoised in the new
+  `main_branch_detected` state key so a session probes git at most once.
+  Documented in `GUIDE.md` §7.4, `docs/claude-code-hook-integration.md` §3.4, and
+  `schemas/hook_contract.md`.
 - **Stop-hook Phase-3 auto-breadcrumb.** When the working tree is dirty at
   session end (any branch), the `Stop` hook records `plans/UNFINISHED.md`
   (branch, uncommitted files, pending closure steps) so an interrupted closure

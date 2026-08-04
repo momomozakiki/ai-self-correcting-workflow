@@ -1,6 +1,6 @@
 ---
 title: Claude Code Hook Integration
-version: 1.11
+version: 1.12
 last_validated: 2026-07-18
 official: false
 source: agent-generated, describing this repo's own hooks/workflow_hook.py; hook-contract facts cross-checked against https://code.claude.com/docs/en/hooks
@@ -11,12 +11,13 @@ estimated_tokens: 5000
 
 # Claude Code Hook Integration
 *Adaptive Self‑Correcting Workflow – Implementation Guide*
-**Version 1.11** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
+**Version 1.12** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
 **Last Validated**: 2026‑07‑18
 
 ## Revision History
 | Version | Date       | Change                                                                                                 |
 |---------|------------|--------------------------------------------------------------------------------------------------------|
+| 1.12    | 2026-08-04 | New §3.4: `main_branch` resolution order (explicit pin → local `refs/remotes/<remote>/HEAD` → opt-in `git remote show` → `main`). Adds the three `stop_hook.main_branch_*` keys to §5.2/§5.3 and `main_branch_detected` to §4. |
 | 1.11    | 2026-07-18 | §3.2 Stop-reminder mirror: use the `git commit -m "<msg>"` form so an agent copying it can't hit a bare-`git commit` editor hang or a stdin/heredoc rejection. |
 | 1.10    | 2026-07-18 | §5.1.1: added read-only `gh` commands to the allowlist example and a note that writes (`gh pr merge`) stay gated and compound commands can still prompt. |
 | 1.9     | 2026-07-18 | Added §5.1.1 documenting the `permissions.allow` allowlist that stops plan mode from prompting on every read-only `Bash` command. |
@@ -255,7 +256,8 @@ Guards against an infinite block loop:
 include pre‑session changes). It short‑circuits (exit `0`) if `stop_hook_active`
 is set or `stop_block_count >= max_blocks`. Otherwise it assembles reminders when:
 
-1. the working tree is **dirty on a non‑`main_branch` branch** → commit & push
+1. the working tree is **dirty on a branch other than the resolved main branch**
+   (see §3.4) → commit & push
    (`git add -A && git commit -m "<msg>" && git push`; the reminder uses the `-m`
    form so an agent copying it can't hit a bare‑`git commit` editor hang or a
    stdin/heredoc rejection), and/or
@@ -264,6 +266,31 @@ is set or `stop_block_count >= max_blocks`. Otherwise it assembles reminders whe
 
 If any reminder applies (and the caps allow), it increments `stop_block_count`,
 saves state, and emits the block. Otherwise it exits `0` and the session ends.
+
+### 3.4 Which branch counts as "main"
+
+`resolve_main_branch()` decides which branch the dirty‑tree reminder treats as
+home. Hard‑coding `main` nags every `master`/`trunk`/`develop` repo on every
+close, so it resolves in precedence order:
+
+| Order | Source | Cost |
+|-------|--------|------|
+| 1 | `stop_hook.main_branch`, if non‑empty — an explicit pin always wins | none |
+| 2 | `git symbolic-ref --short refs/remotes/<remote>/HEAD` (unless `main_branch_autodetect` is `false`) | local ref read, **no network** |
+| 3 | `git remote show <remote>` → `HEAD branch:` — only if `main_branch_probe_remote` is `true` | **network round‑trip** |
+| 4 | `"main"` | none |
+
+`<remote>` comes from `stop_hook.main_branch_remote` (default `origin`).
+Resolution runs **after** the `stop_hook_active` / block‑cap short‑circuit, so a
+suppressed `Stop` costs no git calls, and the answer is memoised in the session
+state as `main_branch_detected` — one probe per session at most. Every step is
+fail‑soft: a git failure just falls through to the next candidate.
+
+The remote probe is opt‑in on purpose: `Stop` runs while the user is waiting for
+the session to close, and a hanging network call there is far worse than an
+occasional wrong branch guess. Step 2 covers the normal case, since `git clone`
+writes `refs/remotes/origin/HEAD` for you (`git remote set-head origin --auto`
+repopulates it if it is missing or stale).
 
 ---
 
@@ -281,6 +308,8 @@ State lives at:
 - `ledger_touched` — a file under `ledger.directory` was edited this session.
 - `doc_nudged` — the one‑time `PostToolUse` advisory has fired.
 - `stop_block_count` — number of `Stop` blocks emitted this session.
+- `main_branch_detected` — the auto‑detected default branch (`null` until the
+  first `Stop` resolves it), so detection runs once per session (§3.4).
 - `session_start_ts` — creation timestamp (used for stale purging).
 
 **Atomic writes**: written to a temp sibling then `os.replace`d into place.
@@ -405,7 +434,9 @@ This is the live config for this repo:
   },
   "stop_hook": {
     "max_blocks": 2,
-    "main_branch": "main"
+    "main_branch_autodetect": true,
+    "main_branch_remote": "origin",
+    "main_branch_probe_remote": false
   }
 }
 ```
@@ -423,7 +454,10 @@ the dispatcher and contract stay the same:
 | `roadmap_file` | Path (from repo root) to the roadmap holding the `**Next action:**` line. |
 | `ledger.directory` | Where weekly ledger files (`YYYY-Www.md`) live. |
 | `env_check.tool_paths` | Tools to verify at `SessionStart`. Each entry is `{ "path", "version_flag" }`; use `null`/`""` for an existence‑only check. Add your runtimes (node, go, …). |
-| `stop_hook.main_branch` | The branch on which a dirty tree is *not* nagged (commits there are expected to be intentional). |
+| `stop_hook.main_branch` | The branch on which a dirty tree is *not* nagged (commits there are expected to be intentional). **Omit it** to let auto‑detection resolve it (§3.4); set it only to pin a branch detection would get wrong. |
+| `stop_hook.main_branch_autodetect` | `true` (default) detects the default branch from `refs/remotes/<remote>/HEAD`; `false` restores the old "assume `main`" behaviour. Ignored when `main_branch` is pinned. |
+| `stop_hook.main_branch_remote` | Remote whose `HEAD` detection consults (default `origin`; set e.g. `upstream` on a fork). |
+| `stop_hook.main_branch_probe_remote` | `true` allows the `git remote show` fallback, which **contacts the remote**. Leave `false` unless your clones lack `origin/HEAD` and you accept a network call at session close. |
 | `stop_hook.max_blocks` | How many times `Stop` may re‑block before giving up (default 2). |
 
 > **`$CLAUDE_PROJECT_DIR`** in the `command` is provided by Claude Code and
