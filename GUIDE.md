@@ -1,22 +1,23 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 4.7
-last_validated: 2026-07-18
+version: 5.0
+last_validated: 2026-08-04
 official: true
 source: agent-generated
-tags: [workflow, governance, reference, hooks, provenance]
+tags: [workflow, governance, reference, hooks, provenance, runtime]
 applies_when: "Understanding, adopting, or modifying the Adaptive Self-Correcting Workflow itself."
-estimated_tokens: 6600
+estimated_tokens: 8200
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 4.7 – Centralized, Configurable, Self‑Improving*
+*Version 5.0 – Centralized, Configurable, Self‑Improving, Governed*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
 ## Revision History
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
+| 5.0     | 2026-08-04 | Governance integration (MAJOR — three new sections). §4 gains loop detection, reversibility and a Tier-0 line; new §12 maps the imported 21-step SOP onto Phase 0–3; new §13 documents the `.ai/` governance library; new §14 records the runtime assumptions (Claude Pro + Claude Code, no API key) that the tiering rests on. **This table now stands at 8 rows — at the next edit, fold it per §6.3 into a sibling `CHANGELOG.md` and keep the latest ≤3 rows plus a link.** |
 | 4.7     | 2026-08-04 | New §7.4: `main_branch` resolution order (explicit pin → local `refs/remotes/<remote>/HEAD` autodetect → opt-in `git remote show` probe → `main`), plus the `main_branch_detected` state key in §7.2. Adds `stop_hook.main_branch_autodetect` / `main_branch_remote` / `main_branch_probe_remote`. |
 | 4.6     | 2026-07-18 | §4 Phase-3 commit step: standardized on `git commit -m` and cautioned against heredocs / `-F -` (Bash-safety-layer rejection) and a bare `git commit` (editor hang). Mirrored in `hooks/workflow_hook.py`, `docs/claude-code-hook-integration.md`, and `SKILL.md`. |
 | 4.5     | 2026-07-18 | §6.3/§6.5: clarified `last_validated` semantics — it records the last **content** review, not the last edit. A mechanical/frontmatter-only edit bumps `version` + adds a history row but leaves `last_validated` unchanged. Resolves an internal contradiction; mirrored in `DOC_TEMPLATE.md` + `SKILL.md`. |
@@ -56,6 +57,12 @@ workflow-core/
 ├── GUIDE.md                      # This document (the full workflow reference)
 ├── CHANGELOG.md                  # Semantic versioning of workflow changes
 ├── ROADMAP.md                    # Planned improvements to the workflow itself
+├── .ai/                          # Governance library (§13) — this repo's own instance
+├── docs/
+│   ├── RETROSPECTIVE.md          # Mistakes → rules (the self-hardening loop)
+│   ├── governance-integration-decision.md   # Which controls are enforced, and why
+│   ├── claude-code-hook-integration/        # Hook integration guide (folded)
+│   └── self-growing-checklist-ecosystem/    # Imported v14 reference (folded)
 ├── history/                      # The workflow’s own ledger (practice what you preach)
 │   ├── FORMAT.md
 │   └── YYYY-Www.md
@@ -65,12 +72,13 @@ workflow-core/
 │   └── adaptive-workflow/
 │       └── SKILL.md              # Agent process manual
 ├── schemas/
-│   ├── hook_contract.md          # Validated I/O shapes
+│   ├── hook_contract.md          # Validated I/O shapes + --self-test contract
 │   └── config_schema.json        # Schema for project workflow_config.json
 ├── templates/
 │   ├── CLAUDE.md.fragment        # Blocks to include in a project’s CLAUDE.md
 │   ├── settings.json.hooks       # Hook definitions for .claude/settings.json
-│   └── workflow_config.json      # Default configuration (to be customized)
+│   ├── workflow_config.json      # Default configuration (to be customized)
+│   └── ai-library/               # Governance library scaffold for adopters
 ├── tests/
 │   └── test_hook.py              # Synthetic event tests for the hook dispatcher
 └── CONTRIBUTING.md               # How to propose improvements
@@ -157,6 +165,11 @@ Items marked with `[ ]` are actionable steps; the agent should tick them off men
 
 ### Phase 0 – Fixed Invariants (Always do first)
 
+> **Tier 0 — absolute prohibitions.** Never force-push a shared branch, never
+> commit secrets, never rewrite published history, never delete the ledger or plan
+> archive. These are not overrideable by config or by instruction. Full set:
+> `.ai/02-market-rules/prohibitions/`.
+
 - [ ] **F1 – Git sync**  
   `git fetch && git pull --rebase`.  
   Check for a dirty working tree; if dirty, ask user how to handle (continue, stash, commit, etc.).
@@ -214,6 +227,17 @@ For each bullet in the task‑specific plan, **implement, validate, and apply co
 #### Implementation & Validation
 - [ ] Write code / docs / design as planned.
 - [ ] Immediately run linter, formatter, and relevant tests. Fix failures before moving on.
+- [ ] **Verify reversibility before destructive work.** Git is the rollback
+  mechanism: make sure a clean commit checkpoint exists before anything hard to
+  undo. If an operation can't be reversed, say so *before* running it.
+- [ ] **Watch for loops.** If the same call repeats with identical arguments and
+  no progress, change the approach rather than retrying — vary the arguments,
+  read the error, or ask. The `PostToolUse` hook flags this at 3 consecutive
+  identical calls (§7.3), but noticing first is cheaper than being told.
+- [ ] **Never feed a program or message over heredoc stdin.** Write the script to
+  a file and run the file; use the editing tools for source changes. Shell and
+  tool layers mangle escape sequences, and the corruption is silent until a
+  pattern misses. Same root cause as the `git commit -F -` caveat in Phase 3.
 - [ ] If an obstacle arises, **log it**, propose an updated plan, await user approval, then continue.
 
 #### Conditional Update Triggers (apply **during and after** each change)
@@ -263,6 +287,12 @@ Log everything else that a reviewer would care about.
   - Append a closure entry summarizing the task.
 
 - [ ] **Update roadmap** if triggered (check completed item, adjust future epics, move finished epics to `## Completed Epics`).
+
+- [ ] **Retrospective** — if the task produced a mistake worth remembering, add an
+  entry to `docs/RETROSPECTIVE.md`. If the same mistake is already there, append
+  `(recurring)` to its heading; it now owes a rule file under `.ai/01-phases/` and
+  a checklist item in `SKILL.md`. `--self-test` reports recurring entries that are
+  still uncodified. Two occurrences is the threshold: one is noise, two is a pattern.
 
 - [ ] **Commit & push**  
   `git add -A`  
@@ -618,6 +648,123 @@ The following is a condensed, one‑page checklist for the AI agent. It mirrors 
 
 ---
 
+## 12. The Imported 21-Step SOP → Phase 0–3 Mapping
+
+The [Self-Growing Checklist Ecosystem v14](docs/self-growing-checklist-ecosystem/index.md)
+specifies a 21-step Master Execution Checklist. **It is not adopted as a replacement
+numbering** — Phase 0–3 stays canonical, and renumbering would break every archived
+plan, ledger entry and hook reference for no behavioural gain. Instead each step maps
+to the phase that already owns it, with its enforcement tier attached.
+
+Tiers: **live** = a hook or test enforces it · **convention** = the agent follows it,
+nothing blocks · **declarative** = recorded only, not enforceable in this runtime.
+The reasoning behind each assignment is in
+[`docs/governance-integration-decision.md`](docs/governance-integration-decision.md).
+
+| v14 step | What it asks for | Lands in | Tier |
+|---|---|---|---|
+| 1 | Synchronize source control | Phase 0 · F1 | live |
+| 2 | Check for pending work | Phase 0 · F1/F4 | live |
+| 3 | Check pending ratifications | Phase 0 · F4 (`UNFINISHED.md`) | live |
+| 4 | Validate the build environment | Phase 0 · F2 | live |
+| 5 | Check security vulnerabilities | Phase 2 (conditional on a lockfile) | convention |
+| 6 | Draft high-level plan | Phase 1 | convention |
+| 7 | Retrieve similar past context | Phase 0 · F3 + the weekly ledger | convention |
+| 8 | Load domain checklists | Phase 0 · F3 + `.ai/` manifests | convention |
+| 9 | Identify knowledge gaps / research | Phase 1 | convention |
+| 10 | Validate new knowledge | Phase 2 · Documentation Standard | convention |
+| 11 | Split plan into stages | Phase 1 | convention |
+| 12 | Iterative technical audit | Phase 2 · lint + tests | live |
+| 13 | Performance scrutiny | Phase 2 (optional) | convention |
+| 14 | Verify reversibility | Phase 2 · reversibility item | live |
+| 15 | Check for agent loops | Phase 2 · `PostToolUse` loop detection (§7.3) | live |
+| 16 | Verify test coverage | Phase 2 · test suite | live |
+| 17 | Stage and commit | Phase 3 | live |
+| 18 | Push & open PR | Phase 3 | convention |
+| 19 | Generate validation checklist | Phase 3 · the user reviews | convention |
+| 20 | Wait for human sign-off | Phase 3 · the user approves | convention |
+| 21 | Retrospective & grow the library | Phase 3 · retrospective item | live |
+
+Steps with no row here — cryptographic identity, delegation, shadow-AI detection,
+sandboxed execution, RAG quality metrics — are **declarative or dropped**. They
+presuppose an agent fleet, key infrastructure, or API access that this runtime does
+not have (§14). They are recorded in `.ai/` with the reason attached rather than
+faked.
+
+---
+
+## 13. The Governance Library (`.ai/`)
+
+A chunked rule library instantiated from v14 §5. Small files, one manifest per
+folder, loaded on demand — the same progressive-disclosure idea as §6, applied to
+rules instead of prose.
+
+```
+.ai/
+├── 00-system/              config, agent registry, autonomy boundaries, maturity tracker
+├── 01-phases/              one rule file per workflow step (Phase 0-3 + v14 step mapping)
+├── 02-market-rules/        immutable golden rules; prohibitions/ is Tier 0
+├── 05-domains/             technology rules      — empty, grows per retrospective
+├── 06-components/          blueprints            — empty, grows per retrospective
+├── 08-behavioral-metrics/  hook-written JSONL, and what is deliberately absent
+├── 09-variants/            forks awaiting ratification
+├── 10-ratification-archive/ decision history
+└── GROWTH.md               the three growth protocols + the self-hardening rule
+```
+
+**Every artifact declares an `enforcement_status`.** The rule is that no artifact
+may imply enforcement it doesn't have: a declarative field is written as `null` with
+its reason attached, never as a plausible-looking fake value. If you cannot name the
+hook or test that makes a rule *live*, it is `convention` — say so and mean it.
+
+**Seeded empty on purpose.** `05-domains/` and `06-components/` ship with manifests
+and nothing else. A rule nobody has hit yet is a guess; a rule harvested from a real
+mistake is knowledge. See `.ai/GROWTH.md` for the breadth / depth / blueprint
+protocols and the self-hardening rule (a mistake recorded twice becomes structure).
+
+**Provenance.** `00-system/` config files carry `.prov.md` sidecars per §6.2. Rule
+files don't — they embed a `provenance` block in the JSON, which is what the sidecar
+convention exists to substitute for. One provenance record per artifact, in the
+artifact wherever the format allows it.
+
+**Health.** `python hooks/workflow_hook.py --self-test` validates the config and
+reports a governance maturity level (1–5) derived from real checks, writing
+`00-system/maturity-tracker.json`. The level is reported, never enforced — a young
+repository is not a broken one.
+
+---
+
+## 14. Runtime Assumptions
+
+The workflow is shaped by what its runtime can actually do. Verified against
+official sources on 2026-08-04; **re-check these before trusting §12's tiering**,
+because two of them have already moved once.
+
+| Fact | Source |
+|------|--------|
+| Claude Pro ($20/mo, $17 annual) **includes Claude Code** | [claude.com/pricing](https://claude.com/pricing) |
+| Claude Code authenticates with the subscription login. A set `ANTHROPIC_API_KEY` **overrides it** and bills per token | [support 11145838](https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-or-max-plan) |
+| Sonnet 5 is the default; Opus 5 is *"the strongest model on Claude Pro"* | [Opus 5 announcement](https://www.anthropic.com/news/claude-opus-5) |
+| **On Pro, Fable 5 bills pay-as-you-go usage credits** — it is not covered by plan limits | [support 15424964](https://support.claude.com/en/articles/15424964-claude-fable-5-on-your-plan) |
+| `opus` → Opus 5 on the Anthropic API, but **only on Claude Code v2.1.219+** (before that it resolved to Opus 4.8) | [model-config](https://code.claude.com/docs/en/model-config) |
+| Rolling 5-hour session window + weekly caps, **separate weekly cap for Opus**, shared with the Claude app | [costs](https://code.claude.com/docs/en/costs) |
+
+**Model policy.** Sonnet 5 for routine work; `/model opus` for hard passes.
+**Fable 5 is a paid escalation on Pro and must never be a shipped default** — not in
+a skill, not in subagent frontmatter, not in an `ANTHROPIC_DEFAULT_*` variable.
+
+**What the constraints rule out.** No API key means no embeddings, no vector search
+and no judge model, so v14's RAG quality metrics are dropped rather than deferred.
+One local agent means cryptographic identity, delegation and shadow-AI detection have
+no counterparty. Finite, separately-metered quota makes "chunk large tasks" a cost
+control, not just hygiene.
+
+**The `ANTHROPIC_API_KEY` trap.** A key left in the environment silently moves
+billing off the subscription. `SessionStart` and `--self-test` both warn about it.
+Warning only — API-key auth is legitimate, just rarely what you meant here.
+
+---
+
 ## Appendix A: Templates
 
 ### ISO‑Week Filename
@@ -666,4 +813,4 @@ estimated_tokens: <int>
 
 ---
 
-*End of Version 4.1 – The Adaptive Self‑Correcting Workflow. The single source of truth, powered by its community.*
+*End of Version 5.0 – The Adaptive Self‑Correcting Workflow. The single source of truth, powered by its community.*

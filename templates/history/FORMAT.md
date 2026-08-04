@@ -19,6 +19,23 @@ thumb: *if a reviewer would care, log it.*
 ## Tag vocabulary
 `[design]` `[doc]` `[code]` `[workflow]` `[config]` `[decision]` `[data]`
 
+## Risk field (optional)
+
+A change that carries real risk may add one `**Risk:**` line using one of five
+fixed slugs, drawn from the CISA / Five Eyes agentic-AI risk categories:
+
+| Slug | Covers |
+|------|--------|
+| `privilege` | Permissions, access scope, credentials, anything that widens what an agent can reach |
+| `design` | Flawed planning or logic: missing validation, a gap in the workflow itself |
+| `behavioral` | The agent acting unpredictably — loops, retries, drift from instructions |
+| `structural` | Composition and interaction between agents or components; cascading failure |
+| `accountability` | Ownership, auditability, traceability — who is answerable, and can you tell later |
+
+The slugs are fixed even if upstream prose renames a category, so the ledger
+format never churns. Omit the line when a change carries no notable risk — an
+always-present field stops carrying signal.
+
 ## Entry format
 
 Substantial changes use the full form:
@@ -30,6 +47,7 @@ Substantial changes use the full form:
 ### [design] docs/artifact/Scale Indicator.dc.html
 - **What:** Reworked ODB reference into full weighing-terminal layout.
 - **Why:** Round-2 UI/UX pass.
+- **Risk:** design — the layout drives operator actions; a wrong control placement misleads.
 - **Refs:** plan `plans/archive/2026-07-08_scale-indicator/plan.md` · commit b30333d
 ```
 

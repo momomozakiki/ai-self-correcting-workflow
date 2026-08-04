@@ -10,6 +10,11 @@ lives in `.claude/workflow-core/GUIDE.md`; the agent operating manual is the
 `adaptive-workflow` skill (`.claude/workflow-core/skills/adaptive-workflow/SKILL.md`).
 Hooks provide ambient reminders — treat them as helpful nudges, not blockers.
 
+### Tier 0 — absolute prohibitions (never overrideable)
+- Never force-push a shared branch. Never commit secrets. Never rewrite published
+  history. Never delete the ledger or the plan archive.
+- Full set: `.ai/02-market-rules/prohibitions/` (see GUIDE §13).
+
 ### Fixed invariants — always do first (Phase 0)
 - **F1 Git sync:** `git fetch && git pull --rebase`. If the tree is dirty, ask
   the user how to proceed before changing anything.
@@ -29,7 +34,17 @@ Hooks provide ambient reminders — treat them as helpful nudges, not blockers.
   `history/YYYY-Www.md` (skip only trivial typo/whitespace-only edits). Add doc
   frontmatter (provenance + version) to any new or updated document.
 - **Close (Phase 3):** archive the plan, write the final ledger entry, update
-  the roadmap, then commit & push. You are **not done** until `UNFINISHED.md`
-  is cleared, the ledger entry is written, and the commit is pushed.
+  the roadmap, log any mistake worth remembering in the retrospective, then
+  commit & push. You are **not done** until `UNFINISHED.md` is cleared, the
+  ledger entry is written, and the commit is pushed.
+
+### Guards
+- **Reversibility:** git is the rollback mechanism — have a clean checkpoint
+  before anything hard to undo, and say so if an operation can't be reversed.
+- **Loops:** if a call repeats with identical arguments and no progress, change
+  the approach instead of retrying.
+- **No heredoc stdin:** write scripts to a file and run the file. Escapes get
+  mangled silently. For git use `git commit -m` or `-F <file>`, never `-F -`.
+- **Health check:** `python .claude/workflow-core/hooks/workflow_hook.py --self-test`.
 
 <!-- END adaptive-workflow fragment -->

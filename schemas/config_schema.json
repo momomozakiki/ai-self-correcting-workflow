@@ -105,6 +105,46 @@
         }
       }
     },
+    "loop_detection": {
+      "type": "object",
+      "description": "Agent loop detection (imported framework section 15.4). PostToolUse tracks a signature of (tool_name, tool_input); when the same call repeats consecutively at the threshold, the hook emits an advisory and appends a line to log_path. Advisory only -- it never blocks.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Master switch. When false, no signatures are tracked and nothing is logged.",
+          "default": true
+        },
+        "repeat_threshold": {
+          "type": "integer",
+          "minimum": 2,
+          "description": "Consecutive identical tool calls required before the advisory fires. Values below 2 are clamped to 2.",
+          "default": 3
+        },
+        "log_path": {
+          "type": "string",
+          "description": "Path (relative to project_root unless absolute) of the JSONL loop log. Parent directories are created on first write.",
+          "default": ".ai/08-behavioral-metrics/loop_detection.jsonl"
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "description": "Governance library locations, consumed by `--self-test`. See docs/governance-integration-decision.md for which controls are enforced versus merely recorded.",
+      "additionalProperties": false,
+      "properties": {
+        "library_root": {
+          "type": "string",
+          "description": "Root of the chunked governance library.",
+          "default": ".ai"
+        },
+        "maturity_tracker": {
+          "type": "string",
+          "description": "Path that `--self-test` rewrites with the derived maturity level. Generated file -- do not hand-edit.",
+          "default": ".ai/00-system/maturity-tracker.json"
+        }
+      }
+    },
     "workflow_update_check": {
       "type": "object",
       "description": "F5 daily update check for the vendored workflow-core submodule. Opt-in and notification-only: when enabled, SessionStart fetches the submodule at most once per day and reports if it is behind upstream. Never auto-applies the update.",

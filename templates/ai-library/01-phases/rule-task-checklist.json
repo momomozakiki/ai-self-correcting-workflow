@@ -1,0 +1,27 @@
+{
+  "id": "rule-task-checklist",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "category": "planning",
+  "type": "phase-rule",
+  "tier": 1,
+  "enforcement": "MANDATORY",
+  "enforcement_status": "convention",
+  "overrideable": false,
+  "workflow_phase": "1",
+  "maps_to_v14_step": 6,
+  "rule": "Produce a task-specific checklist with acceptance criteria before writing code.",
+  "condition": null,
+  "ai_action": "Assess scope, doc impact, provenance need and ledger steps; emit a concrete bullet checklist.",
+  "risk_source": "design",
+  "risk_weight": 5,
+  "provenance": {
+    "source": "agent-generated during the v14 integration",
+    "authored": "2026-08-04",
+    "basis": "docs/self-growing-checklist-ecosystem/ + GUIDE.md"
+  },
+  "tags": [
+    "planning",
+    "checklist"
+  ]
+}

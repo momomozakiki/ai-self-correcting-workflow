@@ -1,0 +1,61 @@
+{
+  "schema_note": "Fields marked declarative are intentionally null. Do not populate with placeholder values.",
+  "agents": [
+    {
+      "id": "local-claude-code",
+      "name": "Claude Code session (TEMPLATE)",
+      "purpose": "Maintain this repository under the Adaptive Self-Correcting Workflow.",
+      "owner": "TODO: your email",
+      "lifecycle_stage": "approved",
+      "runtime": {
+        "surface": "Claude Code CLI",
+        "auth": "Claude subscription (Pro) - no API key",
+        "default_model_alias": "sonnet",
+        "escalation_model_alias": "opus",
+        "paid_escalation": {
+          "alias": "fable",
+          "warning": "On Pro, Fable 5 bills pay-as-you-go usage credits. Never set as a default."
+        },
+        "session_id": null,
+        "session_id_note": "Populated per-session by the hook from the event payload; not persisted here."
+      },
+      "permissions": [
+        "repo:read",
+        "repo:write",
+        "git:local",
+        "git:push-topic-branch"
+      ],
+      "data_access_scope": [
+        "public",
+        "internal"
+      ],
+      "identity": {
+        "enforcement_status": "declarative",
+        "reason": "Single-operator runtime: one local Claude Code session authenticated by a Claude subscription, no API key, no second agent. Nothing to authenticate to, delegate to, or attest against. Field kept so an adopter with key infrastructure can populate it. See docs/governance-integration-decision.md.",
+        "did": null,
+        "spiffe_id": null,
+        "public_key": null,
+        "key_rotation": null
+      },
+      "trust_profile": {
+        "enforcement_status": "declarative",
+        "reason": "No certification body or attestation service in this runtime.",
+        "certification_status": null,
+        "behavioral_fingerprint": null
+      },
+      "delegations": {
+        "enforcement_status": "declarative",
+        "reason": "No second agent exists to delegate to. APS constraint dimensions (scope, spend, depth, time, reputation, values, reversibility) recorded in docs/self-growing-checklist-ecosystem/04-autonomy-and-governance.md.",
+        "entries": []
+      },
+      "governance_maturity": {
+        "level": null,
+        "note": "Computed by `--self-test`; see maturity-tracker.json."
+      }
+    }
+  ],
+  "shadow_ai_detection": {
+    "enforcement_status": "declarative",
+    "reason": "Meaningless for a single operator on their own machine; no fleet to scan."
+  }
+}

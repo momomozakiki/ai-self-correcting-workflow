@@ -1,0 +1,21 @@
+{
+  "id": "prohibition-force-push-shared",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "category": "prohibitions",
+  "type": "absolute-prohibition",
+  "tier": 0,
+  "enforcement": "ABSOLUTE",
+  "enforcement_status": "convention",
+  "enforcement_note": "No hook blocks these; they are honoured by the agent and reviewed by the user. Claude Code permission rules are the mechanism if you want a hard block.",
+  "overrideable": false,
+  "rule": "Never force-push to a shared or protected branch.",
+  "ai_action": "If a force-push to main or any shared branch is requested, HALT and explain the alternative (a new commit, or a force-push to your own topic branch after confirming nobody else has pulled it).",
+  "risk_source": "capability",
+  "risk_weight": 10,
+  "tags": [
+    "prohibition",
+    "tier0",
+    "absolute"
+  ]
+}

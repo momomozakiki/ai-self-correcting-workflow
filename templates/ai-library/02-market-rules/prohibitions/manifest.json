@@ -1,0 +1,26 @@
+{
+  "folder": "02-market-rules/prohibitions",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "tier": 0,
+  "overrideable": false,
+  "total_items": 4,
+  "items": [
+    {
+      "id": "prohibition-force-push-shared",
+      "file": "prohibition-force-push-shared.json"
+    },
+    {
+      "id": "prohibition-commit-secrets",
+      "file": "prohibition-commit-secrets.json"
+    },
+    {
+      "id": "prohibition-rewrite-published-history",
+      "file": "prohibition-rewrite-published-history.json"
+    },
+    {
+      "id": "prohibition-delete-ledger",
+      "file": "prohibition-delete-ledger.json"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "folder": "02-market-rules",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "subfolders": [
+    "prohibitions"
+  ],
+  "note": "Immutable golden rules. Only prohibitions are seeded; security/git-hygiene/performance folders grow per retrospective."
+}

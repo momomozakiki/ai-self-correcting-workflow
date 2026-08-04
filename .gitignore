@@ -11,3 +11,7 @@ workflow_hook_state_*.json
 # Editors / OS
 .DS_Store
 Thumbs.db
+
+# Hook-written runtime metrics: per-machine session noise, not project history.
+# The weekly ledger and docs/RETROSPECTIVE.md are the durable records.
+.ai/08-behavioral-metrics/*.jsonl

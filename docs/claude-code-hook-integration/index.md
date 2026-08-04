@@ -1,7 +1,7 @@
 ---
 title: Claude Code Hook Integration
-version: 1.12
-last_validated: 2026-07-18
+version: 1.13
+last_validated: 2026-08-04
 official: false
 source: agent-generated, describing this repo's own hooks/workflow_hook.py; hook-contract facts cross-checked against https://code.claude.com/docs/en/hooks
 tags: [hooks, claude-code, integration, workflow, dispatcher]
@@ -11,29 +11,26 @@ estimated_tokens: 5000
 
 # Claude Code Hook Integration
 *Adaptive Self‑Correcting Workflow – Implementation Guide*
-**Version 1.12** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
-**Last Validated**: 2026‑07‑18
+**Version 1.13** — *Describes the dispatcher shipped in this repo; doubles as a golden reference for adopters*
+**Last Validated**: 2026‑08‑04
 
 ## Revision History
 | Version | Date       | Change                                                                                                 |
 |---------|------------|--------------------------------------------------------------------------------------------------------|
+| 1.13    | 2026-08-04 | Loop detection (§2.4) and `--self-test` (§8) documented. §4's state-field list replaced by a pointer to `schemas/hook_contract.md`. Folded into a folder; history relocated. |
 | 1.12    | 2026-08-04 | New §3.4: `main_branch` resolution order (explicit pin → local `refs/remotes/<remote>/HEAD` → opt-in `git remote show` → `main`). Adds the three `stop_hook.main_branch_*` keys to §5.2/§5.3 and `main_branch_detected` to §4. |
 | 1.11    | 2026-07-18 | §3.2 Stop-reminder mirror: use the `git commit -m "<msg>"` form so an agent copying it can't hit a bare-`git commit` editor hang or a stdin/heredoc rejection. |
-| 1.10    | 2026-07-18 | §5.1.1: added read-only `gh` commands to the allowlist example and a note that writes (`gh pr merge`) stay gated and compound commands can still prompt. |
-| 1.9     | 2026-07-18 | Added §5.1.1 documenting the `permissions.allow` allowlist that stops plan mode from prompting on every read-only `Bash` command. |
-| 1.8     | 2026-07-10 | Migrated to the unified Documentation Standard: SOURCE-PROVENANCE comment → YAML frontmatter; changelog moved from the comment's `Notes:` field into this table. |
-| 1.7     | 2026-07-10 | Realigned the guide with the real Python dispatcher and this repo's actual `.claude/workflow_config.json`; established as the golden reference for adopters. |
-| 1.6     | (prior)    | Described a different (Flutter/Dart) project — superseded.                                              |
-| ≤ 1.3   | (prior)    | Described a hypothetical Node.js design — superseded.                                                   |
+
+*Full history: [`CHANGELOG.md`](CHANGELOG.md).*
 
 > This guide describes the **real** implementation in this repository — a single
-> stdlib‑Python dispatcher, [`hooks/workflow_hook.py`](../hooks/workflow_hook.py),
-> driven by [`.claude/workflow_config.json`](../.claude/workflow_config.json) and
-> wired up in [`.claude/settings.json`](../.claude/settings.json). Every config
+> stdlib‑Python dispatcher, [`hooks/workflow_hook.py`](../../hooks/workflow_hook.py),
+> driven by [`.claude/workflow_config.json`](../../.claude/workflow_config.json) and
+> wired up in [`.claude/settings.json`](../../.claude/settings.json). Every config
 > snippet and behavioural claim below is taken from those live artifacts, so the
 > doc works both as this repo's reference **and** as a golden template other
 > repos adapt (see [§5.3 Adapting for your repo](#53-adapting-for-your-repo)).
-> [`schemas/hook_contract.md`](../schemas/hook_contract.md) is the authoritative
+> [`schemas/hook_contract.md`](../../schemas/hook_contract.md) is the authoritative
 > I/O contract.
 
 ---
@@ -64,7 +61,7 @@ in control. A bug in the tooling can never break a session: the dispatcher is
 
 ## Implementation Architecture
 
-A **single Python dispatcher** ([`hooks/workflow_hook.py`](../hooks/workflow_hook.py))
+A **single Python dispatcher** ([`hooks/workflow_hook.py`](../../hooks/workflow_hook.py))
 serves all three events. It reads the event JSON from `stdin`, branches on
 `hookEventName` (`hook_event_name` is also accepted), and writes a JSON response
 to `stdout`. It:
@@ -205,6 +202,31 @@ If source changed, no doc was touched on this call, and no nudge has fired yet
 this session, it emits a **one‑time** advisory. The `doc_nudged` flag guards
 against repetition.
 
+### 2.4 Loop detection
+
+The same handler watches for the agent retrying itself into a corner. Every tool
+call is reduced to a signature —
+`sha256(tool_name + "\0" + json.dumps(tool_input, sort_keys=True))`, first 16 hex
+chars — and pushed onto a rolling 20‑entry window in the session state. When the
+run of *consecutive identical* signatures reaches `loop_detection.repeat_threshold`
+(default 3, clamped to a minimum of 2), the hook says so once and appends a line
+to `loop_detection.log_path`:
+
+```json
+{"timestamp": "2026-08-04T21:57:10+08:00", "session_id": "…", "tool_name": "Bash",
+ "signature": "be9fc650e7879079", "repeat_count": 3, "threshold": 3}
+```
+
+Judging on **arguments, not just the tool name** is the point: reading ten
+different files is work, reading the same file ten times is a loop. Changing any
+argument breaks the run. Each signature is announced at most once per session
+(`loop_hits`), so a genuinely necessary retry loop doesn't turn into a nag.
+`Stop` reports how many fired, pointing at `docs/RETROSPECTIVE.md`.
+
+**Advisory only.** Like every other `PostToolUse` output, it cannot block — the
+tool has already run. Set `loop_detection.enabled: false` to switch it off
+entirely.
+
 ---
 
 ## 3. `Stop` Hook — Phase‑3 Closure Reminder
@@ -302,15 +324,12 @@ State lives at:
 {tempfile.gettempdir()}/workflow_hook_state_<sanitized_session_id>.json
 ```
 
-**Fields** (see `default_state()`):
-
-- `source_changed` — a source‑directory file was edited this session.
-- `ledger_touched` — a file under `ledger.directory` was edited this session.
-- `doc_nudged` — the one‑time `PostToolUse` advisory has fired.
-- `stop_block_count` — number of `Stop` blocks emitted this session.
-- `main_branch_detected` — the auto‑detected default branch (`null` until the
-  first `Stop` resolves it), so detection runs once per session (§3.4).
-- `session_start_ts` — creation timestamp (used for stale purging).
+**Fields**: see the state-key table in
+[`schemas/hook_contract.md`](../../schemas/hook_contract.md), which is the authoritative
+in-repo contract and the only place the key list is maintained. It is not restated here —
+this document covers *integration* (settings wiring, deployment, platform behaviour); the
+contract covers *I/O shapes and state*. Keeping one list in one file is what stops the two
+from drifting apart.
 
 **Atomic writes**: written to a temp sibling then `os.replace`d into place.
 **Cleanup**: on `SessionStart`, state files older than 24h are deleted. If
@@ -326,7 +345,7 @@ Claude Code requires a **two‑level** structure per event: a *matcher‑group* 
 each entry containing a `hooks` array of `{ type, command }` handlers. A flat
 `{ "type", "command", "matcher" }` entry directly inside the event array is
 **invalid** and silently fails to register. This is the shape actually shipped in
-[`.claude/settings.json`](../.claude/settings.json):
+[`.claude/settings.json`](../../.claude/settings.json):
 
 ```json
 {
@@ -373,7 +392,7 @@ commands (`git status`, `git log`, `git fetch`, `python -m unittest`) each
 trigger a prompt.
 
 The fix is an **allowlist** of the read‑only commands the workflow actually
-runs, added alongside `hooks` in [`.claude/settings.json`](../.claude/settings.json):
+runs, added alongside `hooks` in [`.claude/settings.json`](../../.claude/settings.json):
 
 ```json
 {
@@ -505,10 +524,54 @@ the dispatcher and contract stay the same:
 
 ---
 
+## 8. `--self-test` — config validation & governance health
+
+Not a hook event. Run it by hand or in CI:
+
+```bash
+python hooks/workflow_hook.py --self-test
+```
+
+It is the **only** path in the dispatcher allowed to exit non‑zero, because a
+human or a CI job invokes it — never Claude Code. It reads no stdin.
+
+```text
+Adaptive Workflow -- self-test
+============================================================
+config: /repo/.claude/workflow_config.json
+root:   /repo
+
+[ ok ] config valid against schemas/config_schema.json
+[ ok ] weekly ledger history/2026-W32.md
+[ ok ] plans/UNFINISHED.md absent
+[ ok ] loop detection enabled
+[ ok ] every doc carries frontmatter
+[ ok ] tier-0 prohibitions: 4 defined
+[ ok ] retrospective has entries
+
+------------------------------------------------------------
+Governance maturity: level 5/5 (Optimized)
+```
+
+**Validation** uses a stdlib subset of JSON Schema (`type`, `properties`,
+`required`, `additionalProperties`, `enum`, `minimum`, `items`) so the repo keeps
+its no‑dependency promise. The root config object is deliberately open
+(`additionalProperties: true`) so a project can carry its own keys; nested blocks
+are closed, so a typo inside one is a real error rather than an extension point.
+
+**Exit code reflects validation only** — the maturity level is reported, never
+enforced. A young repository sits at level 1–2 and still exits 0. Full check‑to‑level
+mapping: [`schemas/hook_contract.md`](../../schemas/hook_contract.md).
+
+On a console that can't encode the report (Windows `cp1252` and the API‑key
+warning emoji), the output degrades to ASCII instead of crashing.
+
+---
+
 ## Official References
 
 - [Claude Code Hooks – Official Documentation](https://code.claude.com/docs/en/hooks)
-- Authoritative in‑repo contract: [`schemas/hook_contract.md`](../schemas/hook_contract.md)
+- Authoritative in‑repo contract: [`schemas/hook_contract.md`](../../schemas/hook_contract.md)
 - Behavioural spec: `GUIDE.md` §7
 
 ---

@@ -1,0 +1,21 @@
+{
+  "id": "prohibition-delete-ledger",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "category": "prohibitions",
+  "type": "absolute-prohibition",
+  "tier": 0,
+  "enforcement": "ABSOLUTE",
+  "enforcement_status": "convention",
+  "enforcement_note": "No hook blocks these; they are honoured by the agent and reviewed by the user. Claude Code permission rules are the mechanism if you want a hard block.",
+  "overrideable": false,
+  "rule": "Never delete or rewrite the change-history ledger or the plan archive.",
+  "ai_action": "The ledger and plans/archive/ are the audit trail. Correct an entry by appending, never by editing history away.",
+  "risk_source": "capability",
+  "risk_weight": 10,
+  "tags": [
+    "prohibition",
+    "tier0",
+    "absolute"
+  ]
+}

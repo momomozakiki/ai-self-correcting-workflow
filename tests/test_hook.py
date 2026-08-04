@@ -557,5 +557,257 @@ class TestDryRun(BaseCase):
         self.assertFalse(workflow_hook.state_path(self.session_id).exists())
 
 
+class TestLoopDetection(BaseCase):
+    """Repeated identical tool calls (v14 section 15.4). Advisory, never blocking."""
+
+    def bash_event(self, command):
+        return {"hookEventName": "PostToolUse", "session_id": self.session_id,
+                "tool_name": "Bash", "tool_input": {"command": command}}
+
+    def enable_loops(self, **overrides):
+        cfg = {
+            "project_root": ".",
+            "ledger": {"enabled": True, "directory": "history"},
+            "source_directories": ["src"],
+            "documentation_directories": ["docs"],
+            "env_check": {"tool_paths": {}},
+            "stop_hook": {"max_blocks": 2, "main_branch": "main"},
+            "loop_detection": {"enabled": True, "repeat_threshold": 3,
+                               "log_path": "metrics/loop.jsonl"},
+        }
+        cfg["loop_detection"].update(overrides)
+        self.write_config(cfg)
+        return self.project / "metrics" / "loop.jsonl"
+
+    def test_below_threshold_is_silent(self):
+        self.enable_loops()
+        for _ in range(2):
+            rc, out = run_hook(self.bash_event("pytest -q"), project_dir=self.project)
+            self.assertEqual(rc, 0)
+            self.assertIsNone(out)
+
+    def test_fires_once_at_threshold_and_logs(self):
+        log = self.enable_loops()
+        for _ in range(2):
+            run_hook(self.bash_event("pytest -q"), project_dir=self.project)
+
+        rc, out = run_hook(self.bash_event("pytest -q"), project_dir=self.project)
+        self.assertEqual(rc, 0)
+        self.assertIsNotNone(out)
+        self.assertIn("3x in a row", out["hookSpecificOutput"]["additionalContext"])
+
+        # Exactly one JSONL record, carrying the run length.
+        self.assertTrue(log.is_file())
+        records = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["repeat_count"], 3)
+        self.assertEqual(records[0]["tool_name"], "Bash")
+
+        # A fourth identical call must not re-report the same signature.
+        rc, out = run_hook(self.bash_event("pytest -q"), project_dir=self.project)
+        self.assertIsNone(out)
+        self.assertEqual(len(log.read_text(encoding="utf-8").splitlines()), 1)
+
+    def test_different_arguments_reset_the_run(self):
+        self.enable_loops()
+        for cmd in ("a", "a", "b", "a", "a"):
+            rc, out = run_hook(self.bash_event(cmd), project_dir=self.project)
+            self.assertIsNone(out, f"unexpected advisory after {cmd!r}")
+
+    def test_disabled_produces_nothing(self):
+        log = self.enable_loops(enabled=False)
+        for _ in range(5):
+            rc, out = run_hook(self.bash_event("pytest -q"), project_dir=self.project)
+            self.assertIsNone(out)
+        self.assertFalse(log.exists())
+
+    def test_threshold_below_two_is_clamped(self):
+        # A threshold of 1 would fire on every single call; clamp to 2.
+        self.enable_loops(repeat_threshold=1)
+        rc, out = run_hook(self.bash_event("x"), project_dir=self.project)
+        self.assertIsNone(out)
+        rc, out = run_hook(self.bash_event("x"), project_dir=self.project)
+        self.assertIsNotNone(out)
+
+    def test_stop_reports_loops_seen_this_session(self):
+        self.enable_loops()
+        for _ in range(3):
+            run_hook(self.bash_event("pytest -q"), project_dir=self.project)
+        rc, out = run_hook({"hookEventName": "Stop", "session_id": self.session_id},
+                           project_dir=self.project)
+        self.assertIsNotNone(out)
+        self.assertIn("Loop detection fired", out["reason"])
+
+    def test_missing_config_block_defaults_to_enabled(self):
+        # Regression: a config predating loop_detection must still work.
+        for _ in range(2):
+            run_hook(self.bash_event("pytest -q"), project_dir=self.project)
+        rc, out = run_hook(self.bash_event("pytest -q"), project_dir=self.project)
+        self.assertIsNotNone(out)
+        self.assertIn("3x in a row", out["hookSpecificOutput"]["additionalContext"])
+
+
+class TestSchemaValidator(unittest.TestCase):
+    """The stdlib JSON Schema subset used by --self-test."""
+
+    SCHEMA = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["name"],
+        "properties": {
+            "name": {"type": "string"},
+            "count": {"type": "integer", "minimum": 2},
+            "mode": {"type": "string", "enum": ["a", "b"]},
+            "nested": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"flag": {"type": "boolean"}},
+            },
+            "items": {"type": "array", "items": {"type": "string"}},
+            "nullable": {"type": ["string", "null"]},
+        },
+    }
+
+    def errors(self, instance):
+        return workflow_hook.validate_against_schema(instance, self.SCHEMA)
+
+    def test_valid_instance(self):
+        self.assertEqual(self.errors({
+            "name": "x", "count": 3, "mode": "a",
+            "nested": {"flag": True}, "items": ["p"], "nullable": None}), [])
+
+    def test_missing_required_key(self):
+        self.assertIn("missing required key 'name'", " ".join(self.errors({})))
+
+    def test_unknown_key_rejected(self):
+        self.assertIn("unknown key 'nope'", " ".join(self.errors({"name": "x", "nope": 1})))
+
+    def test_wrong_type(self):
+        self.assertIn("expected string", " ".join(self.errors({"name": 42})))
+
+    def test_enum_and_minimum(self):
+        joined = " ".join(self.errors({"name": "x", "mode": "z", "count": 1}))
+        self.assertIn("is not one of", joined)
+        self.assertIn("below the minimum", joined)
+
+    def test_nested_and_array_errors_report_paths(self):
+        joined = " ".join(self.errors({"name": "x", "nested": {"flag": "yes"},
+                                       "items": ["ok", 5]}))
+        self.assertIn("<root>.nested.flag", joined)
+        self.assertIn("<root>.items[1]", joined)
+
+    def test_booleans_are_not_integers(self):
+        # bool is a subclass of int in Python; the validator must not be fooled.
+        self.assertIn("expected integer", " ".join(self.errors({"name": "x", "count": True})))
+
+    def test_shipped_configs_validate(self):
+        schema = json.loads((REPO_ROOT / "schemas" / "config_schema.json").read_text(
+            encoding="utf-8"))
+        for rel in (".claude/workflow_config.json", "templates/workflow_config.json"):
+            with self.subTest(config=rel):
+                cfg = json.loads((REPO_ROOT / rel).read_text(encoding="utf-8"))
+                self.assertEqual(workflow_hook.validate_against_schema(cfg, schema), [])
+
+
+class TestSelfTest(BaseCase):
+    """--self-test exits non-zero on validation failure only, never on low maturity."""
+
+    def run_self_test(self):
+        buf = io.StringIO()
+        old_env = os.environ.get("CLAUDE_PROJECT_DIR")
+        os.environ["CLAUDE_PROJECT_DIR"] = str(self.project)
+        try:
+            with redirect_stdout(buf):
+                rc = workflow_hook.main(["--self-test"])
+        finally:
+            if old_env is None:
+                os.environ.pop("CLAUDE_PROJECT_DIR", None)
+            else:
+                os.environ["CLAUDE_PROJECT_DIR"] = old_env
+        return rc, buf.getvalue()
+
+    def test_valid_config_passes(self):
+        rc, out = self.run_self_test()
+        self.assertEqual(rc, 0)
+        self.assertIn("RESULT: PASS", out)
+
+    def test_low_maturity_still_passes(self):
+        # A bare project has no prohibitions and no retrospective; that is a young
+        # repository, not a broken one.
+        rc, out = self.run_self_test()
+        self.assertEqual(rc, 0)
+        self.assertIn("Governance maturity: level", out)
+
+    def test_unknown_root_key_is_allowed(self):
+        # The root schema sets additionalProperties: true on purpose, so a project
+        # can carry its own keys alongside the workflow's.
+        self.write_config({"project_root": ".", "project_specific_key": True})
+        rc, out = self.run_self_test()
+        self.assertEqual(rc, 0)
+        self.assertIn("RESULT: PASS", out)
+
+    def test_invalid_config_fails_and_names_the_key(self):
+        # Nested blocks *are* closed (additionalProperties: false), so a typo there
+        # is a real error rather than an extension point.
+        self.write_config({"project_root": ".",
+                           "stop_hook": {"max_blocks": 2, "mian_branch": "main"}})
+        rc, out = self.run_self_test()
+        self.assertEqual(rc, 1)
+        self.assertIn("RESULT: FAIL", out)
+        self.assertIn("mian_branch", out)
+
+    def test_wrong_type_fails(self):
+        self.write_config({"project_root": ".", "source_directories": "not-a-list"})
+        rc, out = self.run_self_test()
+        self.assertEqual(rc, 1)
+        self.assertIn("source_directories", out)
+
+    def test_writes_maturity_tracker(self):
+        self.write_config({
+            "project_root": ".",
+            "governance": {"library_root": ".ai", "maturity_tracker": "out/maturity.json"},
+        })
+        rc, _ = self.run_self_test()
+        self.assertEqual(rc, 0)
+        tracker = json.loads((self.project / "out" / "maturity.json").read_text(
+            encoding="utf-8"))
+        self.assertIn("maturity_level", tracker)
+        self.assertIn("checks", tracker)
+
+    def test_reports_missing_frontmatter(self):
+        (self.project / "docs" / "naked.md").write_text("# no frontmatter\n", encoding="utf-8")
+        rc, out = self.run_self_test()
+        self.assertEqual(rc, 0)  # a warning, not a validation failure
+        self.assertIn("naked.md", out)
+
+    def test_prov_sidecars_are_exempt_from_frontmatter(self):
+        (self.project / "docs" / "thing.json.prov.md").write_text(
+            "# Provenance for thing.json\n", encoding="utf-8")
+        rc, out = self.run_self_test()
+        self.assertEqual(rc, 0)
+        self.assertNotIn("thing.json.prov.md", out)
+
+
+class TestApiKeyWarning(unittest.TestCase):
+    def setUp(self):
+        self.old = os.environ.get("ANTHROPIC_API_KEY")
+
+    def tearDown(self):
+        if self.old is None:
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+        else:
+            os.environ["ANTHROPIC_API_KEY"] = self.old
+
+    def test_silent_when_unset(self):
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+        self.assertIsNone(workflow_hook.api_key_warning())
+
+    def test_warns_when_set(self):
+        os.environ["ANTHROPIC_API_KEY"] = "sk-ant-test"
+        warning = workflow_hook.api_key_warning()
+        self.assertIsNotNone(warning)
+        self.assertIn("subscription", warning)
+
+
 if __name__ == "__main__":
     unittest.main()

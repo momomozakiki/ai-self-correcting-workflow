@@ -15,6 +15,29 @@ this project's actual paths.
 
 ---
 
+## Tier 0 — absolute prohibitions
+
+Not overrideable by config, by instruction, or by you:
+
+- **Never force-push a shared or protected branch.** Propose a forward-fixing
+  commit, or force-push only your own topic branch after confirming nobody pulled it.
+- **Never commit secrets, credentials, tokens, or private keys.** If one is already
+  committed, say so plainly and treat it as compromised — rotation is required;
+  scrubbing history is not sufficient on its own.
+- **Never rewrite published history.** No rebase/amend/reset on pushed commits.
+- **Never delete or rewrite the ledger or the plan archive.** They are the audit
+  trail. Correct an entry by appending, never by editing history away.
+
+Full set with rationale: `.ai/02-market-rules/prohibitions/`.
+
+## Model choice (Claude Pro)
+
+Sonnet 5 handles routine work; `/model opus` for hard passes — Opus has its own
+weekly cap. **Fable 5 bills pay-as-you-go usage credits on Pro**, so never set it
+as a default anywhere. See GUIDE §14.
+
+---
+
 ## Phase 0 — Fixed Invariants (always, first)
 
 - **F1 Git sync.** `git fetch && git pull --rebase`. If the working tree is
@@ -57,6 +80,19 @@ For each checklist item: **implement → run linter/formatter/tests → fix
 failures before moving on.** If blocked, log the obstacle, propose an updated
 plan, await approval, continue.
 
+**Three execution guards:**
+
+- **Reversibility.** Git is the rollback mechanism — make sure a clean commit
+  checkpoint exists before anything hard to undo. If an operation can't be
+  reversed, say so *before* running it.
+- **Loops.** If a call repeats with identical arguments and no progress, change
+  the approach — vary the arguments, read the error, or ask. The hook flags this
+  at 3 consecutive identical calls, but noticing first is cheaper.
+- **No heredoc stdin.** Never feed a program or a multi-line message to a command
+  over a heredoc. Write the script to a file and run the file; use the editing
+  tools for source changes. Escapes get mangled silently. For git: `git commit -m`
+  (repeatable) or `-F <file>` — never `-F -`, a heredoc, or a bare `git commit`.
+
 **Conditional triggers (apply during and after each change):**
 
 | Trigger | Action |
@@ -68,7 +104,9 @@ plan, await approval, continue.
 | Non-obvious technical decision | Decision log in `plans/archive/<slug>/execution_log.md`. |
 | New significant directory with a distinct responsibility (large/monorepo projects) | Optionally add a `SCOPE.md` describing its role + DO/DON'T rules; link it from the parent's `SCOPE.md` (Progressive Disclosure Guide §3.1). Skip for small projects. |
 | Repeatable mistake | Warning in best practices / retro note. |
-| **Any intentional change** (not a trivial typo/whitespace edit) | **Append a ledger entry** to `history/YYYY-Www.md`. |
+| **Any intentional change** (not a trivial typo/whitespace edit) | **Append a ledger entry** to `history/YYYY-Www.md`. Add an optional `**Risk:**` line using one of `privilege \| design \| behavioral \| structural \| accountability` when the change carries real risk — omit it when it doesn't, or the field stops meaning anything. |
+| Mistake worth remembering | Entry in `docs/RETROSPECTIVE.md`. If it's already there, append `(recurring)` to the heading — it now owes a rule file under `.ai/01-phases/` and a line here. |
+| New rule harvested from a real mistake | Add the rule file, update the folder's `manifest.json` in the same edit, and set `enforcement_status` honestly (`live` only if a hook or test enforces it). See `.ai/GROWTH.md`. |
 | External doc without provenance | Ask for the official URL, then add the doc frontmatter (provenance fields). |
 | Completed task affects roadmap | Update the roadmap. |
 | Epic finished | Move it to `## Completed Epics`. |
@@ -99,6 +137,9 @@ per the Progressive Disclosure Guide. Full spec: `GUIDE.md` §6.
 - **Final ledger entry:** ensure all session changes are logged; append a
   closure summary.
 - **Update roadmap** if triggered.
+- **Retrospective:** log any mistake worth remembering; mark it `(recurring)` if
+  it has happened before, and codify it (rule file + a line in this skill).
+  `python hooks/workflow_hook.py --self-test` reports uncodified recurrences.
 - **Commit & push:** `git add -A && git commit -m "Plan: <slug> – <summary>" && git push`.
   Multi‑paragraph message → repeated `-m` flags or `git commit -F <file>`. Avoid
   heredocs / `-F -` (the Bash safety layer can reject stdin‑fed commands) and a

@@ -1,0 +1,93 @@
+{
+  "folder": "01-phases",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "total_items": 12,
+  "note": "One rule file per workflow step. workflow_phase maps to GUIDE Phase 0-3; maps_to_v14_step maps to the imported 21-step SOP (see GUIDE section 12).",
+  "items": [
+    {
+      "id": "rule-git-sync",
+      "file": "rule-git-sync.json",
+      "phase": "0",
+      "v14_step": 1,
+      "enforcement_status": "live"
+    },
+    {
+      "id": "rule-env-check",
+      "file": "rule-env-check.json",
+      "phase": "0",
+      "v14_step": 4,
+      "enforcement_status": "live"
+    },
+    {
+      "id": "rule-living-docs",
+      "file": "rule-living-docs.json",
+      "phase": "0",
+      "v14_step": 8,
+      "enforcement_status": "convention"
+    },
+    {
+      "id": "rule-unfinished-plan",
+      "file": "rule-unfinished-plan.json",
+      "phase": "0",
+      "v14_step": 2,
+      "enforcement_status": "live"
+    },
+    {
+      "id": "rule-task-checklist",
+      "file": "rule-task-checklist.json",
+      "phase": "1",
+      "v14_step": 6,
+      "enforcement_status": "convention"
+    },
+    {
+      "id": "rule-lint-test",
+      "file": "rule-lint-test.json",
+      "phase": "2",
+      "v14_step": 16,
+      "enforcement_status": "live"
+    },
+    {
+      "id": "rule-ledger-entry",
+      "file": "rule-ledger-entry.json",
+      "phase": "2",
+      "v14_step": 21,
+      "enforcement_status": "live"
+    },
+    {
+      "id": "rule-doc-standard",
+      "file": "rule-doc-standard.json",
+      "phase": "2",
+      "v14_step": 10,
+      "enforcement_status": "convention"
+    },
+    {
+      "id": "rule-loop-detection",
+      "file": "rule-loop-detection.json",
+      "phase": "2",
+      "v14_step": 15,
+      "enforcement_status": "live"
+    },
+    {
+      "id": "rule-reversibility",
+      "file": "rule-reversibility.json",
+      "phase": "2",
+      "v14_step": 14,
+      "enforcement_status": "live"
+    },
+    {
+      "id": "rule-no-heredoc-stdin",
+      "file": "rule-no-heredoc-stdin.json",
+      "phase": "2",
+      "v14_step": 12,
+      "enforcement_status": "convention"
+    },
+    {
+      "id": "rule-closure",
+      "file": "rule-closure.json",
+      "phase": "3",
+      "v14_step": 21,
+      "enforcement_status": "live"
+    }
+  ]
+}

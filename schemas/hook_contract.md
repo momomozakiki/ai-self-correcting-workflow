@@ -17,9 +17,22 @@ See `GUIDE.md` §7 for the full behavioural spec.
 | `session_id` | string | Identifies the session; used to name the per-session state file. If absent, the hook runs statelessly. |
 
 Per-session state lives at
-`{tempdir}/workflow_hook_state_{sanitized_session_id}.json` and holds
-`source_changed`, `ledger_touched`, `stop_block_count`, `doc_nudged`,
-`main_branch_detected`, `session_start_ts`.
+`{tempdir}/workflow_hook_state_{sanitized_session_id}.json`. **This table is the
+single source of truth for the state keys** — no other document restates it.
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `source_changed` | bool | A file under `source_directories` was edited this session. |
+| `ledger_touched` | bool | A file under `ledger.directory` was edited this session. |
+| `doc_nudged` | bool | The one-time `PostToolUse` documentation advisory has fired. |
+| `stop_block_count` | int | Number of `Stop` blocks emitted this session (capped by `stop_hook.max_blocks`). |
+| `main_branch_detected` | str \| null | Auto-detected default branch, memoised on the first `Stop` so a session probes git at most once. |
+| `recent_tool_calls` | list[str] | Rolling window (last 20) of tool-call signatures, for loop detection. |
+| `loop_hits` | list[str] | Signatures already reported this session, so one loop is announced once. |
+| `session_start_ts` | float | Creation timestamp, used for stale-state purging (>24h). |
+
+Written atomically (temp sibling + `os.replace`). With no `session_id`, the hook
+runs statelessly and none of the above persists.
 
 ---
 
@@ -73,10 +86,28 @@ Fail-soft: any git/network error leaves the check silent.
 Both the top-level `file_path` and every `edits[].file_path` are collected.
 
 **Behaviour:** set `source_changed` / `ledger_touched` flags by directory; emit
-a one-time advisory nudge if source changed without a doc file being touched.
-**Advisory only — never blocks.**
+a one-time advisory nudge if source changed without a doc file being touched;
+run loop detection (below). **Advisory only — never blocks.**
 
-**Output (only when nudging):**
+**Loop detection** (`loop_detection.enabled`, default true). A signature is
+`sha256(tool_name + "\0" + json.dumps(tool_input, sort_keys=True))`, truncated to
+16 hex chars, so "the same call again" is judged on arguments, not just the tool.
+Each call is appended to `recent_tool_calls`; the length of the run of identical
+signatures ending at the current call is compared to `repeat_threshold` (default
+3, **clamped to a minimum of 2** — a threshold of 1 would fire on every call).
+
+On reaching the threshold, and only the **first** time for a given signature
+(tracked in `loop_hits`), the hook appends one JSON line to `loop_detection.log_path`:
+
+```json
+{"timestamp": "2026-08-04T21:57:10+08:00", "session_id": "...", "tool_name": "Bash",
+ "signature": "be9fc650e7879079", "repeat_count": 3, "threshold": 3}
+```
+
+Changing any argument breaks the run. Log writes are fail-soft: an unwritable path
+silently skips the record and never affects the advisory.
+
+**Output (only when nudging and/or reporting a loop; both are joined by a blank line):**
 ```json
 { "hookSpecificOutput": { "hookEventName": "PostToolUse", "additionalContext": "…" } }
 ```
@@ -93,6 +124,8 @@ Otherwise: no output.
   → exit 0, no output (allow the session to end).
 - Dirty working tree on a non-`main_branch` branch → commit reminder.
 - `source_changed` && !`ledger_touched` → ledger reminder.
+- `loop_hits` non-empty → a reminder naming how many loops fired, pointing at
+  `docs/RETROSPECTIVE.md`.
 - **Dirty working tree on _any_ branch → write a Phase-3 breadcrumb** to
   `plans/UNFINISHED.md` (see below). This happens whether or not the hook blocks.
 - If any reminder: increment `stop_block_count`, emit a block decision.
@@ -139,3 +172,46 @@ Otherwise: no output.
 
 - `--dry-run` — compute and print output as normal but route state writes to a
   null session so nothing is persisted and no real block count increments.
+- `--self-test` — see below.
+
+---
+
+## `--self-test`
+
+The one path that reads no stdin and is **allowed to exit non-zero**, because a
+human or CI invokes it, never a hook event.
+
+```bash
+python hooks/workflow_hook.py --self-test
+```
+
+**Behaviour**, in order:
+
+1. Locate and parse `workflow_config.json`. Not found or unparseable → exit 1.
+2. Validate it against `schemas/config_schema.json` using a stdlib subset
+   validator (`type`, `properties`, `required`, `additionalProperties`, `enum`,
+   `minimum`, `items`). No `jsonschema` dependency. Note the **root object sets
+   `additionalProperties: true` deliberately**, so a project may carry its own
+   keys; nested blocks are closed, so a typo inside one is a real error.
+3. Run health checks: weekly ledger present, no stray `plans/UNFINISHED.md`,
+   loop detection enabled, every doc under `documentation_directories` carries
+   frontmatter (`*.prov.md` sidecars exempt — they *are* the provenance
+   mechanism), tier-0 prohibitions present, retrospective has entries, and every
+   `(recurring)` retrospective entry carries a `**Codified:**` line.
+4. Warn if `ANTHROPIC_API_KEY` is set, and print the `env_check` tool versions.
+5. Derive a cumulative maturity level and rewrite `governance.maturity_tracker`.
+
+| Level | Name | Requires (cumulatively) |
+|-------|------|--------------------------|
+| 1 | Ad-hoc | config parses |
+| 2 | Repeatable | config schema-valid; current ISO-week ledger exists |
+| 3 | Defined | no `UNFINISHED.md`; loop detection on; all docs carry frontmatter |
+| 4 | Managed | tier-0 prohibitions present; retrospective has entries |
+| 5 | Optimized | no uncodified recurring mistakes |
+
+**Exit code reflects validation only.** A young repository sits at level 1–2 and
+still exits 0; the level is reported, never enforced.
+
+**Output:** a plain-text report on stdout. If the console encoding cannot
+represent it (Windows `cp1252` and the warning emoji), the report degrades to
+ASCII rather than crashing or emitting mojibake.

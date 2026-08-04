@@ -1,0 +1,28 @@
+{
+  "id": "rule-git-sync",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "category": "pre-flight",
+  "type": "phase-rule",
+  "tier": 1,
+  "enforcement": "MANDATORY",
+  "enforcement_status": "live",
+  "overrideable": false,
+  "workflow_phase": "0",
+  "maps_to_v14_step": 1,
+  "rule": "Run git fetch and pull --rebase before any work; if the tree is dirty, ask the user how to proceed.",
+  "condition": null,
+  "ai_action": "Run `git fetch && git pull --rebase`. On a dirty tree, stop and ask.",
+  "risk_source": "design",
+  "risk_weight": 6,
+  "provenance": {
+    "source": "agent-generated during the v14 integration",
+    "authored": "2026-08-04",
+    "basis": "docs/self-growing-checklist-ecosystem/ + GUIDE.md"
+  },
+  "tags": [
+    "git",
+    "pre-flight",
+    "f1"
+  ]
+}

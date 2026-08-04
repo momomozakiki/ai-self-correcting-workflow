@@ -18,6 +18,11 @@ lives in `GUIDE.md`; the agent operating manual is the `adaptive-workflow` skill
 (`skills/adaptive-workflow/SKILL.md`). Hooks provide ambient reminders — treat
 them as helpful nudges, not blockers.
 
+### Tier 0 — absolute prohibitions (never overrideable)
+- Never force-push a shared branch. Never commit secrets. Never rewrite published
+  history. Never delete the ledger or the plan archive.
+- Full set: `.ai/02-market-rules/prohibitions/`.
+
 ### Fixed invariants — always do first (Phase 0)
 - **F1 Git sync:** `git fetch && git pull --rebase`. If the tree is dirty, ask
   the user how to proceed before changing anything.
@@ -47,3 +52,16 @@ them as helpful nudges, not blockers.
   vendor it without a dependency tree. Run: `python -m unittest discover -s tests`.
 - When changing hook behaviour, update `schemas/hook_contract.md`, `GUIDE.md`
   §7, and `skills/adaptive-workflow/SKILL.md` together to prevent drift.
+  `schemas/hook_contract.md` is the **only** place the state-key list lives.
+- **Health check:** `python hooks/workflow_hook.py --self-test` validates the
+  config and reports a governance maturity level. Exit code reflects validation
+  only — the level is reported, never enforced.
+- **Governance library** in `.ai/` (GUIDE §13). Every artifact declares
+  `enforcement_status`: `live` (a hook or test enforces it), `convention` (followed,
+  nothing blocks), `declarative` (recorded only). Never imply enforcement that
+  doesn't exist — write declarative fields as `null` with a reason, never faked.
+- **Runtime:** Claude Code on a Claude Pro subscription, no API key (GUIDE §14).
+  Sonnet 5 for routine work, `/model opus` for hard passes. **Fable 5 bills usage
+  credits on Pro — never make it a default.**
+- **No heredoc stdin.** Write scripts to a file and run the file; use the editing
+  tools for source changes. Escapes get mangled silently.

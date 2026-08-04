@@ -8,6 +8,58 @@ and are called out so adopting projects can adjust their `workflow_config.json`.
 ## [Unreleased]
 
 ### Added
+- **Governance library (`.ai/`) and the v14 integration.** Instantiated the
+  imported Self-Growing Checklist Ecosystem v14 as a chunked rule library, with an
+  adopter scaffold at `templates/ai-library/`. Every artifact declares an
+  `enforcement_status` — `live` (a hook or test enforces it), `convention`
+  (followed, nothing blocks), or `declarative` (recorded only, not enforceable on
+  Claude Code + a Claude Pro subscription with no API key). Declarative fields are
+  written as `null` with a reason rather than filled with plausible fakes.
+  `docs/governance-integration-decision.md` dispositions all 24 v14 sections and
+  records the runtime assumptions and source verification behind the tiering.
+  New `GUIDE.md` §12 (21-step → Phase 0–3 mapping), §13 (the library), §14
+  (runtime assumptions).
+- **Agent loop detection.** `PostToolUse` hashes `(tool_name, tool_input)` and
+  flags consecutive identical calls at `loop_detection.repeat_threshold`
+  (default 3, clamped to ≥2), logging one JSONL line per loop to
+  `loop_detection.log_path`. Judged on arguments, not just the tool, so reading
+  ten different files is work while reading one file ten times is a loop. Each
+  signature is announced once per session; `Stop` reports the session total.
+  Advisory only — it can't block, because the tool has already run. New config
+  block `loop_detection`; new state keys `recent_tool_calls`, `loop_hits`.
+- **`--self-test`.** Validates `workflow_config.json` against
+  `schemas/config_schema.json` using a stdlib JSON Schema subset (no
+  `jsonschema` dependency), runs workflow health checks, and derives a governance
+  maturity level 1–5 written to `.ai/00-system/maturity-tracker.json`. **Exit code
+  reflects validation only** — the maturity level is reported, never enforced. New
+  config block `governance` (`library_root`, `maturity_tracker`).
+- **`ANTHROPIC_API_KEY` warning** at `SessionStart` and in `--self-test`: a key in
+  the environment overrides the Claude subscription and bills per token. Warning
+  only, since API-key auth is legitimate.
+- **Retrospective and the self-hardening loop.** `docs/RETROSPECTIVE.md` activates
+  the previously unused `retrospective_file` config key. A mistake recorded twice
+  is marked `(recurring)` and owes a rule file; `--self-test` reports uncodified
+  recurrences and withholds maturity level 5 until none remain.
+- **Optional `**Risk:**` field on ledger entries**, using five fixed slugs
+  (`privilege`, `design`, `behavioral`, `structural`, `accountability`) drawn from
+  the CISA / Five Eyes agentic-AI risk categories. The slugs are stable even if
+  upstream prose renames a category. Convention only — nothing parses it.
+
+### Changed
+- **Documentation consolidated.** The imported v13/v14 framework (3,054 lines,
+  ~96% duplicated) folded into `docs/self-growing-checklist-ecosystem/` per
+  `GUIDE.md` §6.4 — five children each inside the ≤5,000-token Semantic budget,
+  plus an `index.md` and a sibling `CHANGELOG.md` holding the v13→v14 delta.
+  v13 retired; both flat files are recoverable from history (commit `6470a2c`).
+  `docs/claude-code-hook-integration.md` folded into a folder for the same reason
+  (its revision table passed ~8 rows) and bumped to v1.13.
+- **State-key list de-duplicated.** `schemas/hook_contract.md` is now the only
+  place it is maintained; the integration guide points at it instead of restating.
+- Removed the orphaned `docs/Adaptive Self‑Correcting Workflow.md` redirect stub —
+  a pointer to `GUIDE.md` with no inbound links, marked "never load for content".
+- `GUIDE.md` → **5.0**. Phase 0 gains a Tier-0 prohibitions block; Phase 2 gains
+  reversibility, loop-awareness and a no-heredoc-stdin guard; Phase 3 gains the
+  retrospective step.
 - **`main_branch` auto-detection.** The `Stop` hook no longer assumes the default
   branch is `main`: `resolve_main_branch()` reads the local ref
   `refs/remotes/<remote>/HEAD` (via `git symbolic-ref` — no network), so
