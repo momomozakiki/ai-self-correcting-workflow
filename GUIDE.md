@@ -1,7 +1,7 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 5.0
-last_validated: 2026-08-04
+version: 5.1
+last_validated: 2026-08-05
 official: true
 source: agent-generated
 tags: [workflow, governance, reference, hooks, provenance, runtime]
@@ -10,21 +10,19 @@ estimated_tokens: 8200
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 5.0 – Centralized, Configurable, Self‑Improving, Governed*
+*Version 5.1 – Centralized, Configurable, Self‑Improving, Governed*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
 ## Revision History
+Latest three only — the full history lives in [`GUIDE_CHANGELOG.md`](GUIDE_CHANGELOG.md),
+folded there per §6.3 when this table passed ~8 rows.
+
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
-| 5.0     | 2026-08-04 | Governance integration (MAJOR — three new sections). §4 gains loop detection, reversibility and a Tier-0 line; new §12 maps the imported 21-step SOP onto Phase 0–3; new §13 documents the `.ai/` governance library; new §14 records the runtime assumptions (Claude Pro + Claude Code, no API key) that the tiering rests on. **This table now stands at 8 rows — at the next edit, fold it per §6.3 into a sibling `CHANGELOG.md` and keep the latest ≤3 rows plus a link.** |
+| 5.1     | 2026-08-05 | New §7.5: why the Tier-0 guard is a `PreToolUse` hook rather than a `permissions.deny` rule, and why it emits both `deny` and `ask`. §7.1/§7.3 gain the `PreToolUse` event and the fail-open consequence; §13 records the four re-tierings. Revision History folded per §6.3. |
+| 5.0     | 2026-08-04 | Governance integration (MAJOR — three new sections). §4 gains loop detection, reversibility and a Tier-0 line; new §12 maps the imported 21-step SOP onto Phase 0–3; new §13 documents the `.ai/` governance library; new §14 records the runtime assumptions (Claude Pro + Claude Code, no API key) that the tiering rests on. |
 | 4.7     | 2026-08-04 | New §7.4: `main_branch` resolution order (explicit pin → local `refs/remotes/<remote>/HEAD` autodetect → opt-in `git remote show` probe → `main`), plus the `main_branch_detected` state key in §7.2. Adds `stop_hook.main_branch_autodetect` / `main_branch_remote` / `main_branch_probe_remote`. |
-| 4.6     | 2026-07-18 | §4 Phase-3 commit step: standardized on `git commit -m` and cautioned against heredocs / `-F -` (Bash-safety-layer rejection) and a bare `git commit` (editor hang). Mirrored in `hooks/workflow_hook.py`, `docs/claude-code-hook-integration.md`, and `SKILL.md`. |
-| 4.5     | 2026-07-18 | §6.3/§6.5: clarified `last_validated` semantics — it records the last **content** review, not the last edit. A mechanical/frontmatter-only edit bumps `version` + adds a history row but leaves `last_validated` unchanged. Resolves an internal contradiction; mirrored in `DOC_TEMPLATE.md` + `SKILL.md`. |
-| 4.4     | 2026-07-11 | §6.4: added a pointer to the Progressive Disclosure Guide's new §3.1 (optional distributed `SCOPE.md` scaling tier) and §5.1 (content-quality rules), harvested from an incoming AI-documentation guide. |
-| 4.3     | 2026-07-10 | §6.3/§6.4: added the lazy **doc-folding** convention — bound the in-file Revision History (~8 rows / ≤3 kept) and relocate full history to a sibling Episodic `CHANGELOG.md` (`exclude_from_ai: true`). Renamed §6.4 to "Folding a document into a folder". |
-| 4.2     | 2026-07-10 | §6 recast as the unified Documentation Standard (frontmatter provenance + versioning + Progressive Disclosure splitting); added this frontmatter/Revision History. |
-| 4.1     | (prior)    | Centralized, configurable, self‑improving baseline (pre‑frontmatter).                       |
 
 ---
 
@@ -456,7 +454,9 @@ Its `estimated_tokens` therefore stay **outside** the active token budget; only
 ## 7. Hook System Architecture
 
 ### 7.1 Dispatcher
-A single Python script (`hooks/workflow_hook.py`) is invoked for `SessionStart`, `PostToolUse`, and `Stop`. It reads the event from stdin JSON, loads the project’s `workflow_config.json`, and branches to the appropriate handler. Every handler is wrapped in a try‑except that ensures the process exits with code 0 (fail‑soft).
+A single Python script (`hooks/workflow_hook.py`) is invoked for `SessionStart`, `PreToolUse`, `PostToolUse`, and `Stop`. It reads the event from stdin JSON, loads the project’s `workflow_config.json`, and branches to the appropriate handler. Every handler is wrapped in a try‑except that ensures the process exits with code 0 (fail‑soft).
+
+Fail‑soft cuts both ways once one of those handlers is a guard: a crash in `PreToolUse` means the tool call proceeds. The dispatcher **fails open** and is not a security boundary. §7.5 states the limits; the `enforcement_note` on every artifact that depends on it repeats them, so `live` is never read as “unbypassable”.
 
 ### 7.2 Per‑Session State
 State is persisted across invocations using a temporary JSON file: `Path(tempfile.gettempdir()) / "workflow_hook_state_{session_id}.json"` (`session_id` sanitized). This file contains:
@@ -476,6 +476,15 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 - Parses the `**Next action:**` line from the configured roadmap file.
 - **F5 update check (opt-in):** when `workflow_update_check.enabled` is true and the configured `submodule_path` is a linked git repo, fetches it at most once per day (gated by `.ai/.workflow_check_date`) and, if it is behind `{remote}/{branch}`, appends a `🔄 Workflow updates available` notice. Detection only — never auto-applies. Off by default; see §9.
 - Outputs: `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "..."}}` and optionally a `sessionTitle`.
+
+#### PreToolUse
+- Matcher: `Bash|PowerShell` — both, because `Bash(...)` and `PowerShell(...)` are separate permission namespaces and a Bash‑only guard is bypassed by the other tool.
+- Splits the command on the separators the permission matcher recognises (`&&`, `||`, `|&`, `;`, `|`, `&`, newline) and evaluates every subcommand, so a prohibited call cannot hide behind a benign one.
+- Emits `permissionDecision: "deny"` for a force‑push whose destination resolves to a protected branch, and for a deletion aimed at `tier0_guard.protected_paths`.
+- Emits `permissionDecision: "ask"` for a history rewrite (`--amend`, `rebase`, `reset --hard`, `filter-branch`) and for heredoc stdin (`<<`, `-F -`, `--file=-`, bare `git commit`) — cases where the command alone cannot settle the question. A `deny` anywhere outranks an `ask` anywhere.
+- Emits **nothing** otherwise. Silence defers to the normal permission flow; returning `"allow"` would *approve* the call and auto‑approve every shell command in the session.
+- Holds no session state and consults git only after a force flag has already been parsed — it runs before every shell call, so it must cost nothing on the ones that are not pushes.
+- Full contract, including the guard table and the known limits, in `schemas/hook_contract.md`. Design rationale in §7.5.
 
 #### PostToolUse
 - Matcher: `Edit|Write|MultiEdit`.
@@ -510,6 +519,27 @@ The dirty‑tree commit reminder needs to know which branch is “home”, becau
 The resolved value is memoised in the session state (`main_branch_detected`), so a session probes at most once even across repeated `Stop` events, and the probe is skipped entirely when `Stop` short‑circuits on `stop_hook_active` / the block cap. Fail‑soft throughout: a git error at any step falls through to the next candidate.
 
 > **Edge case:** a repo with no remote (or a stale `origin/HEAD`) yields no detection and lands on `main`. If such a project's default branch is `master`, pin `stop_hook.main_branch` explicitly — or run `git remote set-head origin --auto` once to populate the ref.
+
+### 7.5 Why the Tier‑0 guard is a hook and not a deny rule
+
+Claude Code's `permissions.deny` is the stronger mechanism for anything a pattern can express: deny is evaluated before ask and allow, it applies in every permission mode including `bypassPermissions`, and a `PreToolUse` hook returning `"allow"` cannot loosen it. Where a pattern suffices, use a deny rule.
+
+It does not suffice here, for three reasons that are properties of the prohibitions rather than of the syntax:
+
+1. **Arguments reorder.** `Bash(git push --force*)` matches a literal prefix, so it misses `git push origin main --force` and `git push -f`. The docs warn directly that patterns constraining command *arguments* are fragile.
+2. **A deny rule carries no exceptions.** One broad enough to stop a force‑push to `main` also stops the same push to a topic branch you own. But the prohibition is *never force‑push a **shared** branch* — and whether a branch is shared is a fact about the repository, not about the command string.
+3. **Two shells.** `Bash(...)` and `PowerShell(...)` are separate namespaces. A rule list written for one is bypassed by the other.
+
+So the guard parses. Two decisions come out of it, and the split is the design:
+
+- **`deny`** where the prohibition is unambiguous from the command plus the repository — the destination branch is protected, the deletion target is inside the audit trail.
+- **`ask`** where it is not. Whether a commit is already published, or whether a particular heredoc is the dangerous kind, cannot be read off the command. Denying every candidate would block legitimate work; guessing would be worse. An `ask` still enforces — the call cannot proceed without a human — while a false positive costs one keystroke instead of a wall.
+
+That second decision is what made the guard worth building. `rule-no-heredoc-stdin` v1.0 declined a hook on the grounds that *“the false‑positive cost on legitimate heredocs was judged higher than the failure it prevents.”* That weighed a hard block. `ask` inverts the trade.
+
+**Limits, stated because a tier that overstates itself is the failure this library exists to prevent.** The dispatcher is fail‑soft, so an exception in the guard allows the call. Subcommand splitting does not honour quotes, so a separator inside a quoted string yields an extra fragment — over‑reporting, the safe direction. In `dontAsk` mode an `ask` becomes a silent block rather than a prompt. And the guard sees tool calls only, never a terminal opened outside Claude Code: OS‑level enforcement is the sandbox's job.
+
+One prohibition deliberately did **not** move. `prohibition-commit-secrets` stays `convention` because the guard sees the command, not the file contents being committed — it could only ever catch a secret typed inline, which would be enforcement theatre. Real coverage means scanning `git diff --cached`; that is on the roadmap, not claimed in the library.
 
 ---
 
@@ -727,6 +757,16 @@ imported spec, this section's step-mapping table to `01-phases/manifest.json`, a
 `.ai/` to its `templates/ai-library/` mirror. Written after an audit found seven
 taxonomy violations, a false step mapping and eight untraceable `live` claims in a
 library that had been correct-looking prose for exactly one commit.
+
+**Three prohibitions are now `live`, and one deliberately is not.** The Tier-0 set
+shipped as `convention` — prose the agent honours and the user reviews. The
+`PreToolUse` guard (§7.5) moved force-push-to-a-shared-branch and deleting the audit
+trail to a `deny`, and rewriting published history to an `ask`; `rule-no-heredoc-stdin`
+moved with them. `prohibition-commit-secrets` stayed `convention` because the guard
+sees the command, not the file contents being committed — the honest tier for a
+control that would only ever catch a secret typed inline. Every one of those artifacts
+states in its `enforcement_note` which decision it emits and that the dispatcher fails
+open, so `live` is never read as *unbypassable*.
 
 **Seeded empty on purpose.** `05-domains/` and `06-components/` ship with manifests
 and nothing else. A rule nobody has hit yet is a guess; a rule harvested from a real

@@ -41,12 +41,25 @@ first `**Next action:**` line below and surfaces it at session start.
       empty on purpose — see `.ai/GROWTH.md`).
 - [ ] `--self-test --json` for CI consumption, so a pipeline can assert a
       minimum maturity level without scraping the text report.
-- [ ] Fold `GUIDE.md`'s revision history into a sibling `CHANGELOG.md` — the
-      table hit 8 rows at v5.0 and trips the §6.3 threshold on the next edit.
-- [ ] Decide whether Tier-0 prohibitions should become a `PreToolUse` hard block
-      rather than a convention. Currently the agent honours them and the user
-      reviews; a real block would need a Bash-command parser, which is a
-      meaningful step up in complexity and false-positive risk.
+- [x] Fold `GUIDE.md`'s revision history into a sibling changelog — the table hit 8
+      rows at v5.0 and tripped the §6.3 threshold at the v5.1 edit. Relocated to
+      `GUIDE_CHANGELOG.md` (`exclude_from_ai: true`), latest 3 rows kept in place.
+      Named for its document rather than `CHANGELOG.md`, which at the repository
+      root would read as the project's changelog.
+- [x] Decide whether Tier-0 prohibitions should become a `PreToolUse` hard block
+      rather than a convention. **Done, and the answer was neither.** A
+      `permissions.deny` rule cannot express "shared branch" and is bypassed by
+      the PowerShell tool, so it took a parser after all — but emitting `ask`
+      alongside `deny` dissolved the false-positive risk this item was deferred
+      over. Force-push and audit-trail deletion `deny`; history rewrite and
+      heredoc `ask`; `prohibition-commit-secrets` stays `convention` (see below).
+      GUIDE §7.5, decision doc §8.
+- [ ] Secret scanner for `prohibition-commit-secrets` — the one Tier-0 prohibition
+      still unenforced. The `PreToolUse` guard sees the command, not the file
+      contents, so it would only ever catch a secret typed inline. Real coverage
+      means scanning `git diff --cached` on a `git commit`: entropy plus a small
+      known-prefix set (`sk-`, `ghp_`, `AKIA`, PEM headers), stdlib-only, with a
+      documented false-positive escape. Until it exists the tier stays honest.
 
 ## Active Epic: Adoption ergonomics
 

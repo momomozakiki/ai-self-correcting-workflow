@@ -809,5 +809,226 @@ class TestApiKeyWarning(unittest.TestCase):
         self.assertIn("subscription", warning)
 
 
+class TestTier0Guard(BaseCase):
+    """`PreToolUse` guard behind the Tier-0 prohibitions.
+
+    The guard exists because permission patterns cannot express "is this branch
+    shared" -- so every test here is a case a `permissions.deny` pattern gets
+    wrong: reordered arguments, the short flag, the other shell, a subcommand
+    hiding behind `&&`.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # An explicit main_branch pin wins over detection, so no test in this
+        # class shells out to git unless it stubs _git deliberately.
+        self.write_config({
+            "project_root": ".",
+            "source_directories": ["src"],
+            "documentation_directories": ["docs"],
+            "ledger": {"directory": "history"},
+            "env_check": {"tool_paths": {}},
+            "stop_hook": {"main_branch": "main"},
+        })
+
+    def shell_event(self, command, tool_name="Bash"):
+        return {"hookEventName": "PreToolUse", "session_id": self.session_id,
+                "tool_name": tool_name, "tool_input": {"command": command}}
+
+    def decide(self, command, tool_name="Bash"):
+        """Return (decision, reason) for ``command``; (None, None) when silent."""
+        rc, out = run_hook(self.shell_event(command, tool_name),
+                           project_dir=self.project)
+        self.assertEqual(rc, 0, "the guard must never exit non-zero")
+        if out is None:
+            return None, None
+        hso = out.get("hookSpecificOutput") or {}
+        return hso.get("permissionDecision"), hso.get("permissionDecisionReason")
+
+    # -- output shape ------------------------------------------------------ #
+    def test_decision_uses_the_documented_output_shape(self):
+        rc, out = run_hook(self.shell_event("git push --force origin main"),
+                           project_dir=self.project)
+        self.assertEqual(rc, 0)
+        hso = out["hookSpecificOutput"]
+        self.assertEqual(hso["hookEventName"], "PreToolUse")
+        self.assertIn(hso["permissionDecision"], ("deny", "ask"))
+        self.assertTrue(hso["permissionDecisionReason"].strip())
+
+    # -- guard_force_push -------------------------------------------------- #
+    def test_force_push_to_main_is_denied(self):
+        decision, reason = self.decide("git push --force origin main")
+        self.assertEqual(decision, "deny")
+        self.assertIn("prohibition-force-push-shared", reason)
+
+    def test_force_push_to_a_topic_branch_is_allowed(self):
+        self.assertEqual(self.decide("git push --force origin feat/x")[0], None)
+
+    def test_force_flag_after_the_refspec_is_denied(self):
+        # `Bash(git push --force*)` misses this; the whole reason for a parser.
+        self.assertEqual(self.decide("git push origin main --force")[0], "deny")
+
+    def test_short_force_flag_is_denied(self):
+        self.assertEqual(self.decide("git push -f origin main")[0], "deny")
+
+    def test_force_with_lease_is_still_a_force_push(self):
+        self.assertEqual(
+            self.decide("git push --force-with-lease origin main")[0], "deny")
+
+    def test_plus_refspec_is_a_force_push(self):
+        self.assertEqual(self.decide("git push origin +main")[0], "deny")
+
+    def test_colon_refspec_resolves_to_its_destination(self):
+        self.assertEqual(self.decide("git push --force origin HEAD:main")[0], "deny")
+        self.assertEqual(self.decide("git push --force origin main:feat/x")[0], None)
+
+    def test_non_forced_push_to_main_is_allowed(self):
+        self.assertEqual(self.decide("git push origin main")[0], None)
+
+    def test_powershell_gets_the_same_decision(self):
+        # A Bash-only deny list would be bypassed by the other shell entirely.
+        self.assertEqual(
+            self.decide("git push --force origin main", tool_name="PowerShell")[0],
+            "deny")
+
+    def test_force_push_hidden_behind_a_subcommand_is_denied(self):
+        self.assertEqual(
+            self.decide("git status && git push --force origin main")[0], "deny")
+
+    def test_bare_force_push_uses_the_current_branch(self):
+        calls = []
+
+        def fake_git(root, *args):
+            calls.append(args)
+            if args[:1] == ("rev-parse",):
+                return "main"
+            return None
+
+        orig = workflow_hook._git
+        workflow_hook._git = fake_git
+        self.addCleanup(lambda: setattr(workflow_hook, "_git", orig))
+        self.assertEqual(self.decide("git push --force")[0], "deny")
+        self.assertTrue(calls, "current branch should have been resolved")
+
+    def test_a_plain_command_never_shells_out_to_git(self):
+        """Parse first, resolve second -- this runs before every shell command."""
+        calls = []
+
+        def fake_git(root, *args):
+            calls.append(args)
+            return None
+
+        orig = workflow_hook._git
+        workflow_hook._git = fake_git
+        self.addCleanup(lambda: setattr(workflow_hook, "_git", orig))
+        self.decide("python -m unittest discover -s tests")
+        self.assertEqual(calls, [])
+
+    # -- guard_protected_paths --------------------------------------------- #
+    def test_deleting_the_ledger_is_denied(self):
+        decision, reason = self.decide("rm -rf history/")
+        self.assertEqual(decision, "deny")
+        self.assertIn("prohibition-delete-ledger", reason)
+
+    def test_deleting_the_plan_archive_is_denied(self):
+        self.assertEqual(self.decide("git rm -r plans/archive")[0], "deny")
+
+    def test_powershell_removal_of_the_ledger_is_denied(self):
+        self.assertEqual(
+            self.decide("Remove-Item -Recurse -Force history",
+                        tool_name="PowerShell")[0],
+            "deny")
+
+    def test_deleting_an_unprotected_path_is_allowed(self):
+        self.assertEqual(self.decide("rm -rf build/")[0], None)
+
+    def test_reading_the_ledger_is_allowed(self):
+        # The prohibition is against deletion; the ledger must stay readable.
+        self.assertEqual(self.decide("cat history/2026-W32.md")[0], None)
+
+    # -- guard_history_rewrite --------------------------------------------- #
+    def test_amend_escalates_rather_than_blocking(self):
+        decision, reason = self.decide("git commit --amend -m 'x'")
+        self.assertEqual(decision, "ask")
+        self.assertIn("prohibition-rewrite-published-history", reason)
+
+    def test_rebase_escalates(self):
+        self.assertEqual(self.decide("git rebase main")[0], "ask")
+
+    def test_hard_reset_escalates(self):
+        self.assertEqual(self.decide("git reset --hard HEAD~1")[0], "ask")
+
+    def test_an_ordinary_commit_is_allowed(self):
+        self.assertEqual(self.decide("git commit -m 'x'")[0], None)
+
+    # -- guard_heredoc ------------------------------------------------------ #
+    def test_heredoc_to_an_interpreter_escalates(self):
+        # The mistake this rule came from was `python - <<'PY'`, not a commit.
+        decision, reason = self.decide("python - <<'PY'\nprint(1)\nPY")
+        self.assertEqual(decision, "ask")
+        self.assertIn("rule-no-heredoc-stdin", reason)
+
+    def test_here_string_escalates(self):
+        self.assertEqual(self.decide("cat <<< 'hello'")[0], "ask")
+
+    def test_commit_message_on_stdin_escalates(self):
+        self.assertEqual(self.decide("git commit -F -")[0], "ask")
+        self.assertEqual(self.decide("git commit --file=-")[0], "ask")
+        self.assertEqual(self.decide("git commit -F /dev/stdin")[0], "ask")
+
+    def test_commit_message_from_a_file_is_allowed(self):
+        self.assertEqual(self.decide("git commit -F msg.txt")[0], None)
+
+    def test_bare_commit_escalates(self):
+        # A bare `git commit` opens an editor and hangs the session.
+        self.assertEqual(self.decide("git commit")[0], "ask")
+
+    def test_left_shift_is_not_a_heredoc(self):
+        self.assertEqual(self.decide("python -c 'print(2 << 3)'")[0], None)
+
+    # -- precedence, config and fail-soft ----------------------------------- #
+    def test_deny_wins_over_ask_in_a_compound_command(self):
+        self.assertEqual(
+            self.decide("git commit --amend && git push --force origin main")[0],
+            "deny")
+
+    def test_guard_can_be_disabled(self):
+        cfg = json.loads(
+            (self.project / ".claude" / "workflow_config.json").read_text("utf-8"))
+        cfg["tier0_guard"] = {"enabled": False}
+        self.write_config(cfg)
+        self.assertEqual(self.decide("git push --force origin main")[0], None)
+
+    def test_extra_protected_branches_are_honoured(self):
+        cfg = json.loads(
+            (self.project / ".claude" / "workflow_config.json").read_text("utf-8"))
+        cfg["tier0_guard"] = {"protected_branches": ["release"]}
+        self.write_config(cfg)
+        self.assertEqual(self.decide("git push --force origin release")[0], "deny")
+
+    def test_non_shell_tools_are_ignored(self):
+        rc, out = run_hook(
+            {"hookEventName": "PreToolUse", "session_id": self.session_id,
+             "tool_name": "Edit", "tool_input": {"file_path": "src/a.py"}},
+            project_dir=self.project)
+        self.assertEqual(rc, 0)
+        self.assertIsNone(out)
+
+    def test_missing_tool_input_is_silent(self):
+        rc, out = run_hook(
+            {"hookEventName": "PreToolUse", "session_id": self.session_id,
+             "tool_name": "Bash"},
+            project_dir=self.project)
+        self.assertEqual(rc, 0)
+        self.assertIsNone(out)
+
+    def test_the_guard_never_writes_session_state(self):
+        """It runs before every shell command; state churn would be constant."""
+        state_file = workflow_hook.state_path(self.session_id)
+        self.assertFalse(state_file.exists())
+        self.decide("git push --force origin main")
+        self.assertFalse(state_file.exists())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,7 @@
 {
   "folder": "01-phases",
-  "version": "1.1",
-  "last_updated": "2026-08-04",
+  "version": "1.2",
+  "last_updated": "2026-08-05",
   "total_items": 12,
   "note": "One rule file per workflow step. workflow_phase maps to GUIDE Phase 0-3; maps_to_v14_step maps to the imported 21-step SOP (see GUIDE section 12), or is null for rules self-hardened locally with no v14 ancestor. enforcement_status here is an index of the rule file's own value - tests/test_governance_library.py keeps the two identical.",
   "items": [
@@ -80,7 +80,7 @@
       "file": "rule-no-heredoc-stdin.json",
       "phase": "2",
       "v14_step": null,
-      "enforcement_status": "convention"
+      "enforcement_status": "live"
     },
     {
       "id": "rule-closure",

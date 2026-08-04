@@ -1,9 +1,13 @@
 # Hook I/O Contract
 
-The dispatcher (`hooks/workflow_hook.py`) is invoked by Claude Code for three
+The dispatcher (`hooks/workflow_hook.py`) is invoked by Claude Code for four
 hook events. For each, Claude writes a JSON event object to the hook's **stdin**
 and reads a JSON object from its **stdout**. The hook **always exits 0**
 (fail-soft): an error in the workflow tooling must never break a session.
+
+Fail-soft has a consequence worth stating plainly, because `PreToolUse` is a
+guard: a crash in a handler means the tool call is **allowed**. The dispatcher
+fails open. Nothing here is a security boundary.
 
 See `GUIDE.md` §7 for the full behavioural spec.
 
@@ -13,7 +17,7 @@ See `GUIDE.md` §7 for the full behavioural spec.
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `hookEventName` | string | `SessionStart` \| `PostToolUse` \| `Stop`. (`hook_event_name` is also accepted.) |
+| `hookEventName` | string | `SessionStart` \| `PreToolUse` \| `PostToolUse` \| `Stop`. (`hook_event_name` is also accepted.) |
 | `session_id` | string | Identifies the session; used to name the per-session state file. If absent, the hook runs statelessly. |
 
 Per-session state lives at
@@ -64,6 +68,66 @@ Fail-soft: any git/network error leaves the check silent.
   }
 }
 ```
+
+---
+
+## PreToolUse
+
+**Matcher (in settings.json):** `Bash|PowerShell`. Both shells, because
+`Bash(...)` and `PowerShell(...)` are separate permission namespaces — a
+Bash-only guard is bypassed by the other tool.
+
+**Input:**
+```json
+{
+  "hookEventName": "PreToolUse",
+  "session_id": "…",
+  "tool_name": "Bash",
+  "tool_input": { "command": "git push --force origin main" }
+}
+```
+
+**Behaviour — the Tier-0 guard.** Splits the command on the separators the
+permission matcher recognises (`&&`, `||`, `|&`, `;`, `|`, `&`, newline) and runs
+four guards over each subcommand, so a prohibited call cannot hide behind a
+benign one. Configured by `tier0_guard`; `enabled: false` disables it entirely.
+
+| Guard | Decision | Fires on |
+|-------|----------|----------|
+| `guard_force_push` | `deny` | a force flag (`--force*`, `-f`, a `+refspec`) whose destination resolves to a protected branch |
+| `guard_protected_paths` | `deny` | `rm` / `Remove-Item` / `git rm` targeting `tier0_guard.protected_paths` |
+| `guard_history_rewrite` | `ask` | `git commit --amend`, `git rebase`, `git reset --hard`, `git filter-branch` |
+| `guard_heredoc` | `ask` | heredoc / here-string, `-F -`, `--file=-`, `-F /dev/stdin`, bare `git commit` |
+
+A `deny` anywhere outranks an `ask` anywhere. `ask` is used wherever the command
+alone cannot settle the question — whether a commit is published, whether a
+heredoc is the dangerous kind — so a false positive costs one keystroke rather
+than blocking the session.
+
+**State:** none. This handler runs before every shell call and deliberately
+neither reads nor writes the session state file. Git is only consulted after a
+force flag has already been parsed out of the command.
+
+**Output — when a guard fires:**
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "Tier-0 prohibition-force-push-shared: …"
+  }
+}
+```
+
+**Output — otherwise: nothing.** Silence defers to the normal permission flow.
+Emitting `"allow"` would *approve* the call, auto-approving every shell command
+in the session; the guard never does this.
+
+**Known limits.** In `dontAsk` mode an `ask` becomes a silent block rather than a
+prompt. Subcommand splitting does not honour quotes, so a separator inside a
+quoted string can produce an extra fragment — over-reporting, which is the safe
+direction. And the guard sees tool calls only, never a terminal opened outside
+Claude Code; OS-level enforcement is the sandbox's job, not a hook's.
 
 ---
 

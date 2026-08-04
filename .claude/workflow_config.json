@@ -21,6 +21,13 @@
     "repeat_threshold": 3,
     "log_path": ".ai/08-behavioral-metrics/loop_detection.jsonl"
   },
+  "tier0_guard": {
+    "enabled": true,
+    "protected_branches": [],
+    "protected_paths": ["history", "plans/archive"],
+    "escalate_history_rewrite": true,
+    "escalate_heredoc": true
+  },
   "governance": {
     "library_root": ".ai",
     "maturity_tracker": ".ai/00-system/maturity-tracker.json"

@@ -22,6 +22,12 @@ them as helpful nudges, not blockers.
 - Never force-push a shared branch. Never commit secrets. Never rewrite published
   history. Never delete the ledger or the plan archive.
 - Full set: `.ai/02-market-rules/prohibitions/`.
+- **Three of these are enforced.** A `PreToolUse` guard (`hooks/workflow_hook.py`,
+  matcher `Bash|PowerShell`) *denies* a force-push resolving to a protected branch and
+  any deletion aimed at `history/` or `plans/archive/`, and *asks* before a history
+  rewrite or a heredoc. A block is the prohibition working, not an obstacle to route
+  around. Equally: no block is not permission — the guard fails open, sees tool calls
+  only, and does not check for **secrets** at all. GUIDE §7.5 has the limits.
 
 ### Fixed invariants — always do first (Phase 0)
 - **F1 Git sync:** `git fetch && git pull --rebase`. If the tree is dirty, ask

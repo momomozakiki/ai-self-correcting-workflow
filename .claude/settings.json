@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "plan",
     "allow": [
       "Read",
       "Grep",
@@ -27,6 +28,17 @@
   "hooks": {
     "SessionStart": [
       {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/hooks/workflow_hook.py\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
         "hooks": [
           {
             "type": "command",

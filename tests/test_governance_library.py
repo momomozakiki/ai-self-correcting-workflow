@@ -557,5 +557,71 @@ class TemplateParity(unittest.TestCase):
                     f"{rel}: identical in both trees -- remove it from PARITY_EXEMPT")
 
 
+# --------------------------------------------------------------------------- #
+# Settings wiring
+# --------------------------------------------------------------------------- #
+class SettingsWiring(unittest.TestCase):
+    """Four ``live`` tiers rest on the guard being *registered*, not just written.
+
+    ``resolve_enforcer`` proves ``guard_force_push`` exists in the source. It
+    cannot prove Claude Code ever calls it -- that depends on a hook entry in
+    ``.claude/settings.json``, a file no other test reads. Delete the entry and
+    the guard becomes unreachable code while every tier claim still resolves.
+    This class closes that gap.
+    """
+
+    def setUp(self):
+        self.settings_path = REPO_ROOT / ".claude" / "settings.json"
+        self.assertTrue(self.settings_path.is_file(),
+                        f"{self.settings_path} missing")
+        self.settings = load_json(self.settings_path)
+
+    def _pre_tool_use_entries(self):
+        return (self.settings.get("hooks") or {}).get("PreToolUse") or []
+
+    def test_a_pre_tool_use_hook_is_registered(self):
+        self.assertTrue(
+            self._pre_tool_use_entries(),
+            ".claude/settings.json registers no PreToolUse hook, so the Tier-0 "
+            "guard never runs -- four artifacts claim `live` on unreachable code")
+
+    def test_the_guard_covers_both_shells(self):
+        """A Bash-only matcher is bypassed by the PowerShell tool on Windows."""
+        matchers = [e.get("matcher") or "" for e in self._pre_tool_use_entries()]
+        for tool in ("Bash", "PowerShell"):
+            with self.subTest(tool=tool):
+                self.assertTrue(
+                    any(tool in m for m in matchers),
+                    f"no PreToolUse matcher covers {tool}: {matchers}")
+
+    def test_the_registered_command_is_the_dispatcher(self):
+        commands = [
+            h.get("command") or ""
+            for entry in self._pre_tool_use_entries()
+            for h in (entry.get("hooks") or [])
+        ]
+        self.assertTrue(
+            any("workflow_hook.py" in c for c in commands),
+            f"PreToolUse is registered but not to the dispatcher: {commands}")
+
+    def test_default_mode_is_plan(self):
+        self.assertEqual(
+            "plan", (self.settings.get("permissions") or {}).get("defaultMode"),
+            "permissions.defaultMode is what makes planning the session default; "
+            "rule-task-checklist's enforcement_note describes it")
+
+    def test_artifacts_citing_settings_are_backed_by_this_class(self):
+        """Nothing may name settings.json as an enforcer without these checks."""
+        for rel, artifact in artifacts():
+            refs = [str(r) for r in (artifact.get("enforced_by") or [])]
+            if not any(".claude/settings.json" in r for r in refs):
+                continue
+            with self.subTest(artifact=rel):
+                self.assertIn(
+                    "tests/test_governance_library.py::SettingsWiring", refs,
+                    f"{rel} cites .claude/settings.json but not the test that "
+                    "checks it, so the citation is unfalsifiable")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -30,6 +30,15 @@ Not overrideable by config, by instruction, or by you:
 
 Full set with rationale: `.ai/02-market-rules/prohibitions/`.
 
+**Three of these are enforced, not just written down.** A `PreToolUse` guard in
+`hooks/workflow_hook.py` inspects every Bash and PowerShell command: it *denies* a
+force-push whose destination resolves to a protected branch and any deletion aimed at
+the ledger or plan archive, and *asks* before a history rewrite or a heredoc — cases
+where the command alone cannot settle the question. Two things follow. Don't treat a
+block as a bug to route around; it is the prohibition working. And don't treat the
+absence of a block as permission: the guard fails open, sees tool calls only, and has
+nothing at all to say about **secrets** — that one is still on you.
+
 ## Model choice (Claude Pro)
 
 Sonnet 5 handles routine work; `/model opus` for hard passes — Opus has its own
@@ -92,6 +101,9 @@ plan, await approval, continue.
   over a heredoc. Write the script to a file and run the file; use the editing
   tools for source changes. Escapes get mangled silently. For git: `git commit -m`
   (repeatable) or `-F <file>` — never `-F -`, a heredoc, or a bare `git commit`.
+  The `PreToolUse` guard now *asks* on all four forms rather than blocking, because
+  the occasional legitimate heredoc shouldn't become a wall. Answering the prompt
+  isn't the fix — writing the file is.
 
 **Conditional triggers (apply during and after each change):**
 

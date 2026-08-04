@@ -128,6 +128,39 @@
         }
       }
     },
+    "tier0_guard": {
+      "type": "object",
+      "description": "PreToolUse guard behind the Tier-0 prohibitions. Inspects Bash and PowerShell commands and emits permissionDecision 'deny' (force-push to a protected branch, deleting the audit trail) or 'ask' (history rewrite, heredoc stdin). Fail-open: an exception in the handler allows the call. In dontAsk mode an 'ask' becomes a silent block.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Master switch. When false the guard evaluates nothing and never emits a decision.",
+          "default": true
+        },
+        "protected_branches": {
+          "type": "array",
+          "description": "Extra branches treated as shared, in addition to the branch resolved by stop_hook.main_branch / main_branch_autodetect. A force-push whose target resolves to one of these is denied.",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "protected_paths": {
+          "type": "array",
+          "description": "Paths no command may delete. Defaults to the configured ledger directory plus 'plans/archive' -- exactly what the delete-ledger prohibition names. Widen it deliberately; a Tier-0 prohibition should not grow by implication.",
+          "items": { "type": "string" }
+        },
+        "escalate_history_rewrite": {
+          "type": "boolean",
+          "description": "Ask before `git commit --amend`, `git rebase`, `git reset --hard` and `git filter-branch`. Whether the commits are published is not visible from the command, so the guard escalates rather than guessing.",
+          "default": true
+        },
+        "escalate_heredoc": {
+          "type": "boolean",
+          "description": "Ask before heredoc stdin, `-F -` / `--file=-` / `-F /dev/stdin`, and a bare `git commit`.",
+          "default": true
+        }
+      }
+    },
     "governance": {
       "type": "object",
       "description": "Governance library locations, consumed by `--self-test`. See docs/governance-integration-decision.md for which controls are enforced versus merely recorded.",

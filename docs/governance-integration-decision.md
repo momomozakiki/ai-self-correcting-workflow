@@ -1,7 +1,7 @@
 ---
 title: Governance Integration Decision Record (v14 → workflow-core)
-version: 1.1
-last_validated: 2026-08-04
+version: 1.2
+last_validated: 2026-08-05
 official: true
 source: agent-generated
 tags: [governance, decision-record, adr, enforcement, provenance, v14]
@@ -17,6 +17,7 @@ estimated_tokens: 2400
 |---------|------------|----------|
 | 1.0     | 2026-08-04 | Initial. Dispositions all 24 sections of the imported v14 framework against the real runtime; records the source-verification results and the runtime assumptions they rest on. |
 | 1.1     | 2026-08-05 | Audit of v1.0's own tier claims (see §6). Two re-tiers: step 1 git sync **live → convention**, step 10 documentation standard **convention → live**. Seven risk-taxonomy violations and one false v14 step mapping corrected. `tests/test_governance_library.py` added so the tier claims in this record are now checked rather than asserted. |
+| 1.2     | 2026-08-05 | New §8: enforcing the Tier-0 prohibitions with a `PreToolUse` guard, and why `permissions.deny` lost to it. Three prohibitions and `rule-no-heredoc-stdin` move **convention → live**; `prohibition-commit-secrets` deliberately does not. Old §8 renumbered to §9. |
 
 ---
 
@@ -168,7 +169,72 @@ the imported band does not fit, and `RiskTaxonomy.test_risk_weight_is_in_band_or
 accepts an out-of-band weight only when one is present. It also rejects a note on an
 in-band weight, so the field cannot become boilerplate.
 
-## 8. Re-checking this record
+## 8. Enforcing the Tier-0 prohibitions (2026-08-05)
+
+§4's row for v14 §12.2 already named the real local mechanism: *"Claude Code permission
+modes plus `PreToolUse` hooks."* Until now nothing used it, so all four Tier-0
+prohibitions sat at `convention`. Three moved to `live`. The choice of mechanism is the
+part worth recording, because the obvious answer was wrong.
+
+**`permissions.deny` is the stronger tool, and it does not fit.** Deny is evaluated
+before ask and allow, applies in every permission mode including `bypassPermissions`,
+and a `PreToolUse` hook returning `"allow"` cannot loosen it — for anything a pattern
+can express, a deny rule beats a hook. Three properties of *these* prohibitions defeat
+it:
+
+1. **Patterns anchor on a literal prefix.** `Bash(git push --force*)` misses
+   `git push origin main --force` and `git push -f`. The official docs carry an explicit
+   warning that patterns constraining command *arguments* are fragile, with near-identical
+   examples.
+2. **A deny rule carries no exceptions.** One broad enough to stop a force-push to `main`
+   also stops the same push to a topic branch you own. The prohibition is *never
+   force-push a **shared** branch* — and shared-ness is a fact about the repository, not
+   about the command string.
+3. **Two shells.** `Bash(...)` and `PowerShell(...)` are separate namespaces. On Windows a
+   Bash-only rule list is bypassed by the tool the agent reaches for first.
+
+Several candidate patterns were also simply dead. One spanned a pipe, which the matcher
+splits into independently-checked subcommands, so it could never have matched anything —
+a rule that reads like enforcement and is not. That is the failure mode §6 was written
+about, and it nearly recurred here in a different costume.
+
+**So: a parser, emitting two decisions.** `deny` where the command plus the repository
+settle the question — the destination branch is protected, the deletion target is inside
+the audit trail. `ask` where they do not: whether a commit is already published, or
+whether a particular heredoc is the dangerous kind, is not visible in the command.
+Denying every candidate would block legitimate work; guessing would be worse. An `ask`
+still enforces — the call cannot proceed without a human — while a false positive costs
+one keystroke.
+
+That distinction is what made the guard buildable at all. `rule-no-heredoc-stdin` v1.0
+had declined a hook because *"the false-positive cost on legitimate heredocs was judged
+higher than the failure it prevents"*, and `ROADMAP.md` had deferred the whole question
+over the same false-positive risk. Both were weighing a hard block. `ask` inverts the
+trade, and the rule moved to `live` with it.
+
+**`prohibition-commit-secrets` did not move, and that is the load-bearing decision here.**
+The guard sees the command, not the file contents being committed, so `git commit` of a
+file containing a key is invisible to it — the guard could only ever catch a secret typed
+inline. Shipping that as `live` would have made three real controls and one piece of
+theatre indistinguishable. Real coverage means scanning `git diff --cached`, which is a
+new false-positive surface of its own; it is queued on the roadmap. Until then the tier
+says `convention` and the note says why.
+
+**What `live` does not mean here.** The dispatcher is fail-soft, so an exception in a
+guard allows the call. Subcommand splitting ignores quotes, so a separator inside a quoted
+string yields an extra fragment (over-reporting — the safe direction). In `dontAsk` mode an
+`ask` becomes a silent block rather than a prompt. And the guard sees tool calls only,
+never a terminal opened outside Claude Code; OS-level enforcement is the sandbox's job,
+which is why §4's row for v14 §12.2 stays `declarative`. Every re-tiered artifact repeats
+these limits in its own `enforcement_note`, because a tier that overstates itself is
+exactly what this record exists to prevent.
+
+`SettingsWiring` in `tests/test_governance_library.py` closes the last gap: `enforced_by`
+can prove `guard_force_push` exists, but not that Claude Code ever calls it. That depends
+on a hook entry in `.claude/settings.json` — a file no other test read. Delete the entry
+and the guard would become unreachable code while every tier claim still resolved.
+
+## 9. Re-checking this record
 
 Re-verify §2 whenever the Claude Code CLI or the plan's model lineup changes — the `opus` alias
 resolution and Fable's billing status have both already moved once. Re-run

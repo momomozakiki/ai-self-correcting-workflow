@@ -2,7 +2,7 @@
 """Adaptive Self-Correcting Workflow -- hook dispatcher.
 
 A single fail-soft dispatcher invoked by Claude Code for the ``SessionStart``,
-``PostToolUse`` and ``Stop`` hook events. It reads the event JSON from stdin,
+``PreToolUse``, ``PostToolUse`` and ``Stop`` hook events. It reads the event JSON from stdin,
 loads the project's ``workflow_config.json`` and branches to the appropriate
 handler. Every handler is wrapped so the process *always* exits 0 -- a bug in
 the workflow tooling must never break a coding session.
@@ -532,6 +532,285 @@ def session_context(event_name: str, additional_context: str,
 
 
 # --------------------------------------------------------------------------- #
+# Tier-0 guard (PreToolUse)
+# --------------------------------------------------------------------------- #
+# Claude Code's `permissions.deny` is the stronger mechanism for anything a
+# pattern can express, and it applies in every permission mode. It cannot
+# express these four prohibitions: whether a push target is a *shared* branch is
+# a fact about the repository, not about the command string, and a deny rule
+# carries no exceptions -- one broad enough to stop `git push --force origin
+# main` also stops the same push to your own topic branch. Hence a parser.
+#
+# Two decisions are emitted. `deny` where the prohibition is unambiguous, `ask`
+# where the command is only *suspicious* and a human can settle it in one
+# keystroke. `ask` still enforces: the call cannot proceed without a person.
+#
+# Every guard is a pure function over a token list so the parsing is testable
+# without a repository (tests/test_hook.py::TestTier0Guard).
+
+SHELL_TOOLS = ("Bash", "PowerShell")
+DEFAULT_PROTECTED_ARCHIVE = "plans/archive"
+
+# The separators Claude Code's own permission matcher recognises, longest first
+# so `&&` is not split as two `&`. A rule must hold for every subcommand, so a
+# prohibited call cannot hide behind a benign one.
+_SUBCOMMAND_SPLIT = re.compile(r"&&|\|\||\|&|;|\||&|\n")
+
+# `<<<` is a here-string; `<<WORD` a heredoc. `2 << 3` is a left shift, so a
+# digit after the operator is deliberately excluded.
+_HEREDOC = re.compile(r"<<<|<<-?[ \t]*(?![0-9])['\"\w]")
+
+# `-F -`, `--file=-`, `-F /dev/stdin`: a commit message read from stdin.
+_STDIN_FILE = re.compile(r"(?:^|\s)(?:-F|--file)[=\s]+(?:-|/dev/stdin)(?:\s|$)")
+
+# git's own options that consume the following token, so the subcommand after
+# them is not mistaken for their value (`git -C path push` is a push).
+_GIT_VALUE_OPTS = ("-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path")
+
+_REMOVAL_COMMANDS = ("rm", "remove-item", "ri", "rmdir", "del", "erase", "unlink")
+
+
+def split_subcommands(command: str) -> List[str]:
+    """Split a shell command on the separators the permission matcher uses.
+
+    Deliberately naive about quoting: a separator inside a quoted string splits
+    too. That over-reports rather than under-reports -- an extra fragment can
+    only produce an extra check -- which is the safe direction for a guard.
+    """
+    return [part.strip() for part in _SUBCOMMAND_SPLIT.split(command or "")
+            if part and part.strip()]
+
+
+def _argv(subcommand: str) -> List[str]:
+    return subcommand.split()
+
+
+def _basename(token: str) -> str:
+    # No str.removesuffix -- this file supports Python 3.8.
+    name = Path(token).name.lower()
+    return name[:-4] if name.endswith(".exe") else name
+
+
+def git_subcommand(tokens: List[str]) -> Tuple[Optional[str], List[str]]:
+    """Return ``(subcommand, args_after_it)`` for a git call, else ``(None, [])``."""
+    if not tokens or _basename(tokens[0]) != "git":
+        return None, []
+    i = 1
+    while i < len(tokens):
+        token = tokens[i]
+        if token in _GIT_VALUE_OPTS:
+            i += 2
+            continue
+        if token.startswith("-"):
+            i += 1
+            continue
+        return token, tokens[i + 1:]
+    return None, []
+
+
+def _positionals(args: List[str]) -> List[str]:
+    return [a for a in args if not a.startswith("-")]
+
+
+def refspec_destination(refspec: str) -> str:
+    """`+HEAD:refs/heads/main` -> `main`; `main:feat/x` -> `feat/x`."""
+    ref = refspec.lstrip("+").strip("'\"")
+    if ":" in ref:
+        ref = ref.split(":", 1)[1]
+    if ref.startswith("refs/heads/"):
+        ref = ref[len("refs/heads/"):]
+    return ref
+
+
+def guard_force_push(tokens: List[str], protected: Any,
+                     current_branch: Any) -> Optional[Tuple[str, str]]:
+    """Deny a force-push whose target resolves to a protected branch.
+
+    ``protected`` and ``current_branch`` are callables so neither is resolved --
+    both shell out to git -- until a force flag has actually been seen. This
+    handler runs before every shell command; it must cost nothing on the
+    overwhelming majority that are not pushes.
+    """
+    subcommand, args = git_subcommand(tokens)
+    if subcommand != "push":
+        return None
+
+    positionals = _positionals(args)
+    refspecs = positionals[1:]
+    forced = (any(a == "-f" or a.startswith("--force") for a in args)
+              or any(r.startswith("+") for r in refspecs))
+    if not forced:
+        return None
+
+    protected_branches = protected()
+    targets = [refspec_destination(r) for r in refspecs] or [current_branch()]
+    hits = sorted({t for t in targets if t and t in protected_branches})
+    if not hits:
+        return None
+    return "deny", (
+        f"Tier-0 prohibition-force-push-shared: this force-pushes to "
+        f"{', '.join('`' + h + '`' for h in hits)}, which this repository treats as "
+        "shared. Push a new commit instead, or force-push a branch only you have. "
+        "This prohibition is not overrideable."
+    )
+
+
+def guard_protected_paths(tokens: List[str],
+                          protected_paths: List[str]) -> Optional[Tuple[str, str]]:
+    """Deny a deletion aimed at the ledger or the plan archive."""
+    if not tokens:
+        return None
+
+    head = _basename(tokens[0])
+    if head == "git":
+        subcommand, args = git_subcommand(tokens)
+        if subcommand != "rm":
+            return None
+    elif head in _REMOVAL_COMMANDS:
+        args = tokens[1:]
+    else:
+        return None
+
+    for target in _positionals(args):
+        cleaned = target.strip("'\"").replace("\\", "/").rstrip("*").rstrip("/")
+        while cleaned.startswith("./"):
+            cleaned = cleaned[2:]
+        for guarded in protected_paths:
+            guarded = guarded.rstrip("/")
+            if guarded and (cleaned == guarded or cleaned.startswith(guarded + "/")):
+                return "deny", (
+                    f"Tier-0 prohibition-delete-ledger: `{target}` is inside "
+                    f"`{guarded}`, the audit trail. Correct an entry by appending, "
+                    "never by deleting. This prohibition is not overrideable."
+                )
+    return None
+
+
+def guard_history_rewrite(tokens: List[str]) -> Optional[Tuple[str, str]]:
+    """Escalate a history rewrite -- whether it is *published* is a runtime fact."""
+    subcommand, args = git_subcommand(tokens)
+    if subcommand is None:
+        return None
+
+    what = None
+    if subcommand == "commit" and "--amend" in args:
+        what = "amends the commit at HEAD"
+    elif subcommand == "rebase" and not any(
+            a in ("--abort", "--continue", "--skip", "--quit") for a in args):
+        what = "rebases"
+    elif subcommand == "reset" and "--hard" in args:
+        what = "hard-resets"
+    elif subcommand == "filter-branch":
+        what = "rewrites history wholesale"
+
+    if what is None:
+        return None
+    return "ask", (
+        f"Tier-0 prohibition-rewrite-published-history: this {what}. Whether those "
+        "commits are already pushed is not visible from the command, so this needs "
+        "your call. If they are published, prefer a forward-fixing commit."
+    )
+
+
+def guard_heredoc(tokens: List[str], subcommand_text: str) -> Optional[Tuple[str, str]]:
+    """Escalate stdin-fed programs and messages, and the editor-opening bare commit."""
+    if _HEREDOC.search(subcommand_text):
+        return "ask", (
+            "rule-no-heredoc-stdin: this feeds a heredoc to a command. Shell and tool "
+            "layers mangle escape sequences silently (docs/RETROSPECTIVE.md). Write the "
+            "script to a file and run the file."
+        )
+    if _STDIN_FILE.search(subcommand_text):
+        return "ask", (
+            "rule-no-heredoc-stdin: this reads a message from stdin. Use "
+            "`git commit -m` or `git commit -F <file>` -- never `-F -`."
+        )
+
+    name, args = git_subcommand(tokens)
+    if name == "commit" and not any(
+            a.startswith(("-m", "--message", "-F", "--file", "-C", "--reuse-message",
+                          "--no-edit", "--amend", "--fixup", "--squash", "-t",
+                          "--template"))
+            for a in args):
+        return "ask", (
+            "rule-no-heredoc-stdin: a bare `git commit` opens an editor and can hang "
+            "the session. Pass `-m` or `-F <file>`."
+        )
+    return None
+
+
+class _GitContext:
+    """Lazily-resolved repository facts. Nothing here runs until a guard asks."""
+
+    def __init__(self, config: Dict[str, Any], project_root: Path,
+                 extra_branches: List[str]) -> None:
+        self._config = config
+        self._root = project_root
+        self._extra = extra_branches
+        self._protected: Optional[set] = None
+        self._current: Optional[str] = None
+
+    def protected_branches(self) -> set:
+        if self._protected is None:
+            names = {resolve_main_branch(self._config, self._root)}
+            names.update(b for b in self._extra if isinstance(b, str))
+            self._protected = {n.strip() for n in names if n and n.strip()}
+        return self._protected
+
+    def current_branch(self) -> str:
+        if self._current is None:
+            self._current = _git(self._root, "rev-parse", "--abbrev-ref", "HEAD") or ""
+        return self._current
+
+
+def evaluate_tier0_guards(command: str, config: Dict[str, Any],
+                          project_root: Path) -> Optional[Tuple[str, str]]:
+    """Return the strongest ``(decision, reason)`` across every subcommand.
+
+    A ``deny`` anywhere outranks an ``ask`` anywhere, so a prohibited call cannot
+    be softened by pairing it with a merely suspicious one.
+    """
+    guard_cfg = config.get("tier0_guard") or {}
+    if not guard_cfg.get("enabled", True):
+        return None
+
+    ledger_dir = (config.get("ledger") or {}).get("directory", "history")
+    protected_paths = guard_cfg.get("protected_paths")
+    if not isinstance(protected_paths, list) or not protected_paths:
+        protected_paths = [ledger_dir, DEFAULT_PROTECTED_ARCHIVE]
+
+    ctx = _GitContext(config, project_root,
+                      guard_cfg.get("protected_branches") or [])
+
+    findings: List[Tuple[str, str]] = []
+    for subcommand in split_subcommands(command):
+        tokens = _argv(subcommand)
+        candidates = [
+            guard_force_push(tokens, ctx.protected_branches, ctx.current_branch),
+            guard_protected_paths(tokens, protected_paths),
+        ]
+        if guard_cfg.get("escalate_history_rewrite", True):
+            candidates.append(guard_history_rewrite(tokens))
+        if guard_cfg.get("escalate_heredoc", True):
+            candidates.append(guard_heredoc(tokens, subcommand))
+        findings.extend(c for c in candidates if c)
+
+    for decision in ("deny", "ask"):
+        for finding in findings:
+            if finding[0] == decision:
+                return finding
+    return None
+
+
+def permission_decision(decision: str, reason: str) -> Dict[str, Any]:
+    return {"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": decision,
+        "permissionDecisionReason": reason,
+    }}
+
+
+# --------------------------------------------------------------------------- #
 # Handlers
 # --------------------------------------------------------------------------- #
 def run_env_checks(config: Dict[str, Any], project_root: Path) -> List[str]:
@@ -650,6 +929,28 @@ def handle_session_start(event: Dict[str, Any], config: Dict[str, Any],
                          session_title="Adaptive Workflow session"))
 
 
+def handle_pre_tool_use(event: Dict[str, Any], config: Dict[str, Any],
+                        project_root: Path) -> None:
+    """Tier-0 guard. Silent unless a prohibition is implicated.
+
+    Emitting nothing defers to the normal permission flow, which is the correct
+    default -- returning ``allow`` here would auto-approve every shell command in
+    the session. Deliberately does not touch the session state file: this runs
+    before every Bash and PowerShell call, and the churn would be constant.
+    """
+    if event.get("tool_name") not in SHELL_TOOLS:
+        return
+
+    tool_input = event.get("tool_input")
+    command = tool_input.get("command") if isinstance(tool_input, dict) else None
+    if not isinstance(command, str) or not command.strip():
+        return
+
+    finding = evaluate_tier0_guards(command, config, project_root)
+    if finding:
+        emit(permission_decision(*finding))
+
+
 def handle_post_tool_use(event: Dict[str, Any], config: Dict[str, Any],
                          project_root: Path) -> None:
     session_id = event.get("session_id")
@@ -750,6 +1051,7 @@ def handle_stop(event: Dict[str, Any], config: Dict[str, Any],
 
 HANDLERS = {
     "SessionStart": handle_session_start,
+    "PreToolUse": handle_pre_tool_use,
     "PostToolUse": handle_post_tool_use,
     "Stop": handle_stop,
 }
