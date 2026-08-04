@@ -194,9 +194,30 @@ Otherwise: no output.
   `plans/UNFINISHED.md` (see below). This happens whether or not the hook blocks.
 - If any reminder: increment `stop_block_count`, emit a block decision.
 
-Detection of the ledger reminder uses the **session state file**, not
-`git diff HEAD` (which would include pre-session changes). The breadcrumb and the
-commit reminder use live `git status`.
+**Detecting `source_changed` / `ledger_touched`.** The `PostToolUse` flags are the
+fast path; a modification-time check against `session_start_ts` is the fallback.
+`PostToolUse` only fires for `Edit|Write|MultiEdit`, so without the fallback a
+ledger appended by a shell redirect reads as untouched (the reminder fires when
+the work *was* done) and a source file rewritten by `sed -i` reads as unchanged
+(the reminder never fires at all — the worse direction).
+
+Still **not** `git diff HEAD`, which would count pre-session changes. Comparing
+against `session_start_ts` keeps the reminder scoped to this session while being
+blind to *how* a file was written. Configured by `stop_hook.mtime_fallback`,
+`mtime_scan_limit` and `mtime_prune`. The source walk returns on the first file
+newer than the threshold and gives up after the scan limit, so both the common
+and worst cases are bounded — it runs at every `Stop`.
+
+Two limits worth knowing:
+
+- `git checkout` / `git pull` rewrite files and bump mtimes. A pull that touches
+  the ledger can therefore suppress a legitimate reminder, and one that touches
+  source can raise a spurious one.
+- When the state file is missing, `load_state` returns a fresh `default_state()`
+  whose `session_start_ts` is *now*, so every mtime reads as older and the
+  reminder fires. That is the conservative direction.
+
+The breadcrumb and the commit reminder use live `git status`.
 
 **Main-branch resolution** (for the commit reminder), in precedence order:
 

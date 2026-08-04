@@ -28,6 +28,11 @@ first `**Next action:**` line below and surfaces it at session start.
       configurable threshold. Advisory only; logs to
       `.ai/08-behavioral-metrics/loop_detection.jsonl`.
 - [ ] Structured logging to a rotating debug file when `WORKFLOW_HOOK_DEBUG=1`.
+- [ ] Revisit `FileChanged` for the Stop flags if its matcher ever accepts globs.
+      It is the right mechanism — it watches the disk, so it sees writes from any
+      process — but the watch list is literal filenames and our ledger name rolls
+      over weekly, so a static matcher would go stale in seven days. The mtime
+      fallback covers it meanwhile (GUIDE §7.3, decision doc §9).
 
 ## Active Epic: Governance library growth
 

@@ -36,7 +36,10 @@
     "max_blocks": 2,
     "main_branch_autodetect": true,
     "main_branch_remote": "origin",
-    "main_branch_probe_remote": false
+    "main_branch_probe_remote": false,
+    "mtime_fallback": true,
+    "mtime_scan_limit": 2000,
+    "mtime_prune": []
   },
   "workflow_update_check": {
     "enabled": false,

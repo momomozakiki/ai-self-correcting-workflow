@@ -1,12 +1,13 @@
 {
   "id": "prohibition-delete-ledger",
-  "version": "1.1",
+  "version": "1.2",
   "last_updated": "2026-08-05",
   "category": "prohibitions",
   "type": "absolute-prohibition",
   "tier": 0,
   "enforcement": "ABSOLUTE",
   "enforcement_status": "live",
+  "enforcement_mode": "deny",
   "enforcement_note": "DENY. guard_protected_paths blocks rm, Remove-Item and `git rm` aimed at tier0_guard.protected_paths, which defaults to the configured ledger directory plus plans/archive - exactly the two this rule names, no wider. Reading the ledger is untouched; the prohibition is against deletion. Limits, so `live` is not read as unbypassable: the dispatcher is fail-soft, so an exception in the handler allows the call; the guard only sees Bash and PowerShell tool calls, so a script that unlinks the files itself is invisible to it; and an OS-level guarantee needs the sandbox, not a hook.",
   "enforced_by": [
     "hooks/workflow_hook.py::guard_protected_paths",

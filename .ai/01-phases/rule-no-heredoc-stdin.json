@@ -1,12 +1,13 @@
 {
   "id": "rule-no-heredoc-stdin",
-  "version": "1.1",
+  "version": "1.2",
   "last_updated": "2026-08-05",
   "category": "execution",
   "type": "phase-rule",
   "tier": 1,
   "enforcement": "MANDATORY",
   "enforcement_status": "live",
+  "enforcement_mode": "ask",
   "enforcement_note": "ASK, not deny. guard_heredoc catches heredocs and here-strings, `-F -` / `--file=-` / `-F /dev/stdin`, and the bare `git commit` that opens an editor. v1.0 of this rule declined a hook because 'the false-positive cost on legitimate heredocs was judged higher than the failure it prevents' - that weighed a hard block. An `ask` inverts the trade: a false positive costs one keystroke, and the call still cannot proceed without a human. The detector excludes `<<` followed by a digit so a left shift is not mistaken for a heredoc. Limits: in `dontAsk` mode an `ask` becomes a silent block; the dispatcher is fail-soft, so an exception in the handler allows the call; and the guard only sees Bash and PowerShell tool calls.",
   "enforced_by": [
     "hooks/workflow_hook.py::guard_heredoc",

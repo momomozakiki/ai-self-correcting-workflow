@@ -388,6 +388,46 @@ class EnforcementHonesty(unittest.TestCase):
                     "not enforced and what the real mechanism is")
 
 
+class EnforcementStrength(unittest.TestCase):
+    """`live` covers two strengths, and the artifact must say which it has.
+
+    A guard that returns ``deny`` blocks outright. One that returns ``ask``
+    blocks until a human answers -- and the human may wave it through, which
+    happened within an hour of the guard shipping. Both are `live` under this
+    library's own definition, but they are not the same promise, so the stronger
+    reading must not be the default. ``tests/test_hook.py`` holds the declared
+    mode against what the guard actually returns.
+    """
+
+    MODES = ("deny", "ask")
+
+    @staticmethod
+    def _guard_backed(artifact):
+        return any("::guard_" in str(ref)
+                   for ref in (artifact.get("enforced_by") or []))
+
+    def test_guard_backed_artifacts_declare_a_mode(self):
+        for name, artifact in artifacts():
+            if not self._guard_backed(artifact):
+                continue
+            with self.subTest(artifact=name):
+                self.assertIn(
+                    artifact.get("enforcement_mode"), self.MODES,
+                    f"{name}: enforced by a guard but does not declare whether it "
+                    "denies or asks -- `live` alone overstates an ask")
+
+    def test_mode_is_absent_when_no_guard_backs_the_artifact(self):
+        """No unearned modes -- the field means a guard really decides this."""
+        for name, artifact in artifacts():
+            if self._guard_backed(artifact):
+                continue
+            with self.subTest(artifact=name):
+                self.assertIsNone(
+                    artifact.get("enforcement_mode"),
+                    f"{name}: declares an enforcement_mode but names no guard, so "
+                    "nothing produces that decision")
+
+
 class TierVocabulary(unittest.TestCase):
     """The tier rules apply to every JSON object in the library, not just rules.
 

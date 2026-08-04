@@ -1,6 +1,6 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 5.1
+version: 5.2
 last_validated: 2026-08-05
 official: true
 source: agent-generated
@@ -10,7 +10,7 @@ estimated_tokens: 8200
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 5.1 – Centralized, Configurable, Self‑Improving, Governed*
+*Version 5.2 – Centralized, Configurable, Self‑Improving, Governed*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
@@ -20,9 +20,9 @@ folded there per §6.3 when this table passed ~8 rows.
 
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
+| 5.2     | 2026-08-05 | §7.3: the Stop flags gain a modification-time fallback, because `PostToolUse` sees only the editing tools and both failure directions showed up in practice. §13: `live` now distinguishes `deny` from `ask` strength via a tested `enforcement_mode`, after an `ask` was waved through and the rule it guarded was broken anyway. |
 | 5.1     | 2026-08-05 | New §7.5: why the Tier-0 guard is a `PreToolUse` hook rather than a `permissions.deny` rule, and why it emits both `deny` and `ask`. §7.1/§7.3 gain the `PreToolUse` event and the fail-open consequence; §13 records the four re-tierings. Revision History folded per §6.3. |
 | 5.0     | 2026-08-04 | Governance integration (MAJOR — three new sections). §4 gains loop detection, reversibility and a Tier-0 line; new §12 maps the imported 21-step SOP onto Phase 0–3; new §13 documents the `.ai/` governance library; new §14 records the runtime assumptions (Claude Pro + Claude Code, no API key) that the tiering rests on. |
-| 4.7     | 2026-08-04 | New §7.4: `main_branch` resolution order (explicit pin → local `refs/remotes/<remote>/HEAD` autodetect → opt-in `git remote show` probe → `main`), plus the `main_branch_detected` state key in §7.2. Adds `stop_hook.main_branch_autodetect` / `main_branch_remote` / `main_branch_probe_remote`. |
 
 ---
 
@@ -505,7 +505,13 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 
 **Phase‑3 breadcrumb:** on a dirty tree the hook writes/refreshes `plans/UNFINISHED.md` (timestamp, branch, `git status --porcelain` file list, pending closure steps) so the next `SessionStart` (F4) surfaces the unfinished work — durable even if the reminder is ignored or the session is force‑closed. The file starts with the marker `<!-- workflow-hook: auto-breadcrumb -->`; the hook overwrites only its own marked breadcrumb and **never** clobbers a human‑authored `UNFINISHED.md`. This directly closes the failure mode where a session ends mid‑closure leaving a dirty tree and no trace.
 
-**Important:** The Stop hook’s *ledger* detection relies on the session state file, not `git diff` against HEAD (which would include pre‑session changes). This ensures we only nag for things done *this session*. The dirty‑tree commit reminder and breadcrumb use live `git status`.
+**Important:** The Stop hook’s *ledger* detection is session‑scoped, not `git diff` against HEAD (which would include pre‑session changes). This ensures we only nag for things done *this session*. The dirty‑tree commit reminder and breadcrumb use live `git status`.
+
+**Why the flags alone were not enough.** `source_changed` and `ledger_touched` are set by `PostToolUse`, which fires only for `Edit|Write|MultiEdit`. Anything written another way is invisible to it — and both failure directions showed up in practice within a day of the guard shipping. A ledger appended by a shell redirect reads as untouched, so the reminder fires on a session where the entry was already written, committed and pushed; a reminder that fires when the work *was* done trains you to dismiss it. Worse, a source file rewritten by `sed -i` reads as unchanged, so the reminder never fires at all.
+
+So the flags are now a fast path, backed by a modification‑time check against `session_start_ts` (`stop_hook.mtime_fallback`, default on). That stays session‑scoped as this section requires, while being blind to *how* a file was written. Claude Code’s `FileChanged` event would be the better mechanism — it watches the disk and so sees writes from any process — but its matcher is a list of **literal filenames**, and our ledger filename rolls over every Monday; a static watch list would go stale in a week, which is the mistake already recorded in `docs/RETROSPECTIVE.md`. If that matcher ever accepts globs, revisit it (see `ROADMAP.md`).
+
+The source walk returns on the first file newer than the threshold and gives up after `mtime_scan_limit`, so it is bounded in both directions; it runs at every `Stop`. Two honest limits: `git checkout`/`pull` bump mtimes, so a pull touching the ledger can suppress a real reminder and one touching source can raise a spurious one; and if the state file is lost, `session_start_ts` becomes *now*, every mtime reads as older, and the reminder fires — the conservative direction.
 
 ### 7.4 Resolving the main branch
 
@@ -746,6 +752,22 @@ rules instead of prose.
 may imply enforcement it doesn't have: a declarative field is written as `null` with
 its reason attached, never as a plausible-looking fake value. If you cannot name the
 hook or test that makes a rule *live*, it is `convention` — say so and mean it.
+
+**`live` covers two strengths, and the artifact must say which.** A guard that returns
+`deny` blocks outright. One that returns `ask` blocks until a human answers — and the
+human may wave it through, which happened within an hour of the guard shipping: the
+heredoc guard fired correctly, the prompt was approved, and the rule was broken anyway.
+Both are `live` by the definition above, because both produce a visible signal. They are
+not the same promise. So any artifact enforced by a `guard_*` symbol carries an
+`enforcement_mode`:
+
+| Strength | Meaning | Held to the code by |
+|----------|---------|---------------------|
+| `deny` | The call is blocked. No approval path. | `TestEnforcementModeMatchesGuard` — feeds the guard a command that must trip it and asserts the returned decision equals the declared mode |
+| `ask` | The call is blocked *until a human answers*; the answer may be yes. In `dontAsk` mode it becomes a silent block. | the same test |
+
+Flip an artifact to `ask` while its guard still denies and the suite goes red. The tier
+says a control exists; the mode says how much it promises.
 
 **And the declaration is tested.** `tests/test_governance_library.py` turns each of
 those sentences into an assertion: a `live` artifact must carry `enforced_by`, a list

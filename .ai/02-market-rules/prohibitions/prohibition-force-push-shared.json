@@ -1,12 +1,13 @@
 {
   "id": "prohibition-force-push-shared",
-  "version": "1.1",
+  "version": "1.2",
   "last_updated": "2026-08-05",
   "category": "prohibitions",
   "type": "absolute-prohibition",
   "tier": 0,
   "enforcement": "ABSOLUTE",
   "enforcement_status": "live",
+  "enforcement_mode": "deny",
   "enforcement_note": "DENY. guard_force_push parses the push, resolves the destination refspec and blocks only when it names a protected branch, so force-pushing a topic branch you own still works - which a `permissions.deny` pattern could not express. Three limits, stated so `live` is not read as unbypassable: the dispatcher is fail-soft, so an exception in the handler allows the call; the guard only sees Bash and PowerShell tool calls, not a terminal opened outside Claude Code; and it splits on shell separators without honouring quotes, so a separator inside a quoted string can produce a false positive.",
   "enforced_by": [
     "hooks/workflow_hook.py::guard_force_push",

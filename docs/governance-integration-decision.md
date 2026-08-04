@@ -1,6 +1,6 @@
 ---
 title: Governance Integration Decision Record (v14 → workflow-core)
-version: 1.2
+version: 1.3
 last_validated: 2026-08-05
 official: true
 source: agent-generated
@@ -18,6 +18,7 @@ estimated_tokens: 2400
 | 1.0     | 2026-08-04 | Initial. Dispositions all 24 sections of the imported v14 framework against the real runtime; records the source-verification results and the runtime assumptions they rest on. |
 | 1.1     | 2026-08-05 | Audit of v1.0's own tier claims (see §6). Two re-tiers: step 1 git sync **live → convention**, step 10 documentation standard **convention → live**. Seven risk-taxonomy violations and one false v14 step mapping corrected. `tests/test_governance_library.py` added so the tier claims in this record are now checked rather than asserted. |
 | 1.2     | 2026-08-05 | New §8: enforcing the Tier-0 prohibitions with a `PreToolUse` guard, and why `permissions.deny` lost to it. Three prohibitions and `rule-no-heredoc-stdin` move **convention → live**; `prohibition-commit-secrets` deliberately does not. Old §8 renumbered to §9. |
+| 1.3     | 2026-08-05 | New §9: what one session under the guard taught. `FileChanged` evaluated and rejected (literal-filename matcher vs a weekly-rotating ledger name); the Stop flags gain an mtime fallback. `live` split into `deny` / `ask` strengths via a tested `enforcement_mode` field, after an `ask` was waved through and broke the rule it guarded. Old §9 renumbered to §10. |
 
 ---
 
@@ -234,7 +235,50 @@ can prove `guard_force_push` exists, but not that Claude Code ever calls it. Tha
 on a hook entry in `.claude/settings.json` — a file no other test read. Delete the entry
 and the guard would become unreachable code while every tier claim still resolved.
 
-## 9. Re-checking this record
+## 9. What one session of using the guard taught (2026-08-05)
+
+§8 shipped. One session of working under it produced two findings, both the same shape:
+**a rule that fires is not a rule that is satisfied.**
+
+**`FileChanged` was evaluated and rejected.** The Stop hook's `ledger_touched` flag is
+set only by `PostToolUse` on `Edit|Write|MultiEdit`, so a ledger appended by a shell
+redirect looks untouched and the reminder nags about work already committed. Claude Code
+has a purpose-built answer — `FileChanged` fires *"when a watched file changes on disk"*
+and sees writes from any process, debounced and cross-platform. It does not fit: its
+matcher is a list of **literal filenames**, and this repository's ledger filename rolls
+over every Monday (`2026-W32.md` → `2026-W33.md`). A static watch list would go stale in
+seven days — a check that silently stops passing, which is §6's recorded mistake wearing
+a new hat. Source files are worse, being arbitrarily named. Whether a *matcher-less*
+`FileChanged` watches everything is not stated in the reachable documentation, and
+building on an unverified reading is that same failure a third time.
+
+So the flags gained a modification-time fallback against `session_start_ts` — version-
+independent, stdlib-only, indifferent to filenames, and session-scoped as GUIDE §7.3
+requires. Recorded here so nobody re-litigates it; on the roadmap in case the matcher
+ever accepts globs, at which point `FileChanged` becomes the better mechanism.
+
+**`live` was hiding two different promises.** `guard_heredoc` escalated a heredoc via
+`ask`, exactly as designed; the prompt was approved and the rule was broken anyway —
+and that heredoc is what caused the ledger-flag failure above. One waved prompt produced
+both defects.
+
+An `ask` genuinely enforces: the call cannot proceed unseen. But §8 argued for `ask`
+precisely *because* it is weaker than `deny`, and then let both wear the same tier. A
+reader checking `enforcement_status` could not tell which prohibitions were unbypassable.
+That is this record's own failure mode — an artifact implying more enforcement than it
+has — committed by the record itself.
+
+The fix is the same move `enforced_by` made: bind the claim to the code. Every
+guard-backed artifact now declares `enforcement_mode` (`deny` / `ask`), and
+`TestEnforcementModeMatchesGuard` feeds each guard a command that must trip it and
+asserts the returned decision equals the declared mode. A note in prose would have
+drifted; §6 is the evidence for that.
+
+The tier vocabulary itself was left at three values. Splitting `live` would have touched
+every artifact, both manifests, `GROWTH.md`, both READMEs and the template mirror — a
+large change for a distinction one field and one test capture.
+
+## 10. Re-checking this record
 
 Re-verify §2 whenever the Claude Code CLI or the plan's model lineup changes — the `opus` alias
 resolution and Fable's billing status have both already moved once. Re-run

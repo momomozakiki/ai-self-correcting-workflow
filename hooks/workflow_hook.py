@@ -532,6 +532,70 @@ def session_context(event_name: str, additional_context: str,
 
 
 # --------------------------------------------------------------------------- #
+# Filesystem observation (Stop fallback)
+# --------------------------------------------------------------------------- #
+# `source_changed` and `ledger_touched` are set by PostToolUse, which only fires
+# for Edit/Write/MultiEdit. A ledger appended by a shell redirect, or a source
+# file rewritten by `sed -i`, is invisible to it -- so the reminder fires when
+# the work *was* done, and stays silent when it wasn't.
+#
+# Claude Code's `FileChanged` event would be the right mechanism: it watches the
+# disk and so sees writes from any process. Its matcher is a list of literal
+# filenames, though, and our ledger filename rolls over every Monday -- a static
+# watch list would go stale in a week, which is the failure already recorded in
+# docs/RETROSPECTIVE.md. So: mtime, which does not care about filenames.
+#
+# Compared against `session_start_ts` rather than HEAD, because GUIDE section 7.3
+# rejects `git diff` here on purpose: it would count pre-session changes, and the
+# reminder is about work done *this* session.
+
+DEFAULT_MTIME_SCAN_LIMIT = 2000
+DEFAULT_MTIME_PRUNE = ("__pycache__", "node_modules", "dist", "build", "venv",
+                       "site-packages", "target")
+
+
+def current_ledger_path(config: Dict[str, Any], project_root: Path) -> Path:
+    """Path to this ISO week's ledger file. One definition of the filename."""
+    ledger_dir = project_root / ((config.get("ledger") or {}).get("directory")
+                                 or "history")
+    year, week, _ = datetime.date.today().isocalendar()
+    return ledger_dir / f"{year}-W{week:02d}.md"
+
+
+def changed_since(dirs: List[str], threshold: float, project_root: Path,
+                  limit: int = DEFAULT_MTIME_SCAN_LIMIT,
+                  prune: Any = ()) -> bool:
+    """True if any file under ``dirs`` was modified after ``threshold``.
+
+    Runs at every ``Stop``, so it is bounded in both directions: it returns on
+    the *first* file newer than the threshold (cheap when something did change),
+    and gives up after ``limit`` entries (predictable when nothing did). Hidden
+    directories and the usual build/vendor trees are pruned.
+    """
+    skip = set(DEFAULT_MTIME_PRUNE) | {p for p in (prune or ()) if isinstance(p, str)}
+    seen = 0
+    for entry in dirs or []:
+        root = Path(entry)
+        if not root.is_absolute():
+            root = project_root / entry
+        if not root.is_dir():
+            continue
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames
+                           if not d.startswith(".") and d not in skip]
+            for name in filenames:
+                if seen >= limit:
+                    return False
+                seen += 1
+                try:
+                    if (Path(dirpath) / name).stat().st_mtime > threshold:
+                        return True
+                except OSError:
+                    continue
+    return False
+
+
+# --------------------------------------------------------------------------- #
 # Tier-0 guard (PreToolUse)
 # --------------------------------------------------------------------------- #
 # Claude Code's `permissions.deny` is the stronger mechanism for anything a
@@ -1009,6 +1073,28 @@ def handle_stop(event: Dict[str, Any], config: Dict[str, Any],
     if state.get("main_branch_detected") != cached_main:
         save_state(session_id, state)  # persist the probe even if we don't block
 
+    # The PostToolUse flags are the fast path; mtime is the fallback that sees
+    # work done by any other means. Flag first, so the cheap answer wins.
+    stop_cfg = config.get("stop_hook") or {}
+    source_changed = bool(state.get("source_changed"))
+    ledger_touched = bool(state.get("ledger_touched"))
+
+    if stop_cfg.get("mtime_fallback", True):
+        since = state.get("session_start_ts") or 0.0
+        if not ledger_touched:
+            try:
+                ledger = current_ledger_path(config, project_root)
+                ledger_touched = (ledger.is_file()
+                                  and ledger.stat().st_mtime > since)
+            except OSError:
+                pass
+        if not source_changed:
+            source_changed = changed_since(
+                config.get("source_directories") or [], since, project_root,
+                limit=stop_cfg.get("mtime_scan_limit", DEFAULT_MTIME_SCAN_LIMIT),
+                prune=stop_cfg.get("mtime_prune") or (),
+            )
+
     reminders: List[str] = []
 
     gs = git_status(project_root)
@@ -1021,7 +1107,7 @@ def handle_stop(event: Dict[str, Any], config: Dict[str, Any],
             "/ `-F -`)."
         )
 
-    if state.get("source_changed") and not state.get("ledger_touched"):
+    if source_changed and not ledger_touched:
         reminders.append(
             "Source files changed this session but the weekly ledger "
             "(history/YYYY-Www.md) wasn't updated. Add an entry "
@@ -1204,10 +1290,7 @@ def run_self_test() -> int:
         checks["config_valid"] = False
 
     # --- ledger currency -----------------------------------------------------
-    ledger_cfg = config.get("ledger") or {}
-    ledger_dir = project_root / (ledger_cfg.get("directory") or "history")
-    year, week, _ = datetime.date.today().isocalendar()
-    ledger_file = ledger_dir / f"{year}-W{week:02d}.md"
+    ledger_file = current_ledger_path(config, project_root)
     checks["ledger_current"] = ledger_file.is_file()
     out.append(f"[{' ok ' if checks['ledger_current'] else 'warn'}] weekly ledger "
                f"{ledger_file.relative_to(project_root) if ledger_file.is_file() else ledger_file.name}"

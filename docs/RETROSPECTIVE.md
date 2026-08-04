@@ -1,7 +1,7 @@
 ---
 title: Retrospective — mistakes, root causes, and what they became
-version: 1.0
-last_validated: 2026-08-04
+version: 1.1
+last_validated: 2026-08-05
 official: true
 source: agent-generated
 tags: [retrospective, self-hardening, mistakes, governance]
@@ -16,6 +16,7 @@ estimated_tokens: 900
 | Version | Date       | Change   |
 |---------|------------|----------|
 | 1.0     | 2026-08-04 | Initial, seeded with two real mistakes from the v14 integration session. |
+| 1.1     | 2026-08-05 | New entry: an `ask` tier enforces the prompt, not the outcome — demonstrated within an hour of the Tier-0 guard shipping, and the cause of the Stop-hook false positive alongside it. |
 
 ---
 
@@ -96,6 +97,37 @@ threshold is deliberately two: one mistake is noise, two is a pattern worth payi
 - **Codified:** not yet — first occurrence. If a second "adjust the data to satisfy the
   check" instance appears, this becomes a rule: *when data fails a validator, fix the data
   only if the data is wrong; otherwise fix the validator or record the exception.*
+
+### 2026-08-05 — An `ask` tier enforces the prompt, not the outcome
+
+- **What:** Within an hour of the Tier-0 guard shipping, `guard_heredoc` escalated a
+  heredoc via `permissionDecision: "ask"`, exactly as designed. The prompt was approved
+  and the heredoc ran. The rule was broken anyway — and the heredoc was how the ledger
+  got appended, which is precisely why the `ledger_touched` flag never fired and the Stop
+  hook then nagged twice about an entry that was already committed and pushed. One waved
+  prompt produced both defects.
+- **Why it matters:** `GUIDE.md` §13 defines `live` as *"breaking it produces a visible
+  signal"*. That sentence is true of an `ask` and still oversells it. A signal waved
+  through is a signal nobody acted on, so `deny` and `ask` are not the same promise while
+  the tier vocabulary called them the same thing. Four artifacts carried `live` on the
+  strength of an `ask`.
+- **Root cause:** Designing the guard around whether the *mechanism* could fire, not
+  around whether the *outcome* was guaranteed. `ask` was chosen deliberately and for good
+  reasons — a hard block on heredocs was judged worse — but the tier that described it
+  did not carry the distinction, so a reader could not tell which artifacts were
+  unbypassable and which merely prompted.
+- **Fix:** An `enforcement_mode` field (`deny` / `ask`) on every guard-backed artifact,
+  bound to the code by `tests/test_hook.py::TestEnforcementModeMatchesGuard`: it feeds
+  each guard a command that must trip it and asserts the returned decision equals the
+  declared mode. Declaring `deny` on a guard that only asks fails the build. Documented
+  in `GUIDE.md` §13 and `.ai/README.md`.
+- **A note on the heredoc itself:** this was its third occurrence, and it is already
+  codified (see above). A third instance of a codified rule does not owe a new rule — it
+  says the codification is not sticking. That is the observation, and it is why the fix
+  here is structural rather than another line of guidance.
+- **Codified:** not yet — first occurrence of *this* lesson. If a second `ask`-mode
+  control is waved through and causes a downstream failure, this becomes a rule: *an
+  `ask`-mode control may not be the only enforcement of a Tier-0 prohibition.*
 
 ### 2026-08-04 — An environment check that could never pass
 

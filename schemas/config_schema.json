@@ -102,6 +102,23 @@
           "type": "boolean",
           "description": "Allow auto-detection to fall back to `git remote show <main_branch_remote>`, which CONTACTS THE REMOTE. Off by default so the Stop hook never makes a network call.",
           "default": false
+        },
+        "mtime_fallback": {
+          "type": "boolean",
+          "description": "Back the source_changed / ledger_touched flags with a modification-time check against session_start_ts. PostToolUse only sees Edit/Write/MultiEdit, so without this a ledger appended by a shell redirect looks untouched and a source file rewritten by `sed -i` looks unchanged. Session-scoped, not a git diff — see GUIDE section 7.3.",
+          "default": true
+        },
+        "mtime_scan_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum files the source-directory walk inspects before giving up. Bounds the worst case (nothing changed); the walk already returns on the first file newer than the threshold. 0 disables the source half while leaving the ledger check active.",
+          "default": 2000
+        },
+        "mtime_prune": {
+          "type": "array",
+          "description": "Extra directory names to skip during the walk, on top of the built-in set (hidden directories, __pycache__, node_modules, dist, build, venv, site-packages, target).",
+          "items": { "type": "string" },
+          "default": []
         }
       }
     },

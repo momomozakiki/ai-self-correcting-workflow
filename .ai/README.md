@@ -1,7 +1,7 @@
 ---
 title: Governance library (workflow-core)
-version: 1.1
-last_validated: 2026-08-04
+version: 1.2
+last_validated: 2026-08-05
 official: false
 source: agent-generated
 tags: [governance, library, enforcement-tiers, index]
@@ -21,7 +21,7 @@ Every artifact declares one:
 
 | Tier | Meaning | Required field |
 |------|---------|----------------|
-| **live** | A hook or test enforces it. Breaking it produces a visible signal. | `enforced_by`: `path::symbol` references, resolved against the source |
+| **live** | A hook or test enforces it. Breaking it produces a visible signal. | `enforced_by`: `path::symbol` references, resolved against the source. Plus `enforcement_mode` (`deny` / `ask`) when a `guard_*` symbol is named — see below |
 | **convention** | The agent follows it; nothing blocks. | `enforcement_note`: what is *not* enforced, and what the real mechanism is |
 | **declarative** | Recorded for portability. Not enforceable here; written as `null` with a reason, never faked. | `reason`, plus null/empty values |
 
@@ -29,6 +29,19 @@ Every artifact declares one:
 names a function that does not exist fails the build, as does a `declarative` block whose
 placeholder has been quietly populated. The tiers are claims about code, so they are
 tested like claims about code.
+
+### `live` has two strengths
+
+A guard that returns `deny` blocks the call outright. One that returns `ask` blocks it
+*until a human answers* — and the answer may be yes. Both produce a visible signal, so
+both are `live`; they are not the same promise. Any artifact naming a `guard_*` enforcer
+therefore declares an `enforcement_mode` of `deny` or `ask`, and
+`tests/test_hook.py::TestEnforcementModeMatchesGuard` feeds the guard a command that must
+trip it and asserts the decision it returns equals the declared mode. Declaring `deny` on
+a guard that only asks fails the build.
+
+This exists because it happened: the heredoc guard fired correctly, the prompt was
+approved, and the rule was broken anyway. An `ask` enforces the prompt, not the outcome.
 
 ## Layout
 

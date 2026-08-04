@@ -1030,5 +1030,210 @@ class TestTier0Guard(BaseCase):
         self.assertFalse(state_file.exists())
 
 
+class TestMtimeFallback(BaseCase):
+    """The Stop reminders must see work done outside Edit/Write/MultiEdit.
+
+    `source_changed` and `ledger_touched` are set by `PostToolUse`, which only
+    fires for the editing tools. A ledger appended by a shell redirect, or a
+    source file rewritten by `sed -i`, is invisible to it -- so the reminder
+    fires when the work *was* done, and stays silent when it wasn't. Both
+    directions are wrong; the second is worse.
+    """
+
+    def setUp(self):
+        super().setUp()
+        (self.project / "plans").mkdir(exist_ok=True)
+        self.write_config(self._cfg())
+        self.ledger = workflow_hook.current_ledger_path(self._cfg(), self.project)
+        self.ledger.parent.mkdir(parents=True, exist_ok=True)
+
+    def _cfg(self, **stop_hook):
+        stop_hook.setdefault("main_branch", "main")
+        return {
+            "project_root": ".",
+            "source_directories": ["src"],
+            "documentation_directories": ["docs"],
+            "ledger": {"directory": "history"},
+            "env_check": {"tool_paths": {}},
+            "stop_hook": stop_hook,
+        }
+
+    def _age(self, path, seconds_before_session):
+        """Backdate or forward-date a file relative to this session's start."""
+        state = workflow_hook.load_state(self.session_id)
+        stamp = state["session_start_ts"] - seconds_before_session
+        os.utime(path, (stamp, stamp))
+
+    def _seed_session(self, **flags):
+        state = workflow_hook.default_state()
+        state.update(flags)
+        workflow_hook.save_state(self.session_id, state)
+        return state
+
+    def _stop(self):
+        return run_hook({"hookEventName": "Stop", "session_id": self.session_id},
+                        project_dir=self.project)
+
+    def _reason(self, out):
+        return (out or {}).get("reason", "")
+
+    # -- the ledger half ---------------------------------------------------- #
+    def test_ledger_written_outside_the_editing_tools_silences_the_reminder(self):
+        self._seed_session(source_changed=True, ledger_touched=False)
+        self.ledger.write_text("appended by a shell redirect\n", encoding="utf-8")
+        self._age(self.ledger, -5)  # 5s after session start
+        rc, out = self._stop()
+        self.assertEqual(rc, 0)
+        self.assertNotIn("ledger", self._reason(out).lower())
+
+    def test_a_ledger_untouched_this_session_still_reminds(self):
+        self._seed_session(source_changed=True, ledger_touched=False)
+        self.ledger.write_text("written last week\n", encoding="utf-8")
+        self._age(self.ledger, 86400)  # a day before session start
+        rc, out = self._stop()
+        self.assertIn("ledger", self._reason(out).lower())
+
+    def test_a_missing_ledger_still_reminds(self):
+        self._seed_session(source_changed=True, ledger_touched=False)
+        rc, out = self._stop()
+        self.assertIn("ledger", self._reason(out).lower())
+
+    # -- the source half, the more dangerous direction ---------------------- #
+    def test_source_changed_outside_the_editing_tools_raises_the_reminder(self):
+        """`sed -i` on a source file must not buy silence."""
+        self._seed_session(source_changed=False, ledger_touched=False)
+        touched = self.project / "src" / "rewritten_by_sed.py"
+        touched.write_text("x = 1\n", encoding="utf-8")
+        self._age(touched, -5)
+        rc, out = self._stop()
+        self.assertIn("ledger", self._reason(out).lower())
+
+    def test_untouched_source_stays_silent(self):
+        self._seed_session(source_changed=False, ledger_touched=False)
+        stale = self.project / "src" / "old.py"
+        stale.write_text("x = 1\n", encoding="utf-8")
+        self._age(stale, 86400)
+        rc, out = self._stop()
+        self.assertNotIn("ledger", self._reason(out).lower())
+
+    # -- config, pruning and bounds ----------------------------------------- #
+    def test_fallback_can_be_disabled(self):
+        self.write_config(self._cfg(mtime_fallback=False))
+        self._seed_session(source_changed=True, ledger_touched=False)
+        self.ledger.write_text("appended\n", encoding="utf-8")
+        self._age(self.ledger, -5)
+        rc, out = self._stop()
+        self.assertIn("ledger", self._reason(out).lower())  # falls back to the flag
+
+    def test_pruned_directories_are_not_scanned(self):
+        self._seed_session(source_changed=False, ledger_touched=False)
+        noisy = self.project / "src" / "__pycache__"
+        noisy.mkdir()
+        artefact = noisy / "old.pyc"
+        artefact.write_text("compiled\n", encoding="utf-8")
+        self._age(artefact, -5)
+        rc, out = self._stop()
+        self.assertNotIn("ledger", self._reason(out).lower())
+
+    def test_extra_prune_names_are_honoured(self):
+        self.write_config(self._cfg(mtime_prune=["vendor"]))
+        self._seed_session(source_changed=False, ledger_touched=False)
+        vendored = self.project / "src" / "vendor"
+        vendored.mkdir()
+        artefact = vendored / "lib.py"
+        artefact.write_text("x = 1\n", encoding="utf-8")
+        self._age(artefact, -5)
+        rc, out = self._stop()
+        self.assertNotIn("ledger", self._reason(out).lower())
+
+    def test_scan_limit_bounds_the_walk(self):
+        """The walk runs at every Stop; the worst case must be bounded."""
+        seen = workflow_hook.changed_since(
+            ["src"], threshold=0, project_root=self.project, limit=0)
+        self.assertFalse(seen, "limit=0 must scan nothing and report nothing")
+
+    def test_changed_since_exits_on_the_first_hit(self):
+        state = self._seed_session()
+        for i in range(5):
+            f = self.project / "src" / f"f{i}.py"
+            f.write_text("x\n", encoding="utf-8")
+        self.assertTrue(workflow_hook.changed_since(
+            ["src"], state["session_start_ts"] - 60, self.project, limit=1))
+
+    def test_current_ledger_path_follows_the_configured_directory(self):
+        cfg = {"ledger": {"directory": "changelog"}}
+        path = workflow_hook.current_ledger_path(cfg, self.project)
+        self.assertEqual(path.parent.name, "changelog")
+        self.assertRegex(path.name, r"^\d{4}-W\d{2}\.md$")
+
+
+class TestEnforcementModeMatchesGuard(unittest.TestCase):
+    """An artifact's declared `enforcement_mode` must equal what its guard returns.
+
+    `enforced_by` proves the guard exists; it says nothing about whether the
+    guard denies or merely asks. Those are different strengths -- an ask can be
+    waved through -- so the artifact declares which one it is, and this binds
+    that declaration to the code the same way `resolve_enforcer` binds the
+    enforcer name. Flip an artifact to "ask" while its guard still denies and
+    this fails.
+    """
+
+    # One command per guard that must trip it.
+    TRIPWIRES = {
+        "guard_force_push": "git push --force origin main",
+        "guard_protected_paths": "rm -rf history/",
+        "guard_history_rewrite": "git commit --amend",
+        "guard_heredoc": "python - <<'PY'",
+    }
+
+    def setUp(self):
+        self.artifacts = []
+        root = REPO_ROOT / ".ai"
+        for path in sorted(root.rglob("rule-*.json")) + sorted(
+                root.rglob("prohibition-*.json")):
+            self.artifacts.append((path, json.loads(path.read_text(encoding="utf-8"))))
+
+    def _guard_decision(self, guard_name):
+        command = self.TRIPWIRES[guard_name]
+        guard = getattr(workflow_hook, guard_name)
+        tokens = command.split()
+        if guard_name == "guard_force_push":
+            finding = guard(tokens, lambda: {"main"}, lambda: "main")
+        elif guard_name == "guard_protected_paths":
+            finding = guard(tokens, ["history", "plans/archive"])
+        elif guard_name == "guard_heredoc":
+            finding = guard(tokens, command)
+        else:
+            finding = guard(tokens)
+        self.assertIsNotNone(
+            finding, f"{guard_name} did not fire on its own tripwire: {command!r}")
+        return finding[0]
+
+    def test_every_tripwire_actually_trips(self):
+        for guard_name in self.TRIPWIRES:
+            with self.subTest(guard=guard_name):
+                self.assertIn(self._guard_decision(guard_name), ("deny", "ask"))
+
+    def test_declared_mode_matches_what_the_guard_returns(self):
+        checked = 0
+        for path, artifact in self.artifacts:
+            for reference in artifact.get("enforced_by") or []:
+                guard_name = str(reference).rsplit("::", 1)[-1]
+                if guard_name not in self.TRIPWIRES:
+                    continue
+                checked += 1
+                with self.subTest(artifact=path.name, guard=guard_name):
+                    self.assertEqual(
+                        self._guard_decision(guard_name),
+                        artifact.get("enforcement_mode"),
+                        f"{path.name} declares enforcement_mode "
+                        f"{artifact.get('enforcement_mode')!r} but {guard_name} "
+                        "returns something else")
+        self.assertEqual(
+            checked, len(self.TRIPWIRES),
+            "every guard should back exactly one artifact; if that changed, "
+            "update TRIPWIRES rather than loosening this assertion")
+
+
 if __name__ == "__main__":
     unittest.main()

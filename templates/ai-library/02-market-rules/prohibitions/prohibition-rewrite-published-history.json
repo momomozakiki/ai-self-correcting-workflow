@@ -1,12 +1,13 @@
 {
   "id": "prohibition-rewrite-published-history",
-  "version": "1.1",
+  "version": "1.2",
   "last_updated": "2026-08-05",
   "category": "prohibitions",
   "type": "absolute-prohibition",
   "tier": 0,
   "enforcement": "ABSOLUTE",
   "enforcement_status": "live",
+  "enforcement_mode": "ask",
   "enforcement_note": "ASK, not deny. guard_history_rewrite catches `git commit --amend`, `git rebase`, `git reset --hard` and `git filter-branch`, but whether those commits are already published is a runtime fact the command string does not carry - denying every rewrite would block legitimate local work, and guessing would be worse. An `ask` still enforces: the call cannot proceed without a human. Limits: in `dontAsk` mode an `ask` becomes a silent block rather than a prompt; the dispatcher is fail-soft, so an exception in the handler allows the call; and the guard only sees Bash and PowerShell tool calls.",
   "enforced_by": [
     "hooks/workflow_hook.py::guard_history_rewrite",
