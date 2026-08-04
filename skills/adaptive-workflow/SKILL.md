@@ -106,7 +106,7 @@ plan, await approval, continue.
 | Repeatable mistake | Warning in best practices / retro note. |
 | **Any intentional change** (not a trivial typo/whitespace edit) | **Append a ledger entry** to `history/YYYY-Www.md`. Add an optional `**Risk:**` line using one of `privilege \| design \| behavioral \| structural \| accountability` when the change carries real risk — omit it when it doesn't, or the field stops meaning anything. |
 | Mistake worth remembering | Entry in `docs/RETROSPECTIVE.md`. If it's already there, append `(recurring)` to the heading — it now owes a rule file under `.ai/01-phases/` and a line here. |
-| New rule harvested from a real mistake | Add the rule file, update the folder's `manifest.json` in the same edit, and set `enforcement_status` honestly (`live` only if a hook or test enforces it). See `.ai/GROWTH.md`. |
+| New rule harvested from a real mistake | Add the rule file, update the folder's `manifest.json` in the same edit, mirror it into `templates/ai-library/`, and set `enforcement_status` honestly: `live` needs an `enforced_by` list naming real code, `convention` needs an `enforcement_note` saying what the real mechanism is. `tests/test_governance_library.py` checks all of it. See `.ai/GROWTH.md`. |
 | External doc without provenance | Ask for the official URL, then add the doc frontmatter (provenance fields). |
 | Completed task affects roadmap | Update the roadmap. |
 | Epic finished | Move it to `## Completed Epics`. |

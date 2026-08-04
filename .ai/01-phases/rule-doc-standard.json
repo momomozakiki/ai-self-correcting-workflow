@@ -6,14 +6,19 @@
   "type": "phase-rule",
   "tier": 1,
   "enforcement": "MANDATORY",
-  "enforcement_status": "convention",
+  "enforcement_status": "live",
+  "enforced_by": [
+    "hooks/workflow_hook.py::run_self_test",
+    "hooks/workflow_hook.py::_has_frontmatter",
+    "tests/test_hook.py::TestSelfTest::test_reports_missing_frontmatter"
+  ],
   "overrideable": false,
   "workflow_phase": "2",
   "maps_to_v14_step": 10,
   "rule": "Every created or updated doc carries frontmatter, a version bump and a Revision History row.",
   "condition": null,
   "ai_action": "Apply GUIDE \u00a76. Fold into a folder when the doc outgrows one question, its token budget, or ~8 history rows.",
-  "risk_source": "accountability",
+  "risk_source": "design",
   "risk_weight": 5,
   "provenance": {
     "source": "agent-generated during the v14 integration",

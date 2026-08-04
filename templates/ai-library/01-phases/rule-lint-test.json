@@ -7,6 +7,9 @@
   "tier": 1,
   "enforcement": "MANDATORY",
   "enforcement_status": "live",
+  "enforced_by": [
+    ".github/workflows/tests.yml"
+  ],
   "overrideable": false,
   "workflow_phase": "2",
   "maps_to_v14_step": 16,
@@ -15,6 +18,7 @@
   "ai_action": "Run `python -m unittest discover -s tests`. Do not proceed past a red suite.",
   "risk_source": "design",
   "risk_weight": 7,
+  "risk_weight_note": "One above the design band (4-6). The source is right - shipping past a red suite is a planning failure, not an autonomy failure - but the consequence is worse than the band's ceiling: this repo is vendored by adopters, so a regression that lands travels. Weight left at the honest assessment rather than lowered to fit.",
   "provenance": {
     "source": "agent-generated during the v14 integration",
     "authored": "2026-08-04",

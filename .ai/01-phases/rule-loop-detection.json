@@ -7,13 +7,19 @@
   "tier": 1,
   "enforcement": "MANDATORY",
   "enforcement_status": "live",
+  "enforced_by": [
+    "hooks/workflow_hook.py::detect_loop",
+    "hooks/workflow_hook.py::log_loop",
+    "hooks/workflow_hook.py::tool_signature",
+    "tests/test_hook.py::TestLoopDetection::test_fires_once_at_threshold_and_logs"
+  ],
   "overrideable": false,
   "workflow_phase": "2",
   "maps_to_v14_step": 15,
   "rule": "Detect repeated identical tool calls within a session and surface them.",
   "condition": null,
   "ai_action": "Track a hash of (tool_name, tool_input). At the configured threshold of consecutive identical calls, emit an advisory and log to 08-behavioral-metrics/loop_detection.jsonl. Advisory only, never blocking.",
-  "risk_source": "behavioral",
+  "risk_source": "capability",
   "risk_weight": 9,
   "provenance": {
     "source": "agent-generated during the v14 integration",

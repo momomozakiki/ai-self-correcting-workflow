@@ -22,7 +22,7 @@ thumb: *if a reviewer would care, log it.*
 ## Risk field (optional)
 
 A change that carries real risk may add one `**Risk:**` line using one of five
-fixed slugs, drawn from the CISA / Five Eyes agentic-AI risk categories:
+fixed slugs:
 
 | Slug | Covers |
 |------|--------|
@@ -32,9 +32,17 @@ fixed slugs, drawn from the CISA / Five Eyes agentic-AI risk categories:
 | `structural` | Composition and interaction between agents or components; cascading failure |
 | `accountability` | Ownership, auditability, traceability — who is answerable, and can you tell later |
 
-The slugs are fixed even if upstream prose renames a category, so the ledger
-format never churns. Omit the line when a change carries no notable risk — an
-always-present field stops carrying signal.
+**This list is the ledger's own, and is deliberately not the CISA five.** The
+`risk_source` field on rule files under `.ai/` uses the CISA taxonomy proper —
+`component`, `design`, `capability`, `structural`, `accountability` — per §11.3 of
+the imported spec. These slugs describe risk from the *changing the repo* angle
+(`privilege`, `behavioral`) rather than the *acting autonomously* angle
+(`component`, `capability`), and they are frozen: entries already written use them,
+and rewriting the vocabulary would invalidate history for no gain. Earlier revisions
+of this file described these as the CISA categories, which was wrong.
+
+Omit the line when a change carries no notable risk — an always-present field stops
+carrying signal.
 
 ## Entry format
 

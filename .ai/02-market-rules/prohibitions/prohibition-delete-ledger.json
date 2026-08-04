@@ -13,6 +13,11 @@
   "ai_action": "The ledger and plans/archive/ are the audit trail. Correct an entry by appending, never by editing history away.",
   "risk_source": "capability",
   "risk_weight": 10,
+  "provenance": {
+    "source": "agent-generated during the v14 integration",
+    "authored": "2026-08-04",
+    "basis": "docs/self-growing-checklist-ecosystem/ + GUIDE.md Tier 0"
+  },
   "tags": [
     "prohibition",
     "tier0",

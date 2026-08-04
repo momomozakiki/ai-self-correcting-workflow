@@ -7,6 +7,11 @@
   "tier": 1,
   "enforcement": "MANDATORY",
   "enforcement_status": "live",
+  "enforced_by": [
+    "hooks/workflow_hook.py::write_unfinished_breadcrumb",
+    "hooks/workflow_hook.py::handle_stop",
+    "tests/test_hook.py::TestStopBreadcrumb::test_dirty_tree_writes_breadcrumb_on_main"
+  ],
   "overrideable": false,
   "workflow_phase": "2",
   "maps_to_v14_step": 14,

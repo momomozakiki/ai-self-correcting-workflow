@@ -3,12 +3,20 @@
   "tier_note": "The user approves plans and reviews diffs; hooks nudge, they do not block.",
   "reversibility": {
     "enforcement_status": "live",
+    "enforced_by": [
+      "hooks/workflow_hook.py::write_unfinished_breadcrumb",
+      "tests/test_hook.py::TestStopBreadcrumb"
+    ],
     "required": true,
     "mechanism": "git",
     "checkpoint": "clean commit before destructive work"
   },
   "loop_detection": {
     "enforcement_status": "live",
+    "enforced_by": [
+      "hooks/workflow_hook.py::detect_loop",
+      "tests/test_hook.py::TestLoopDetection"
+    ],
     "see": "workflow_config.json -> loop_detection"
   },
   "absolute_prohibitions": {

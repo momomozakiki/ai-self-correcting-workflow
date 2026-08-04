@@ -51,6 +51,52 @@ threshold is deliberately two: one mistake is noise, two is a pattern worth payi
   the editing tools over generated patch scripts entirely.
 - **Codified:** `.ai/01-phases/rule-no-heredoc-stdin.json`; GUIDE §4 Phase 2; SKILL.md Phase 2.
 
+### 2026-08-05 — A governance library that nothing checked drifted in one commit
+
+- **What:** The v14 integration shipped `.ai/` with an `enforcement_status` on every
+  artifact and the rule that none may imply enforcement it lacks. Nothing tested any of
+  it. An audit one commit later found seven distinct drifts: an invented `risk_source`,
+  six out-of-band weights, an enum documented wrong in `GROWTH.md`, ten `live` claims with
+  nothing to point at, a v14 step mapping whose tier contradicted the GUIDE, four
+  prohibitions missing the `provenance` the README promised, and a ledger slug list
+  mislabelled as the CISA taxonomy.
+- **Why it matters:** Every artifact read as correct. That is the failure mode — prose
+  that describes a control is indistinguishable from a control until something tries to
+  break it. The integration commit even said "no artifact may imply enforcement it does
+  not have" while shipping ten artifacts that did exactly that.
+- **Root cause:** Writing the rule and the artifacts in one pass, with no adversarial step
+  between them. The library was reviewed for whether it read honestly, not for whether it
+  *was* honest.
+- **Fix:** `tests/test_governance_library.py`. A `live` tier now needs an `enforced_by`
+  list resolving to real functions and tests; a `convention` needs an `enforcement_note`
+  naming the real mechanism. Confirmed by running the tests against the unfixed library
+  first — 42 failures — rather than writing them until they passed.
+- **Codified:** not yet — first occurrence. If governance artifacts drift again without a
+  test catching them, this becomes a rule: *an artifact that asserts a property about the
+  codebase ships with the test that checks it, in the same commit.*
+
+### 2026-08-05 — Nudging a number to clear a threshold (caught in review)
+
+- **What:** The first draft of the fix above proposed raising `rule-closure`'s
+  `risk_weight` from 7 to 8, and lowering `rule-lint-test`'s from 7 to 6, so they would sit
+  inside their taxonomy bands. Review asked what the justification for the change was. The
+  honest answer was that there wasn't one — the numbers were being moved to make a check
+  pass.
+- **Why it matters:** This is the same failure as a faked `live` tier, wearing different
+  clothes: an honest assessment bent until it satisfies a validator. It nearly shipped
+  *inside the change whose entire purpose was to stop that*, which is what makes it worth
+  recording. A test that can be satisfied by adjusting the data it measures is not a test.
+- **Root cause:** Treating an imported band as ground truth. The CISA bands were written
+  for an agent fleet; some do not transfer to a single-operator repo, and the mismatch was
+  information about the band, not an error in the weight.
+- **Fix:** Zero weights were changed. `risk_weight_note` records why a band does not fit,
+  and the test accepts an out-of-band weight only with one attached — and rejects a note on
+  an in-band weight, so it cannot decay into boilerplate. Rationale in
+  `docs/governance-integration-decision.md` §7.
+- **Codified:** not yet — first occurrence. If a second "adjust the data to satisfy the
+  check" instance appears, this becomes a rule: *when data fails a validator, fix the data
+  only if the data is wrong; otherwise fix the validator or record the exception.*
+
 ### 2026-08-04 — An environment check that could never pass
 
 - **What:** Added `claude` to `env_check.tool_paths` so `SessionStart` would report the CLI

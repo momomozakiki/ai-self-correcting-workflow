@@ -7,6 +7,7 @@
   "tier": 1,
   "enforcement": "MANDATORY",
   "enforcement_status": "convention",
+  "enforcement_note": "No hook can tell whether a checklist was designed or merely asserted. The real mechanism is the user reading the plan before approving it.",
   "overrideable": false,
   "workflow_phase": "1",
   "maps_to_v14_step": 6,

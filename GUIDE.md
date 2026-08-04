@@ -663,7 +663,7 @@ The reasoning behind each assignment is in
 
 | v14 step | What it asks for | Lands in | Tier |
 |---|---|---|---|
-| 1 | Synchronize source control | Phase 0 · F1 | live |
+| 1 | Synchronize source control | Phase 0 · F1 | convention |
 | 2 | Check for pending work | Phase 0 · F1/F4 | live |
 | 3 | Check pending ratifications | Phase 0 · F4 (`UNFINISHED.md`) | live |
 | 4 | Validate the build environment | Phase 0 · F2 | live |
@@ -672,7 +672,7 @@ The reasoning behind each assignment is in
 | 7 | Retrieve similar past context | Phase 0 · F3 + the weekly ledger | convention |
 | 8 | Load domain checklists | Phase 0 · F3 + `.ai/` manifests | convention |
 | 9 | Identify knowledge gaps / research | Phase 1 | convention |
-| 10 | Validate new knowledge | Phase 2 · Documentation Standard | convention |
+| 10 | Validate new knowledge | Phase 2 · Documentation Standard | live |
 | 11 | Split plan into stages | Phase 1 | convention |
 | 12 | Iterative technical audit | Phase 2 · lint + tests | live |
 | 13 | Performance scrutiny | Phase 2 (optional) | convention |
@@ -716,6 +716,17 @@ rules instead of prose.
 may imply enforcement it doesn't have: a declarative field is written as `null` with
 its reason attached, never as a plausible-looking fake value. If you cannot name the
 hook or test that makes a rule *live*, it is `convention` — say so and mean it.
+
+**And the declaration is tested.** `tests/test_governance_library.py` turns each of
+those sentences into an assertion: a `live` artifact must carry `enforced_by`, a list
+of `path::symbol` references resolved against the actual source; a `convention` must
+carry an `enforcement_note` saying what the real mechanism is; a `declarative` block
+must carry a `reason` and keep its values null. It also holds the manifests to the
+files on disk, `risk_source`/`risk_weight` to the CISA taxonomy in §11.3 of the
+imported spec, this section's step-mapping table to `01-phases/manifest.json`, and
+`.ai/` to its `templates/ai-library/` mirror. Written after an audit found seven
+taxonomy violations, a false step mapping and eight untraceable `live` claims in a
+library that had been correct-looking prose for exactly one commit.
 
 **Seeded empty on purpose.** `05-domains/` and `06-components/` ship with manifests
 and nothing else. A rule nobody has hit yet is a guess; a rule harvested from a real

@@ -1,6 +1,6 @@
 ---
 title: Growing the governance library
-version: 1.0
+version: 1.1
 last_validated: 2026-08-04
 official: false
 source: agent-generated
@@ -34,7 +34,27 @@ structure: a checklist item in `skills/adaptive-workflow/SKILL.md` and a rule fi
 reaching maturity level 5 requires that none are outstanding.
 
 ## Every new rule file needs
-`id`, `enforcement`, `enforcement_status` (live | convention | declarative), `risk_source`
-(one of `privilege`, `design`, `behavioral`, `structural`, `accountability`), `risk_weight`,
-and a `provenance` block. If you cannot name which hook or test makes it *live*, it is not
-live - say `convention` and mean it.
+`id`, `enforcement`, `enforcement_status` (live | convention | declarative), `risk_source`,
+`risk_weight`, and a `provenance` block.
+
+`risk_source` is one of the CISA five, each defined over a weight band
+(`docs/self-growing-checklist-ecosystem/03-risk-gates-and-metrics.md` §11.3):
+
+| `risk_source` | What it covers | `risk_weight` |
+|---|---|---|
+| `component` | vulnerabilities in tools, APIs, data sources | 1-3 |
+| `design` | flaws in planning, reasoning, or action logic | 4-6 |
+| `capability` | risks from autonomous action execution | 7-10 |
+| `structural` | composition and interaction of multiple agents | 6-9 |
+| `accountability` | unclear or diffused responsibility | 8-10 |
+
+If your honest weight falls outside its band, **do not move the number**. Add a
+`risk_weight_note` saying why the imported band does not fit here. The bands were written
+for an agent fleet; some of them do not transfer to a single-operator repo, and fitting a
+number to a threshold is the same failure as claiming enforcement you do not have.
+
+If you cannot name which hook or test makes it *live*, it is not live - say `convention`,
+give it an `enforcement_note` saying what the real mechanism is, and mean it. A `live`
+artifact carries `enforced_by`: a list of `path::symbol` references that
+`tests/test_governance_library.py` resolves against the actual source. A tier claim that
+cannot be traced to code fails the build.

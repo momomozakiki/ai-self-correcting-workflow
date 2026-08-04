@@ -60,6 +60,9 @@ them as helpful nudges, not blockers.
   `enforcement_status`: `live` (a hook or test enforces it), `convention` (followed,
   nothing blocks), `declarative` (recorded only). Never imply enforcement that
   doesn't exist — write declarative fields as `null` with a reason, never faked.
+  `tests/test_governance_library.py` enforces this: `live` needs an `enforced_by`
+  list resolving to real code, `convention` needs an `enforcement_note`. Any edit
+  under `.ai/` must be mirrored into `templates/ai-library/` in the same commit.
 - **Runtime:** Claude Code on a Claude Pro subscription, no API key (GUIDE §14).
   Sonnet 5 for routine work, `/model opus` for hard passes. **Fable 5 bills usage
   credits on Pro — never make it a default.**

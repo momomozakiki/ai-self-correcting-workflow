@@ -1,7 +1,7 @@
 ---
 title: Governance library (TEMPLATE)
-version: 1.0
-last_validated: 2026-08-04
+version: 1.1
+last_validated: 2026-08-05
 official: false
 source: agent-generated
 tags: [governance, library, enforcement-tiers, index]
@@ -19,11 +19,17 @@ each control sits where it does.
 
 Every artifact declares one:
 
-| Tier | Meaning |
-|------|---------|
-| **live** | A hook or test enforces it. Breaking it produces a visible signal. |
-| **convention** | The agent follows it; nothing blocks. |
-| **declarative** | Recorded for portability. Not enforceable here; written as `null` with a reason, never faked. |
+| Tier | Meaning | Required field |
+|------|---------|----------------|
+| **live** | A hook or test enforces it. Breaking it produces a visible signal. | `enforced_by`: `path::symbol` references, resolved against the source |
+| **convention** | The agent follows it; nothing blocks. | `enforcement_note`: what is *not* enforced, and what the real mechanism is |
+| **declarative** | Recorded for portability. Not enforceable here; written as `null` with a reason, never faked. | `reason`, plus null/empty values |
+
+Copy `tests/test_governance_library.py` from workflow-core alongside this tree and adjust
+its paths - it checks all three. A `live` tier whose `enforced_by` names a function that
+does not exist fails the build, as does a `declarative` block whose placeholder has been
+quietly populated. The tiers are claims about code, so they are tested like claims about
+code. Without it, this tree is documentation that happens to be in JSON.
 
 ## Layout
 
@@ -44,7 +50,8 @@ GROWTH.md               how the library grows, and the self-hardening rule
 `00-system/` config files carry `.prov.md` sidecars per GUIDE section 6.2. Rule files under
 `01-phases/` and `02-market-rules/` do **not** - they embed a `provenance` block in the JSON
 itself, which the sidecar convention exists to substitute for. One provenance record per
-artifact, in the artifact where the format allows it.
+artifact, in the artifact where the format allows it. `RuleSchema.test_provenance_is_populated`
+holds every rule and prohibition to this.
 
 ## Hand-maintained from here
 

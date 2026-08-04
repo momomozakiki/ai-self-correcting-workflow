@@ -1,6 +1,6 @@
 ---
 title: Governance Integration Decision Record (v14 → workflow-core)
-version: 1.0
+version: 1.1
 last_validated: 2026-08-04
 official: true
 source: agent-generated
@@ -10,12 +10,13 @@ estimated_tokens: 2400
 ---
 
 # Governance Integration Decision Record
-**Version 1.0** — *Which v14 controls this repository enforces, which it merely follows, and which it only records.*
+**Version 1.1** — *Which v14 controls this repository enforces, which it merely follows, and which it only records.*
 
 ## Revision History
 | Version | Date       | Change   |
 |---------|------------|----------|
 | 1.0     | 2026-08-04 | Initial. Dispositions all 24 sections of the imported v14 framework against the real runtime; records the source-verification results and the runtime assumptions they rest on. |
+| 1.1     | 2026-08-05 | Audit of v1.0's own tier claims (see §6). Two re-tiers: step 1 git sync **live → convention**, step 10 documentation standard **convention → live**. Seven risk-taxonomy violations and one false v14 step mapping corrected. `tests/test_governance_library.py` added so the tier claims in this record are now checked rather than asserted. |
 
 ---
 
@@ -95,7 +96,7 @@ v14 cites heavily. Spot-checking the load-bearing claims:
 | 9 | Selection engine | convention | Project-type detection is agent judgment. |
 | 9.3 | Unified evaluation metrics (ARS/RGC/ACR/PAAS) | **dropped** | Requires an LLM judge and a vector store. Not implementable without an API key. Recorded here rather than in the library, so nothing dangles. |
 | 10 | Path-dependent policy evaluation | convention | The weekly ledger already records decisions and rationale; a second path log would duplicate it. |
-| 11 | Five-risk taxonomy | **live** | The five slugs are a documented ledger field (`history/FORMAT.md`) and a `risk_source` on every rule file. |
+| 11 | Five-risk taxonomy | **live** | `risk_source` on every rule file, enforced by `RiskTaxonomy` in `tests/test_governance_library.py`. *(v1.0 called this live while nothing checked it; seven artifacts had drifted — see §6.)* The ledger's `**Risk:**` field in `history/FORMAT.md` is a **separate, frozen** five-slug list, not this taxonomy; v1.0 conflated the two. |
 | 11 | Structural risk specifically | declarative | Requires a second agent. No multi-agent composition here. |
 | 12.1 | Dual-validation gate | convention | Technical gate = lint/tests (Phase 2); human gate = the user. |
 | 12.2 | Sandboxed execution | declarative | The real local mechanism is Claude Code permission modes plus `PreToolUse` hooks, not a staging environment. Recorded so an adopter with infrastructure can wire it up. |
@@ -130,7 +131,44 @@ cannot exist here:
   no retrieval scoring, no judge model without API access.
 - **Vector-search fallback in the loading strategy (§5.4 step 5).** Manifest lookup only.
 
-## 6. Re-checking this record
+## 6. Audit of v1.0's own claims (2026-08-04)
+
+v1.0 asserted a tier for every control but shipped nothing that could check one. An audit
+one commit later found the library had already drifted from this record in five ways, none
+of which any test or hook would ever have surfaced:
+
+| Finding | Correction |
+|---|---|
+| `rule-loop-detection` used `risk_source: "behavioral"`, absent from the §11.3 taxonomy | → `capability`; runaway autonomous execution is capability risk |
+| Six artifacts carried a `risk_weight` outside their source's band | Sources corrected where mislabelled (`doc-standard`, `living-docs`, `unfinished-plan` → `design`); genuine deviations kept at their honest weight and given a `risk_weight_note`. **No weight was changed to fit a band** — see §7 |
+| `.ai/GROWTH.md` documented `privilege` and `behavioral`, inventing two sources and dropping `component` and `capability` | Corrected to the CISA five, with the weight bands added (their absence is why the weights drifted unnoticed) |
+| Eight rules claimed `live` with no way to name the enforcing code, and two blocks in `autonomy-boundaries.json` did the same | Every `live` artifact now carries `enforced_by`, resolved against real functions and tests |
+| `rule-no-heredoc-stdin` claimed v14 step 12, which GUIDE §12 tiers as live, while the rule is convention | `maps_to_v14_step: null` with a reason: it was self-hardened locally and has no v14 ancestor |
+
+Two tier claims in §4 were wrong and are corrected here:
+
+- **Step 1, git sync: live → convention.** The hook *reports* branch, dirty state and
+  ahead/behind counts. Nothing runs `git fetch && git pull --rebase`, and nothing stops a
+  session on a dirty tree. Reporting a condition is not enforcing a response to it.
+- **Step 10, documentation standard: convention → live.** An under-claim in the other
+  direction: `run_self_test` really does check every doc for frontmatter, and
+  `TestSelfTest::test_reports_missing_frontmatter` really does cover it.
+
+## 7. Why no weight was retuned
+
+The first draft of the fix proposed nudging three `risk_weight` values so they would clear
+their imported bands. That is the same failure as a faked `live` tier wearing different
+clothes: an honest number bent until it satisfies a check. The bands in §11.3 were written
+for an agent fleet, and some of them do not transfer to a single-operator repository —
+a missing audit trail means something different when there is one operator and git already
+records who changed what.
+
+So the escape hatch is a written argument, not a new number. `risk_weight_note` records why
+the imported band does not fit, and `RiskTaxonomy.test_risk_weight_is_in_band_or_carries_a_note`
+accepts an out-of-band weight only when one is present. It also rejects a note on an
+in-band weight, so the field cannot become boilerplate.
+
+## 8. Re-checking this record
 
 Re-verify §2 whenever the Claude Code CLI or the plan's model lineup changes — the `opus` alias
 resolution and Fable's billing status have both already moved once. Re-run

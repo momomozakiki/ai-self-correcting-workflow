@@ -13,6 +13,11 @@
   "ai_action": "If a force-push to main or any shared branch is requested, HALT and explain the alternative (a new commit, or a force-push to your own topic branch after confirming nobody else has pulled it).",
   "risk_source": "capability",
   "risk_weight": 10,
+  "provenance": {
+    "source": "agent-generated during the v14 integration",
+    "authored": "2026-08-04",
+    "basis": "docs/self-growing-checklist-ecosystem/ + GUIDE.md Tier 0"
+  },
   "tags": [
     "prohibition",
     "tier0",

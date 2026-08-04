@@ -31,6 +31,12 @@ first `**Next action:**` line below and surfaces it at session start.
 
 ## Active Epic: Governance library growth
 
+- [x] Library integrity tests (`tests/test_governance_library.py`): manifests vs
+      disk, the required key set, the CISA risk taxonomy, the GUIDE §12 step
+      mapping, `.ai/` vs `templates/ai-library/`, and — the load-bearing one —
+      every `live` tier naming an `enforced_by` that resolves to real code.
+      Found and fixed seven drifts in the v14 integration. `--self-test` now runs
+      in CI, gated on exit code.
 - [ ] Harvest the first `05-domains/` rules from real tasks (the folder ships
       empty on purpose — see `.ai/GROWTH.md`).
 - [ ] `--self-test --json` for CI consumption, so a pipeline can assert a
