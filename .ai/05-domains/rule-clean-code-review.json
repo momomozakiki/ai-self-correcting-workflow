@@ -1,0 +1,70 @@
+{
+  "id": "rule-clean-code-review",
+  "version": "1.0",
+  "last_updated": "2026-08-05",
+  "category": "code-review",
+  "type": "domain-rule",
+  "tier": 2,
+  "enforcement": "CONDITIONAL",
+  "enforcement_status": "convention",
+  "enforcement_note": "A formatter enforces layout and a linter catches unused names; neither can tell whether a name reveals intent or whether an abstraction earned its place. Duplication detectors find identical text, not the same decision expressed twice. The real mechanism is the agent answering these during Phase 2 and the user reading the diff.",
+  "overrideable": true,
+  "condition": "Writing or reviewing any code.",
+  "rule": "Audit new and changed code for naming, function shape, duplication and unnecessary complexity, as questions rather than prescriptions.",
+  "ai_action": "Work through the checklist against the code you just wrote. Prefer deleting to abstracting: an abstraction added for a second case is usually wrong about the third.",
+  "checklist": [
+    {
+      "principle": "Naming",
+      "questions": [
+        "Does the name say what it is for, or what it is made of? `retry_budget` beats `int_counter_2`.",
+        "Could someone who has not read the implementation predict what this returns?",
+        "Does the codebase already have a word for this concept? Two words for one thing is a bug waiting to happen."
+      ]
+    },
+    {
+      "principle": "Functions",
+      "questions": [
+        "Does this do one thing, at one level of abstraction? Mixing 'open the file' with 'parse the header' in one body is two levels.",
+        "Do the parameters suggest the function is deciding things the caller should decide? A boolean parameter usually means two functions.",
+        "Can you describe what it does without saying 'and'?"
+      ]
+    },
+    {
+      "principle": "Duplication",
+      "questions": [
+        "Is this the same *decision* expressed in more than one place, or merely similar text? Only the first is duplication worth removing.",
+        "If this rule changed, how many files would have to change together? That count is the real cost."
+      ]
+    },
+    {
+      "principle": "Simplicity",
+      "questions": [
+        "Is there a layer here that exists only in case something changes? Delete it until it does.",
+        "Would a reader need to hold more than a few things in their head at once to follow this?",
+        "Is the error path as clear as the happy path, or is it a bare except that hides the cause?"
+      ]
+    },
+    {
+      "principle": "Comments",
+      "questions": [
+        "Does each comment say *why*, leaving *what* to the code? A comment restating the line below is maintenance debt with no asset.",
+        "Is there a comment explaining a workaround whose reason has since gone away?"
+      ]
+    }
+  ],
+  "anti_pattern": "Do not convert these into limits. 'Functions must be under 20 lines' produces functions that are 19 lines and incoherent. 'Can you describe it without saying and?' produces a function that does one thing at whatever length that takes.",
+  "risk_source": "design",
+  "risk_weight": 4,
+  "provenance": {
+    "source": "agent-generated; drawn from Robert C. Martin, Clean Code (2008), and the DRY principle as stated in Hunt & Thomas, The Pragmatic Programmer (1999)",
+    "authored": "2026-08-05",
+    "basis": "Harvested as an 05-domains checklist under .ai/GROWTH.md. Phrased as review questions per the checklist-not-prescription rule."
+  },
+  "tags": [
+    "code-review",
+    "clean-code",
+    "naming",
+    "dry",
+    "checklist"
+  ]
+}

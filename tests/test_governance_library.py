@@ -78,14 +78,25 @@ def phase_rules():
     return sorted((LIBRARY / "01-phases").glob("rule-*.json"))
 
 
+def domain_rules():
+    return sorted((LIBRARY / "05-domains").glob("rule-*.json"))
+
+
 def prohibitions():
     return sorted((LIBRARY / "02-market-rules" / "prohibitions").glob("prohibition-*.json"))
 
 
 def artifacts():
-    """Every rule and prohibition file, as (relative path, parsed dict) pairs."""
+    """Every rule and prohibition file, as (relative path, parsed dict) pairs.
+
+    Domain rules are included deliberately: a checklist harvested into
+    ``05-domains/`` is an artifact making the same claims as a phase rule, so it
+    answers to the same schema, taxonomy and honesty checks. Scoping this to
+    ``01-phases/`` would create a folder where half the invariants quietly did
+    not apply -- which is how the drift this module exists to catch gets in.
+    """
     return [(p.relative_to(REPO_ROOT).as_posix(), load_json(p))
-            for p in phase_rules() + prohibitions()]
+            for p in phase_rules() + domain_rules() + prohibitions()]
 
 
 def manifests():

@@ -1,0 +1,66 @@
+{
+  "id": "rule-solid-review",
+  "version": "1.0",
+  "last_updated": "2026-08-05",
+  "category": "code-review",
+  "type": "domain-rule",
+  "tier": 2,
+  "enforcement": "CONDITIONAL",
+  "enforcement_status": "convention",
+  "enforcement_note": "Nothing can mechanically decide whether a class has one responsibility - that is a judgement about intent, not a property of the syntax tree. A linter can measure method count and fan-out; it cannot tell a cohesive five-method class from an incoherent one. The real mechanism is the agent answering these questions honestly during Phase 2 and recording what it found, plus the user reading the diff.",
+  "overrideable": true,
+  "condition": "Reviewing or writing object-oriented or module-structured code.",
+  "rule": "Audit new and changed code against the SOLID principles, as questions rather than prescriptions.",
+  "ai_action": "Work through the checklist against the code you just wrote. Report the answers, including the ones that pass - a checklist that only ever surfaces problems gets read as noise. Where a principle is knowingly traded away, say which and why rather than staying silent.",
+  "checklist": [
+    {
+      "principle": "Single responsibility",
+      "questions": [
+        "Does this class or module have one reason to change? Name it. If naming it needs an 'and', that is two.",
+        "Would a change to persistence, to presentation, and to business rules all touch this same file?"
+      ]
+    },
+    {
+      "principle": "Open-closed",
+      "questions": [
+        "Can the next variation be added without editing this code, or does every new case mean another branch here?",
+        "Is the extension point a real seam, or an abstraction invented for a second case that has not arrived?"
+      ]
+    },
+    {
+      "principle": "Liskov substitution",
+      "questions": [
+        "Can every subtype stand in for its base without the caller knowing which it got?",
+        "Does any override narrow what the base promised - throwing where the base returned, or ignoring an argument the base honoured?"
+      ]
+    },
+    {
+      "principle": "Interface segregation",
+      "questions": [
+        "Does any implementer leave methods empty or raise NotImplemented? That is the interface asking for too much.",
+        "Would splitting this interface leave each caller depending only on what it actually calls?"
+      ]
+    },
+    {
+      "principle": "Dependency inversion",
+      "questions": [
+        "Does the policy depend on the detail, or the detail on the policy?",
+        "Can this be tested without the database, the network, or the clock? If not, the dependency is concrete where it should be injected."
+      ]
+    }
+  ],
+  "anti_pattern": "Do not turn these into prescriptions. 'Use an interface for every service' produces indirection nobody needed; 'does this have one reason to change?' produces a look at the code. The question survives contact with a codebase it was not written for. The prescription does not.",
+  "risk_source": "design",
+  "risk_weight": 5,
+  "provenance": {
+    "source": "agent-generated; SOLID as stated by Robert C. Martin, Agile Software Development: Principles, Patterns, and Practices (2002)",
+    "authored": "2026-08-05",
+    "basis": "Harvested as the first 05-domains checklist under .ai/GROWTH.md. Phrased as review questions per the checklist-not-prescription rule."
+  },
+  "tags": [
+    "code-review",
+    "solid",
+    "design",
+    "checklist"
+  ]
+}

@@ -69,6 +69,16 @@ them as helpful nudges, not blockers.
   `tests/test_governance_library.py` enforces this: `live` needs an `enforced_by`
   list resolving to real code, `convention` needs an `enforcement_note`. Any edit
   under `.ai/` must be mirrored into `templates/ai-library/` in the same commit.
+- **Autonomous runs.** `skills/autonomous-task/SKILL.md` removes `AskUserQuestion` for the
+  turn and says what to do instead: read the repo, then official docs, then take the
+  conservative option and record the assumption. It ends by invoking `skills/handover/`,
+  which writes `plans/HANDOVER.md` — the user's entire view of a run they didn't watch.
+  Autonomy means not asking the user to arbitrate; it is **not** licence to click through
+  a guard's `ask`.
+- **Review checklists** live in `.ai/05-domains/`, phrased as questions rather than
+  prescriptions so they carry to any project and leave judgement intact. All `convention`.
+  `.ai/06-components/` stays empty until a pattern has shipped and survived review —
+  `BLUEPRINT_SCHEMA.md` has the bar.
 - **Runtime:** Claude Code on a Claude Pro subscription, no API key (GUIDE §14).
   Sonnet 5 for routine work, `/model opus` for hard passes. **Fable 5 bills usage
   credits on Pro — never make it a default.**

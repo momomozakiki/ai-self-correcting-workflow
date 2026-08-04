@@ -790,10 +790,22 @@ control that would only ever catch a secret typed inline. Every one of those art
 states in its `enforcement_note` which decision it emits and that the dispatcher fails
 open, so `live` is never read as *unbypassable*.
 
-**Seeded empty on purpose.** `05-domains/` and `06-components/` ship with manifests
-and nothing else. A rule nobody has hit yet is a guess; a rule harvested from a real
-mistake is knowledge. See `.ai/GROWTH.md` for the breadth / depth / blueprint
-protocols and the self-hardening rule (a mistake recorded twice becomes structure).
+**`05-domains/` holds review checklists, written as questions.** *"Does this class have
+one reason to change?"* — not *"use an interface for every service"*. The distinction is
+the point: a question makes the agent look at the code and keeps its judgement intact,
+while a prescription tells it what to type and stops being right the moment the codebase
+differs from the one the rule was written for. All `convention` — nothing mechanically
+decides whether a class has one responsibility, and the checklists say so. The first three
+(SOLID, clean code, security) were harvested by research rather than from a mistake, which
+`GROWTH.md` now documents as a fourth growth protocol; a researched rule is *proposed*
+until a human ratifies it. Each is trialled against real code before being kept, because a
+checklist that finds nothing is too vague to be worth loading.
+
+**`06-components/` is still empty, and stays that way until a pattern earns a blueprint.**
+`BLUEPRINT_SCHEMA.md` defines the shape; the bar is that the pattern has already shipped
+and survived review. A blueprint written in advance is a guess with a filename — the same
+error as a rule harvested from imagination. See `.ai/GROWTH.md` for all four protocols and
+the self-hardening rule (a mistake recorded twice becomes structure).
 
 **Provenance.** `00-system/` config files carry `.prov.md` sidecars per §6.2. Rule
 files don't — they embed a `provenance` block in the JSON, which is what the sidecar

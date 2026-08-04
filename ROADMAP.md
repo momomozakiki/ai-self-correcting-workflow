@@ -42,8 +42,17 @@ first `**Next action:**` line below and surfaces it at session start.
       every `live` tier naming an `enforced_by` that resolves to real code.
       Found and fixed seven drifts in the v14 integration. `--self-test` now runs
       in CI, gated on exit code.
-- [ ] Harvest the first `05-domains/` rules from real tasks (the folder ships
-      empty on purpose — see `.ai/GROWTH.md`).
+- [x] Harvest the first `05-domains/` rules. Three review checklists — SOLID, clean
+      code, security — written as questions rather than prescriptions so they carry
+      to any project. Harvested by research rather than from a mistake, which
+      `.ai/GROWTH.md` now documents as a fourth growth protocol. All `convention`.
+- [ ] Act on the SOLID/clean-code trial findings in `hooks/workflow_hook.py`:
+      `run_self_test` (~166 lines) and `handle_stop` (~89) each fail the "describe it
+      without saying *and*" question, and 16 `except Exception: pass/return/continue`
+      sites make the fail-soft design hard to debug. The checklist found these; acting
+      on them is a refactor, not an audit.
+- [ ] `06-components/`: write the first blueprint when a pattern has shipped and
+      survived review twice. `BLUEPRINT_SCHEMA.md` defines the shape and the bar.
 - [ ] `--self-test --json` for CI consumption, so a pipeline can assert a
       minimum maturity level without scraping the text report.
 - [x] Fold `GUIDE.md`'s revision history into a sibling changelog — the table hit 8

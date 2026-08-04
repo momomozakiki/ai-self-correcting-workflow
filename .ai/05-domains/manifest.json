@@ -1,8 +1,27 @@
 {
   "folder": "05-domains",
-  "version": "1.0",
-  "last_updated": "2026-08-04",
-  "total_items": 0,
-  "items": [],
-  "note": "Technology-specific rule sets (rest-api, database, security-auth, ...). Seeded empty on purpose - see GROWTH.md."
+  "version": "1.1",
+  "last_updated": "2026-08-05",
+  "total_items": 3,
+  "items": [
+    {
+      "id": "rule-solid-review",
+      "file": "rule-solid-review.json",
+      "applies_to": "object-oriented or module-structured code",
+      "enforcement_status": "convention"
+    },
+    {
+      "id": "rule-clean-code-review",
+      "file": "rule-clean-code-review.json",
+      "applies_to": "any code",
+      "enforcement_status": "convention"
+    },
+    {
+      "id": "rule-security-review",
+      "file": "rule-security-review.json",
+      "applies_to": "credentials, untrusted input, access control, data leaving the process",
+      "enforcement_status": "convention"
+    }
+  ],
+  "note": "Domain checklists, written as review questions and never as prescriptions: a question makes you look at the code, a prescription tells you what to type and stops working the moment the codebase differs from the one it was written for. All convention - nothing mechanically decides whether a class has one responsibility. See GROWTH.md for how these grow, and add technology-specific sets (rest-api, database, ...) the same way."
 }

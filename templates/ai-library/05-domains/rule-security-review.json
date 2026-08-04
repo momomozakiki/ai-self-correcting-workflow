@@ -1,0 +1,72 @@
+{
+  "id": "rule-security-review",
+  "version": "1.0",
+  "last_updated": "2026-08-05",
+  "category": "code-review",
+  "type": "domain-rule",
+  "tier": 2,
+  "enforcement": "CONDITIONAL",
+  "enforcement_status": "convention",
+  "enforcement_note": "Nothing here is enforced. The PreToolUse guard inspects commands, not file contents, so it cannot see a secret being committed - which is exactly why prohibition-commit-secrets is still convention and why a `git diff --cached` scanner is on ROADMAP.md. Scanners catch known shapes; they do not catch a missing authorization check. The real mechanism is the agent answering these during Phase 2 and the user reviewing the diff.",
+  "overrideable": false,
+  "condition": "Handling credentials, untrusted input, authentication, authorization, or data leaving the process.",
+  "rule": "Audit new and changed code for secret handling, input trust, access control and data exposure, as questions rather than prescriptions.",
+  "ai_action": "Work through the checklist against the code you just wrote. Where an answer is 'I cannot tell from here', say so rather than assuming the safe answer - an unverified security claim is worse than an open question. If a secret has already been committed, treat it as compromised and say so plainly: rotation is required, and removing it from history is not sufficient on its own.",
+  "checklist": [
+    {
+      "principle": "Secrets",
+      "questions": [
+        "Is any credential, token, key or connection string literal in the source, a test fixture, or an example file?",
+        "Could a secret reach a log line, an error message, a stack trace, or a commit message?",
+        "If this secret leaked today, is there a rotation path, or is it embedded somewhere that makes rotation expensive?"
+      ]
+    },
+    {
+      "principle": "Untrusted input",
+      "questions": [
+        "What here is attacker-controlled? Name it explicitly - request bodies, filenames, environment, and anything read back from storage someone else can write.",
+        "Is that input validated where it enters, or trusted because an earlier layer 'should have' checked it?",
+        "Does any of it reach a query, a shell, a path, a template, or a deserializer without being parameterised or escaped?"
+      ]
+    },
+    {
+      "principle": "Authentication and authorization",
+      "questions": [
+        "Is every entry point authenticated, including the ones added since the last review?",
+        "Is authorization checked against the *object* being touched, not only the route? Route-level checks miss the user who asks for someone else's record.",
+        "Does failure deny, or does an error path fall through to allow?"
+      ]
+    },
+    {
+      "principle": "Data exposure",
+      "questions": [
+        "Does a response, log or error return more than the caller needs to know? Internal identifiers and paths are information.",
+        "Is data encrypted where it is stored and while it moves, and is that a property of the code or an assumption about the deployment?",
+        "Does an error distinguish 'no such user' from 'wrong password' in a way that tells an attacker which?"
+      ]
+    },
+    {
+      "principle": "Dependencies and defaults",
+      "questions": [
+        "Does any new dependency come from where you expected, and is it pinned?",
+        "Is the default configuration the safe one? A flag that must be set to be secure will eventually not be set.",
+        "Does anything here disarm a guard - `verify=False`, `--insecure`, a disabled check - and is the reason written down?"
+      ]
+    }
+  ],
+  "anti_pattern": "Do not narrow these to a vendor. 'Use AWS Secrets Manager' is unanswerable in a project that does not use AWS; 'is any credential literal in the source?' is answerable anywhere. Nor should this be read as a substitute for a scanner or a review by someone who does this for a living - it is a floor, not a ceiling.",
+  "risk_source": "capability",
+  "risk_weight": 8,
+  "provenance": {
+    "source": "agent-generated; question set aligned to the OWASP Top 10 (2021) categories A01 Broken Access Control, A02 Cryptographic Failures, A03 Injection, A05 Security Misconfiguration and A06 Vulnerable Components",
+    "authored": "2026-08-05",
+    "basis": "Harvested as an 05-domains checklist under .ai/GROWTH.md. Phrased as review questions per the checklist-not-prescription rule. Not verified against a current OWASP revision - see enforcement_note."
+  },
+  "tags": [
+    "code-review",
+    "security",
+    "owasp",
+    "secrets",
+    "checklist"
+  ]
+}

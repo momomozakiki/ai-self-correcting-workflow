@@ -1,7 +1,7 @@
 ---
 title: Growing the governance library
-version: 1.1
-last_validated: 2026-08-04
+version: 1.2
+last_validated: 2026-08-05
 official: false
 source: agent-generated
 tags: [governance, growth, retrospective, self-hardening]
@@ -23,9 +23,33 @@ A task needed a domain with no rules at all. Create `05-domains/<domain>/`, add 
 An edge case bit you inside a domain that already exists. Add one rule file. Update the
 folder's `manifest.json` in the same edit - a manifest that lies is worse than no manifest.
 
+## Research - a rule the repository has not learned yet
+A task reached a domain where no checklist exists and no mistake has been made yet, so
+neither breadth nor depth applies. Research the golden rule rather than inventing one:
+prefer the vendor's or standard body's own documentation over blogs and forums, and cite
+the passage you relied on in `provenance.source`. Where sources disagree, record which you
+followed.
+
+**Write it as questions, not prescriptions.** *"Does this class have one reason to
+change?"* — not *"use an interface for every service"*. A question makes the reader look at
+the code; a prescription tells them what to type and stops being right the moment the
+codebase differs from the one it was written for. General enough to carry to another
+project, specific enough that a violation is recognisable.
+
+**Then run it against real code before keeping it.** A checklist that finds nothing in a
+thousand lines is too vague to be worth loading, and you will not discover that by reading
+it. Record what the trial found, including which questions did not apply.
+
+A researched rule is `convention` unless you can name the hook or test that enforces it,
+and it is **proposed, not ratified** — surface it in the handover so a human decides
+whether it stays. The self-hardening rule below still governs anything harvested from an
+actual mistake.
+
 ## Blueprint refinement
 A human corrected a component choice. Update the blueprint's mutable variables so the next
-task starts from the corrected version.
+task starts from the corrected version. `06-components/BLUEPRINT_SCHEMA.md` defines the
+shape, and the bar for writing one at all: a pattern earns a blueprint after it has shipped
+and survived review, never in advance of that.
 
 ## The self-hardening rule
 A mistake recorded **twice** in `docs/RETROSPECTIVE.md` stops being a note and becomes

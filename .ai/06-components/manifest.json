@@ -1,8 +1,9 @@
 {
   "folder": "06-components",
-  "version": "1.0",
-  "last_updated": "2026-08-04",
+  "version": "1.1",
+  "last_updated": "2026-08-05",
   "total_items": 0,
   "items": [],
-  "note": "Proven component blueprints. Seeded empty on purpose - see GROWTH.md."
+  "schema": "BLUEPRINT_SCHEMA.md",
+  "note": "Proven component blueprints. Still seeded empty on purpose: a blueprint records a pattern that has already worked and survived review, so writing one in advance is a guess wearing a blueprint's clothes. BLUEPRINT_SCHEMA.md defines the shape to use when the first one is earned - see GROWTH.md."
 }
