@@ -2,71 +2,207 @@
   "id": "rule-security-review",
   "version": "1.0",
   "last_updated": "2026-08-05",
-  "category": "code-review",
+  "category": "security",
   "type": "domain-rule",
   "tier": 2,
   "enforcement": "CONDITIONAL",
   "enforcement_status": "convention",
-  "enforcement_note": "Nothing here is enforced. The PreToolUse guard inspects commands, not file contents, so it cannot see a secret being committed - which is exactly why prohibition-commit-secrets is still convention and why a `git diff --cached` scanner is on ROADMAP.md. Scanners catch known shapes; they do not catch a missing authorization check. The real mechanism is the agent answering these during Phase 2 and the user reviewing the diff.",
-  "overrideable": false,
+  "enforcement_note": "The PreToolUse guard inspects commands, not file contents, so it cannot see a secret being committed -- which is why prohibition-commit-secrets is still convention and a staged-diff scanner is on ROADMAP.md. Scanners catch known shapes; none catches a missing authorization check.",
+  "overrideable": true,
+  "priority": "CRITICAL",
+  "task_size_required": [
+    "small_change",
+    "new_module",
+    "major_refactor"
+  ],
+  "tech_stack_required": [],
   "condition": "Handling credentials, untrusted input, authentication, authorization, or data leaving the process.",
-  "rule": "Audit new and changed code for secret handling, input trust, access control and data exposure, as questions rather than prescriptions.",
-  "ai_action": "Work through the checklist against the code you just wrote. Where an answer is 'I cannot tell from here', say so rather than assuming the safe answer - an unverified security claim is worse than an open question. If a secret has already been committed, treat it as compromised and say so plainly: rotation is required, and removing it from history is not sufficient on its own.",
+  "rule": "Audit for secret handling, input trust, access control and exposure, as questions.",
+  "ai_action": "Work through the checklist against the code in question. Report the answers, including the ones that pass -- a checklist that only ever surfaces problems reads as noise. Where an answer is 'I cannot tell from here', say so rather than assuming the safe answer.",
   "checklist": [
     {
-      "principle": "Secrets",
-      "questions": [
-        "Is any credential, token, key or connection string literal in the source, a test fixture, or an example file?",
-        "Could a secret reach a log line, an error message, a stack trace, or a commit message?",
-        "If this secret leaked today, is there a rotation path, or is it embedded somewhere that makes rotation expensive?"
-      ]
+      "id": "SEC-SEC-01",
+      "question": "Is any credential, key or token literal in source, tests, or an example file?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 3,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Move it to the environment or a secret store; rotate the exposed value.",
+      "group": "Security-Secrets",
+      "group_condition": "When any credential, key or token is involved"
     },
     {
-      "principle": "Untrusted input",
-      "questions": [
-        "What here is attacker-controlled? Name it explicitly - request bodies, filenames, environment, and anything read back from storage someone else can write.",
-        "Is that input validated where it enters, or trusted because an earlier layer 'should have' checked it?",
-        "Does any of it reach a query, a shell, a path, a template, or a deserializer without being parameterised or escaped?"
-      ]
+      "id": "SEC-SEC-02",
+      "question": "Does access to each secret follow least privilege, or does one credential open everything?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 2,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Issue per-service credentials scoped to what that service reads.",
+      "group": "Security-Secrets",
+      "group_condition": "When any credential, key or token is involved"
     },
     {
-      "principle": "Authentication and authorization",
-      "questions": [
-        "Is every entry point authenticated, including the ones added since the last review?",
-        "Is authorization checked against the *object* being touched, not only the route? Route-level checks miss the user who asks for someone else's record.",
-        "Does failure deny, or does an error path fall through to allow?"
-      ]
+      "id": "SEC-SEC-03",
+      "question": "Could a secret reach a log line, an error message, or a stack trace?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 2,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Redact at the logging boundary, not at each call site.",
+      "group": "Security-Secrets",
+      "group_condition": "When any credential, key or token is involved"
     },
     {
-      "principle": "Data exposure",
-      "questions": [
-        "Does a response, log or error return more than the caller needs to know? Internal identifiers and paths are information.",
-        "Is data encrypted where it is stored and while it moves, and is that a property of the code or an assumption about the deployment?",
-        "Does an error distinguish 'no such user' from 'wrong password' in a way that tells an attacker which?"
-      ]
+      "id": "SEC-INP-01",
+      "question": "Is validation enforced on the server, with client-side checks treated only as usability?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 3,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Re-validate at the trusted service layer.",
+      "group": "Security-Input",
+      "group_condition": "When ANY untrusted input is received"
     },
     {
-      "principle": "Dependencies and defaults",
-      "questions": [
-        "Does any new dependency come from where you expected, and is it pinned?",
-        "Is the default configuration the safe one? A flag that must be set to be secure will eventually not be set.",
-        "Does anything here disarm a guard - `verify=False`, `--insecure`, a disabled check - and is the reason written down?"
-      ]
+      "id": "SEC-INP-02",
+      "question": "Do database queries use parameterization, an ORM, or an equivalent protection?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 4,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Replace concatenation with bound parameters.",
+      "group": "Security-Input",
+      "group_condition": "When ANY untrusted input is received"
+    },
+    {
+      "id": "SEC-INP-03",
+      "question": "Is output encoded for the context it lands in -- HTML body, attribute, CSS, header?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 3,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Use the framework's context-aware encoder.",
+      "group": "Security-Input",
+      "group_condition": "When ANY untrusted input is received"
+    },
+    {
+      "id": "SEC-INP-04",
+      "question": "Have you named what is attacker-controlled here, including data read back from storage?",
+      "source": "OWASP Top 10:2021",
+      "source_version": "OWASP Top 10:2021",
+      "source_authority": 9,
+      "source_consensus": 3,
+      "source_established": 2003,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "List the untrusted inputs before deciding what to validate.",
+      "revalidation_note": "OWASP Top 10:2025 is in release candidate. Re-check this item against the final release; a release candidate is not yet citable as authoritative.",
+      "group": "Security-Input",
+      "group_condition": "When ANY untrusted input is received"
+    },
+    {
+      "id": "SEC-AUT-01",
+      "question": "Is function-level access restricted to consumers with explicit permission?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 3,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Check the permission in the handler, not only the route table.",
+      "group": "Security-Authorization",
+      "group_condition": "When any request acts on data or a privileged function"
+    },
+    {
+      "id": "SEC-AUT-02",
+      "question": "Is access checked against the specific object, not just the endpoint?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 4,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Verify the caller owns the identifier before acting on it.",
+      "group": "Security-Authorization",
+      "group_condition": "When any request acts on data or a privileged function"
+    },
+    {
+      "id": "SEC-AUT-03",
+      "question": "Does an authorization failure deny, or can an error path fall through to allow?",
+      "source": "OWASP Top 10:2021",
+      "source_version": "OWASP Top 10:2021",
+      "source_authority": 9,
+      "source_consensus": 3,
+      "source_established": 2003,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Default to deny; make the allow explicit.",
+      "revalidation_note": "OWASP Top 10:2025 is in release candidate. Re-check this item against the final release; a release candidate is not yet citable as authoritative.",
+      "group": "Security-Authorization",
+      "group_condition": "When any request acts on data or a privileged function"
+    },
+    {
+      "id": "SEC-CMP-01",
+      "question": "Is there an inventory of third-party libraries in use?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 2,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Generate an SBOM in the build.",
+      "group": "Security-Components",
+      "group_condition": "When adding or updating a dependency"
+    },
+    {
+      "id": "SEC-CMP-02",
+      "question": "Are components within your documented update and remediation window?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 2,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Patch or record an accepted exception with a date.",
+      "group": "Security-Components",
+      "group_condition": "When adding or updating a dependency"
     }
   ],
-  "anti_pattern": "Do not narrow these to a vendor. 'Use AWS Secrets Manager' is unanswerable in a project that does not use AWS; 'is any credential literal in the source?' is answerable anywhere. Nor should this be read as a substitute for a scanner or a review by someone who does this for a living - it is a floor, not a ceiling.",
+  "anti_pattern": "Do not convert these questions into prescriptions. A question makes you look at the code and survives a codebase it was not written for; a prescription tells you what to type and stops being right the moment the context differs.",
   "risk_source": "capability",
   "risk_weight": 8,
   "provenance": {
-    "source": "agent-generated; question set aligned to the OWASP Top 10 (2021) categories A01 Broken Access Control, A02 Cryptographic Failures, A03 Injection, A05 Security Misconfiguration and A06 Vulnerable Components",
+    "source": "agent-generated; every item cites a source resolved on 2026-08-05",
     "authored": "2026-08-05",
-    "basis": "Harvested as an 05-domains checklist under .ai/GROWTH.md. Phrased as review questions per the checklist-not-prescription rule. Not verified against a current OWASP revision - see enforcement_note."
+    "basis": "Adopted from docs/checklist-system.md (Professional Hierarchical Checklist System + Golden Rule Research Protocol). Items phrased as review questions per the checklist-not-prescription rule."
   },
   "tags": [
     "code-review",
     "security",
-    "owasp",
-    "secrets",
-    "checklist"
+    "checklist",
+    "sourced"
   ]
 }

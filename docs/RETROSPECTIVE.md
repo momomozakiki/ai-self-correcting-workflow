@@ -1,6 +1,6 @@
 ---
 title: Retrospective — mistakes, root causes, and what they became
-version: 1.1
+version: 1.2
 last_validated: 2026-08-05
 official: true
 source: agent-generated
@@ -17,6 +17,7 @@ estimated_tokens: 900
 |---------|------------|----------|
 | 1.0     | 2026-08-04 | Initial, seeded with two real mistakes from the v14 integration session. |
 | 1.1     | 2026-08-05 | New entry: an `ask` tier enforces the prompt, not the outcome — demonstrated within an hour of the Tier-0 guard shipping, and the cause of the Stop-hook false positive alongside it. |
+| 1.2     | 2026-08-05 | New entry: an instrument that manufactures the state it reports — the breadcrumb loop and the maturity ladder's masking, both correct by their own logic and both misleading. |
 
 ---
 
@@ -97,6 +98,31 @@ threshold is deliberately two: one mistake is noise, two is a pattern worth payi
 - **Codified:** not yet — first occurrence. If a second "adjust the data to satisfy the
   check" instance appears, this becomes a rule: *when data fails a validator, fix the data
   only if the data is wrong; otherwise fix the validator or record the exception.*
+
+### 2026-08-05 — An instrument that manufactures the state it reports
+
+- **What:** The Stop hook writes `plans/UNFINISHED.md` when the tree is dirty. That file is
+  itself untracked, so the next Stop saw it in `git status --porcelain` and counted it as
+  more unfinished work — which kept the tree dirty, which rewrote the breadcrumb. The loop
+  could not clear on its own. Separately, `--self-test` reported "level 2/5 (Repeatable)"
+  while seven of nine checks passed: the maturity ladder `break`s at the first failed gate,
+  so one warn at level 3 hid every passing check at levels 4 and 5.
+- **Why it matters:** Both were *correct* by their own logic and both told the reader
+  something false. A reminder that fires on a state the user considers normal gets
+  dismissed, and once dismissed it is dismissed for the real cases too. A maturity number
+  that reads "immature" when one box is unticked invites either panic or, worse, the habit
+  of ignoring it.
+- **Root cause:** Designing each check in isolation and never asking what it looks like
+  *after* it fires. The breadcrumb's side effect on the next session was invisible from
+  inside a single session; the ladder's masking only appears once a low gate actually
+  fails, which took months to happen.
+- **Fix:** `dirty_excluding_breadcrumb` and `has_outstanding_plan` ignore the hook's own
+  marked breadcrumb while still honouring a human-authored plan at the same path; the
+  maturity report names the blocking gate and what already passes above it. Verified across
+  *two* Stop events, since a single-shot test could not have seen the loop.
+- **Codified:** not yet — first occurrence of this specific shape. If a third instrument is
+  found reporting something other than the truth, this becomes a rule: *a check ships with
+  a test for what it does on the run after it fires, not only on the run that trips it.*
 
 ### 2026-08-05 — An `ask` tier enforces the prompt, not the outcome
 

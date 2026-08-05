@@ -1,6 +1,6 @@
 ---
 title: Growing the governance library
-version: 1.2
+version: 1.3
 last_validated: 2026-08-05
 official: false
 source: agent-generated
@@ -25,10 +25,18 @@ folder's `manifest.json` in the same edit - a manifest that lies is worse than n
 
 ## Research - a rule the repository has not learned yet
 A task reached a domain where no checklist exists and no mistake has been made yet, so
-neither breadth nor depth applies. Research the golden rule rather than inventing one:
-prefer the vendor's or standard body's own documentation over blogs and forums, and cite
-the passage you relied on in `provenance.source`. Where sources disagree, record which you
-followed.
+neither breadth nor depth applies. Research the golden rule rather than inventing one.
+
+**Never assume, never guess, never work from memory.** Every item cites an authoritative
+source, recorded on the item itself: `source`, `source_version`, `source_authority` (the
+1-10 scale in `docs/checklist-system.md` section 3), `source_consensus` (independent
+sources at authority >= 7) and `source_established`. An item you cannot source does not
+ship - the shortfall is the rule working, not an omission. `confidence_level` is then
+**derived** by `hooks/workflow_hook.py::derive_confidence`; never type one by hand.
+
+Cite the exact edition. `docs/checklist-system.md` section 4 records five version defects
+found in this library's own source documents, including a citation ("ASVS 5.10") that was
+malformed in a way `source_version` would have exposed on sight.
 
 **Write it as questions, not prescriptions.** *"Does this class have one reason to
 change?"* — not *"use an interface for every service"*. A question makes the reader look at

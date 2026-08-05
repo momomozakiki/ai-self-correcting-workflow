@@ -43,6 +43,26 @@ When you hit a fork you would normally raise:
 Only stop for something genuinely destructive and irreversible that the user has not
 authorised. That is a *report*, not a question: say what you stopped at and why.
 
+## Loading the right checklists
+
+`.ai/05-domains/` holds ten review checklists. Loading all of them for a typo fix wastes
+the context budget; loading none for a new API misses the point. **The selection rules are
+data, in `.ai/05-domains/manifest.json` under `selection` — read them there.** They are
+deliberately not restated here, because a copy is a second thing to keep right.
+
+Two inputs you supply:
+
+- **`task_size`** — declare it at Phase 1, before the work exists. It is a judgement, not a
+  measurement: deriving it from `git diff --stat` would mean the diff is empty when you
+  need the answer, and correct only once the code you were meant to guide is already
+  written. Because it is a judgement, it goes in the handover for a human to confirm.
+- **`tech_stack`** — what the project actually uses. A rule whose `tech_stack_required` is
+  empty applies everywhere; otherwise it loads only on an intersection. This is what keeps
+  SQL rules out of a NoSQL project.
+
+Then answer the loaded items against the code you wrote, and report the answers —
+including the ones that pass. A checklist that only ever surfaces problems reads as noise.
+
 ## Researching a golden rule
 
 When the task touches a domain with no checklist in `.ai/05-domains/`:

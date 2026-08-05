@@ -16,6 +16,7 @@ the hook. State is isolated per-test via a unique ``session_id`` and a temp
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -1165,6 +1166,156 @@ class TestMtimeFallback(BaseCase):
         path = workflow_hook.current_ledger_path(cfg, self.project)
         self.assertEqual(path.parent.name, "changelog")
         self.assertRegex(path.name, r"^\d{4}-W\d{2}\.md$")
+
+
+class TestBreadcrumbNotCountedAsWork(BaseCase):
+    """An auto-breadcrumb must not be read as the work it reports.
+
+    `handle_stop` writes plans/UNFINISHED.md when the tree is dirty. That file
+    is itself untracked, so the next Stop sees it in `git status --porcelain`
+    and treats it as more unfinished work -- a loop that manufactures the state
+    it complains about, and which can never clear on its own. The marker the
+    breadcrumb already carries (to avoid clobbering a human plan) is reused to
+    tell the two apart.
+    """
+
+    def setUp(self):
+        super().setUp()
+        (self.project / "plans").mkdir(exist_ok=True)
+        # A real repo, so the porcelain line format is exercised rather than
+        # mocked -- the parsing is where this would break.
+        for args in (["init", "-q"], ["config", "user.email", "t@example.com"],
+                     ["config", "user.name", "t"]):
+            subprocess.run(["git"] + args, cwd=str(self.project),
+                           capture_output=True, text=True)
+        (self.project / ".gitignore").write_text("", encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], cwd=str(self.project),
+                       capture_output=True, text=True)
+        subprocess.run(["git", "commit", "-q", "-m", "base"], cwd=str(self.project),
+                       capture_output=True, text=True)
+
+    def _breadcrumb(self, marked=True):
+        target = self.project / "plans" / "UNFINISHED.md"
+        head = workflow_hook.BREADCRUMB_MARKER + "\n" if marked else ""
+        target.write_text(head + "# something\n", encoding="utf-8")
+        return target
+
+    def test_marked_breadcrumb_is_not_dirt(self):
+        self._breadcrumb(marked=True)
+        self.assertFalse(
+            workflow_hook.dirty_excluding_breadcrumb(self.project),
+            "a tree whose only change is the hook's own breadcrumb is not dirty")
+
+    def test_human_plan_at_the_same_path_is_dirt(self):
+        self._breadcrumb(marked=False)
+        self.assertTrue(
+            workflow_hook.dirty_excluding_breadcrumb(self.project),
+            "a human-authored plan is real uncommitted work")
+
+    def test_other_changes_alongside_a_breadcrumb_still_count(self):
+        self._breadcrumb(marked=True)
+        (self.project / "src" / "new.py").write_text("x = 1\n", encoding="utf-8")
+        self.assertTrue(workflow_hook.dirty_excluding_breadcrumb(self.project))
+
+    def test_an_auto_breadcrumb_is_not_an_outstanding_plan(self):
+        self._breadcrumb(marked=True)
+        self.assertFalse(
+            workflow_hook.has_outstanding_plan(self.project),
+            "an auto-breadcrumb is a symptom of a dirty tree, not a plan owed")
+
+    def test_a_human_plan_is_outstanding(self):
+        self._breadcrumb(marked=False)
+        self.assertTrue(workflow_hook.has_outstanding_plan(self.project))
+
+    def test_no_file_means_no_outstanding_plan(self):
+        self.assertFalse(workflow_hook.has_outstanding_plan(self.project))
+
+
+class TestDocExclusion(BaseCase):
+    """One predicate decides whether a doc is held to the frontmatter rule."""
+
+    def _cfg(self, exclude=None):
+        return {"documentation_directories": ["docs"],
+                "documentation_exclude": exclude or []}
+
+    def test_configured_prefix_is_excluded(self):
+        doc = self.project / "docs" / "staging" / "draft.md"
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text("no frontmatter\n", encoding="utf-8")
+        self.assertTrue(workflow_hook.is_excluded_doc(
+            doc, self._cfg(["docs/staging"]), self.project))
+
+    def test_unlisted_doc_is_not_excluded(self):
+        doc = self.project / "docs" / "real.md"
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text("no frontmatter\n", encoding="utf-8")
+        self.assertFalse(workflow_hook.is_excluded_doc(doc, self._cfg(), self.project))
+
+    def test_exclude_from_ai_frontmatter_is_honoured(self):
+        doc = self.project / "docs" / "CHANGELOG.md"
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text("---\nexclude_from_ai: true\n---\n\n# log\n", encoding="utf-8")
+        self.assertTrue(workflow_hook.is_excluded_doc(doc, self._cfg(), self.project))
+
+    def test_prov_sidecars_stay_excluded(self):
+        doc = self.project / "docs" / "thing.prov.md"
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text("sidecar\n", encoding="utf-8")
+        self.assertTrue(workflow_hook.is_excluded_doc(doc, self._cfg(), self.project))
+
+
+class TestConfidenceDerivation(unittest.TestCase):
+    """`confidence_level` is computed, never asserted.
+
+    The protocol's determination table is a set of *thresholds* -- "authority
+    >= 10 and consensus >= 3 and age > 5y" -- not exact keys, so (10, 4, 6)
+    must also yield 5. A threshold ladder is exactly where an off-by-one hides,
+    hence the boundary cases below.
+    """
+
+    def d(self, authority, consensus, age_days):
+        return workflow_hook.derive_confidence(authority, consensus, age_days)
+
+    def test_industry_standard(self):
+        self.assertEqual(self.d(10, 3, 5 * 365 + 1), 5)
+
+    def test_above_every_threshold_still_tops_out_at_five(self):
+        self.assertEqual(self.d(10, 9, 20 * 365), 5)
+
+    def test_enterprise_proven(self):
+        self.assertEqual(self.d(9, 2, 3 * 365 + 1), 4)
+
+    def test_community_validated(self):
+        self.assertEqual(self.d(7, 1, 366), 3)
+
+    def test_emerging(self):
+        self.assertEqual(self.d(5, 1, 30), 2)
+
+    def test_uncertain_when_nothing_supports_it(self):
+        self.assertEqual(self.d(1, 0, 0), 1)
+
+    def test_brand_new_item_cannot_reach_the_top(self):
+        """Age is a required factor -- a day-old citation is not yet proven."""
+        self.assertLess(self.d(10, 3, 0), 5)
+
+    def test_no_consensus_caps_the_level(self):
+        self.assertLess(self.d(10, 0, 10 * 365), 5)
+
+    def test_boundaries_are_inclusive_on_the_documented_side(self):
+        for authority, consensus, age, expected in (
+            (10, 3, 5 * 365 + 1, 5),
+            (9, 3, 5 * 365 + 1, 4),
+            (10, 2, 5 * 365 + 1, 4),
+            (8, 2, 3 * 365 + 1, 4),
+            (7, 2, 3 * 365 + 1, 3),
+        ):
+            with self.subTest(a=authority, c=consensus, age=age):
+                self.assertEqual(self.d(authority, consensus, age), expected)
+
+    def test_matrix_is_ordered_strongest_first(self):
+        levels = [row[-1] for row in workflow_hook.CONFIDENCE_MATRIX]
+        self.assertEqual(levels, sorted(levels, reverse=True),
+                         "an unordered ladder would return the wrong level")
 
 
 class TestEnforcementModeMatchesGuard(unittest.TestCase):

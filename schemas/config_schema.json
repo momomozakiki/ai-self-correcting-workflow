@@ -45,6 +45,18 @@
       "items": { "type": "string" },
       "default": ["docs", ".ai"]
     },
+    "documentation_exclude": {
+      "type": "array",
+      "description": "Path prefixes (relative to project_root) exempt from the --self-test frontmatter check. For staging or vendored trees whose defect IS the missing frontmatter, which an in-file `exclude_from_ai: true` cannot reach. Docs that DO carry frontmatter should use that field instead.",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "revalidation_interval_days": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Age at which --self-test warns that a checklist item's `last_validated` is stale and its source should be re-checked. Replaces a hand-maintained source-version manifest, which would itself go stale silently. 0 disables the warning.",
+      "default": 180
+    },
     "env_check": {
       "type": "object",
       "description": "Tools verified at SessionStart (F2).",

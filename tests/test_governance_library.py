@@ -23,10 +23,15 @@ These tests read the real library rather than fixtures -- there is nothing to
 mock, and a fixture would only test the fixture.
 """
 
+import datetime
 import json
 import re
+import sys
 import unittest
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
+import workflow_hook  # noqa: E402  -- confidence_level is recomputed through it
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LIBRARY = REPO_ROOT / ".ai"
@@ -397,6 +402,153 @@ class EnforcementHonesty(unittest.TestCase):
                     (artifact.get("enforcement_note") or "").strip(),
                     f"{name}: 'convention' needs an enforcement_note saying what is "
                     "not enforced and what the real mechanism is")
+
+
+ITEM_ID = re.compile(r"^[A-Z]{2,5}-[A-Z]{3}-\d{2}$")
+TASK_SIZES = ("typo_fix", "small_change", "new_module", "major_refactor")
+PRIORITIES = ("CRITICAL", "HIGH", "MEDIUM", "LOW")
+
+
+def checklist_items():
+    """Every (rule path, item) pair across the domain checklists."""
+    for path in domain_rules():
+        rule = load_json(path)
+        for entry in rule.get("checklist") or []:
+            yield path.name, entry
+
+
+class ChecklistItems(unittest.TestCase):
+    """The Golden Rule protocol's claims, held to the code.
+
+    Its central rule is that no item ships without an authoritative source.
+    That is checkable, so it is checked -- otherwise "every item is sourced" is
+    the same unfalsifiable prose the enforcement tiers used to be. Applying the
+    protocol to its own companion document already found a malformed citation
+    ("ASVS 5.10", which is two levels of a three-level scheme), so the failure
+    mode is real rather than hypothetical.
+    """
+
+    def test_domain_rules_exist(self):
+        self.assertTrue(list(domain_rules()), "no domain checklists found")
+
+    def test_item_ids_are_well_formed(self):
+        for name, entry in checklist_items():
+            with self.subTest(rule=name, item=entry.get("id")):
+                self.assertRegex(
+                    str(entry.get("id", "")), ITEM_ID,
+                    "item ids look like SEC-INP-01 so they can be cited in a "
+                    "ledger entry or a review")
+
+    def test_item_ids_are_unique_across_the_library(self):
+        seen = {}
+        for name, entry in checklist_items():
+            iid = entry.get("id")
+            with self.subTest(item=iid):
+                self.assertNotIn(
+                    iid, seen,
+                    f"{iid} appears in both {seen.get(iid)} and {name}; a cited "
+                    "id must resolve to exactly one item")
+            seen[iid] = name
+
+    def test_every_item_cites_a_source(self):
+        for name, entry in checklist_items():
+            with self.subTest(rule=name, item=entry.get("id")):
+                self.assertTrue(
+                    (entry.get("source") or "").strip(),
+                    "the protocol's own rule: an unsourced item does not ship")
+                self.assertTrue((entry.get("source_version") or "").strip())
+
+    def test_source_authority_is_on_the_documented_scale(self):
+        for name, entry in checklist_items():
+            with self.subTest(rule=name, item=entry.get("id")):
+                self.assertIn(entry.get("source_authority"), range(1, 11))
+
+    def test_source_consensus_is_a_count(self):
+        for name, entry in checklist_items():
+            with self.subTest(rule=name, item=entry.get("id")):
+                consensus = entry.get("source_consensus")
+                self.assertIsInstance(consensus, int)
+                self.assertGreaterEqual(consensus, 0)
+
+    def test_confidence_level_recomputes_from_the_items_own_fields(self):
+        """Derived, never asserted -- the `enforcement_mode` discipline again.
+
+        Age is measured from ``source_established`` to ``last_validated``, both
+        stored on the item, so this needs nothing outside the file.
+        """
+        for name, entry in checklist_items():
+            with self.subTest(rule=name, item=entry.get("id")):
+                validated = datetime.date.fromisoformat(entry["last_validated"])
+                established = datetime.date(int(entry["source_established"]), 1, 1)
+                expected = workflow_hook.derive_confidence(
+                    entry["source_authority"], entry["source_consensus"],
+                    (validated - established).days)
+                self.assertEqual(
+                    entry.get("confidence_level"), expected,
+                    f"{entry.get('id')}: stored confidence disagrees with what "
+                    "its own source fields imply")
+
+    def test_every_item_offers_a_remediation_hint(self):
+        for name, entry in checklist_items():
+            with self.subTest(rule=name, item=entry.get("id")):
+                self.assertTrue(
+                    (entry.get("remediation_hint") or "").strip(),
+                    "a question without a next step is an audit, not a fix")
+
+    def test_questions_are_questions(self):
+        """The design rule the whole folder rests on."""
+        for name, entry in checklist_items():
+            with self.subTest(rule=name, item=entry.get("id")):
+                self.assertTrue(
+                    str(entry.get("question", "")).rstrip().endswith("?"),
+                    "checklists are phrased as questions, never prescriptions")
+
+
+class ChecklistSelection(unittest.TestCase):
+    """Conditional loading is data, defined once, and must stay resolvable."""
+
+    def setUp(self):
+        self.manifest = load_json(LIBRARY / "05-domains" / "manifest.json")
+
+    def test_task_sizes_come_from_a_closed_vocabulary(self):
+        for item in self.manifest["items"]:
+            with self.subTest(rule=item["id"]):
+                self.assertTrue(item.get("task_size_required"))
+                for size in item["task_size_required"]:
+                    self.assertIn(size, TASK_SIZES)
+
+    def test_priorities_come_from_a_closed_vocabulary(self):
+        for item in self.manifest["items"]:
+            with self.subTest(rule=item["id"]):
+                self.assertIn(item.get("priority"), PRIORITIES)
+
+    def test_manifest_agrees_with_the_rule_files(self):
+        """The index is an index, not a second opinion."""
+        for item in self.manifest["items"]:
+            rule = load_json(LIBRARY / "05-domains" / item["file"])
+            with self.subTest(rule=item["id"]):
+                for field in ("category", "priority", "task_size_required",
+                              "tech_stack_required"):
+                    self.assertEqual(rule.get(field), item.get(field),
+                                     f"{item['id']}: manifest and rule disagree "
+                                     f"on {field}")
+                self.assertEqual(len(rule.get("checklist") or []), item.get("items"))
+
+    def test_every_context_maps_to_categories_that_exist(self):
+        categories = {i["category"] for i in self.manifest["items"]}
+        for context, wanted in self.manifest["selection"]["contexts"].items():
+            with self.subTest(context=context):
+                missing = set(wanted) - categories
+                self.assertEqual(set(), missing,
+                                 f"{context} selects categories with no rule file")
+
+    def test_every_category_is_reachable_from_some_context(self):
+        """A checklist nothing can select is a checklist nothing will run."""
+        selectable = {c for wanted in self.manifest["selection"]["contexts"].values()
+                      for c in wanted}
+        categories = {i["category"] for i in self.manifest["items"]}
+        self.assertEqual(set(), categories - selectable,
+                         "these categories are unreachable by any task context")
 
 
 class EnforcementStrength(unittest.TestCase):

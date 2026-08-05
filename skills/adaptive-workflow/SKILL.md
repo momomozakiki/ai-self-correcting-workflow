@@ -83,6 +83,20 @@ current `UNFINISHED.md` item. Produce a concrete bullet checklist with
 acceptance criteria including only the necessary process steps. Optionally
 confirm the plan with the user.
 
+**Declare `task_size` here**, before the work exists — `typo_fix`,
+`small_change`, `new_module` or `major_refactor`. It selects which
+`.ai/05-domains/` review checklists load in Phase 2, so it has to be decided
+while it can still shape the work. It is a judgement, not a measurement:
+deriving it from `git diff --stat` would give an empty diff at the moment you
+need the answer. Note it in the closing summary so it can be challenged.
+
+**The selection rules live in `.ai/05-domains/manifest.json` under `selection` —
+read them there rather than from a copy.** A rule loads when its
+`task_size_required` includes your declared size *and* its `tech_stack_required`
+is either empty or intersects the project's stack. That intersection is what
+keeps SQL rules out of a NoSQL project and keeps a typo fix from pulling in
+eighty items.
+
 ## Phase 2 — Execute
 
 For each checklist item: **implement → run linter/formatter/tests → fix

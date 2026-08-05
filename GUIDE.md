@@ -1,6 +1,6 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 5.2
+version: 5.3
 last_validated: 2026-08-05
 official: true
 source: agent-generated
@@ -10,7 +10,7 @@ estimated_tokens: 8200
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 5.2 – Centralized, Configurable, Self‑Improving, Governed*
+*Version 5.3 – Centralized, Configurable, Self‑Improving, Governed*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
@@ -20,9 +20,9 @@ folded there per §6.3 when this table passed ~8 rows.
 
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
+| 5.3     | 2026-08-05 | §13: the checklist system lands — ten sourced categories in `05-domains/`, `confidence_level` derived rather than asserted, and conditional loading defined once as manifest data. §7.3/§7.4: the Stop hook stops counting its own breadcrumb as work, and `--self-test` now reports which gate blocked the maturity climb rather than only the floor. New [`docs/checklist-system.md`](docs/checklist-system.md). |
 | 5.2     | 2026-08-05 | §7.3: the Stop flags gain a modification-time fallback, because `PostToolUse` sees only the editing tools and both failure directions showed up in practice. §13: `live` now distinguishes `deny` from `ask` strength via a tested `enforcement_mode`, after an `ask` was waved through and the rule it guarded was broken anyway. |
 | 5.1     | 2026-08-05 | New §7.5: why the Tier-0 guard is a `PreToolUse` hook rather than a `permissions.deny` rule, and why it emits both `deny` and `ask`. §7.1/§7.3 gain the `PreToolUse` event and the fail-open consequence; §13 records the four re-tierings. Revision History folded per §6.3. |
-| 5.0     | 2026-08-04 | Governance integration (MAJOR — three new sections). §4 gains loop detection, reversibility and a Tier-0 line; new §12 maps the imported 21-step SOP onto Phase 0–3; new §13 documents the `.ai/` governance library; new §14 records the runtime assumptions (Claude Pro + Claude Code, no API key) that the tiering rests on. |
 
 ---
 
@@ -795,11 +795,26 @@ one reason to change?"* — not *"use an interface for every service"*. The dist
 the point: a question makes the agent look at the code and keeps its judgement intact,
 while a prescription tells it what to type and stops being right the moment the codebase
 differs from the one the rule was written for. All `convention` — nothing mechanically
-decides whether a class has one responsibility, and the checklists say so. The first three
-(SOLID, clean code, security) were harvested by research rather than from a mistake, which
-`GROWTH.md` now documents as a fourth growth protocol; a researched rule is *proposed*
-until a human ratifies it. Each is trialled against real code before being kept, because a
-checklist that finds nothing is too vague to be worth loading.
+decides whether a class has one responsibility, and the checklists say so. Harvested by
+research rather than from a mistake, which `GROWTH.md` documents as a fourth growth
+protocol; a researched rule is *proposed* until a human ratifies it. Each is trialled
+against real code before being kept, because a checklist that finds nothing is too vague to
+be worth loading.
+
+**Ten categories, 80 items, every one sourced.** Each item cites a document with an
+authority tier, and its `confidence_level` is *derived* by
+`hooks/workflow_hook.py::derive_confidence` and recomputed by test — never typed by hand.
+An item that cannot be sourced does not ship. `--self-test` warns when an item's
+`last_validated` passes `revalidation_interval_days`. The full framework, the ten
+categories, and the five citation defects found in the source documents are in
+[`docs/checklist-system.md`](docs/checklist-system.md).
+
+**Conditional loading keeps this affordable.** The selection rules live once, as data, in
+`.ai/05-domains/manifest.json`; both skills read them rather than restating them. A rule
+loads when its `task_size_required` includes the size declared at Phase 1 *and* its
+`tech_stack_required` is empty or intersects the project's stack. Measured: a typo fix
+loads 9 items, a new REST API 34, and a project with no database in its stack loads no
+database rule at all — which is what makes the §6.4 token budget hold.
 
 **`06-components/` is still empty, and stays that way until a pattern earns a blueprint.**
 `BLUEPRINT_SCHEMA.md` defines the shape; the bar is that the pattern has already shipped

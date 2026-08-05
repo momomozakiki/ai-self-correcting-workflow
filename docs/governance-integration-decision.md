@@ -1,6 +1,6 @@
 ---
 title: Governance Integration Decision Record (v14 → workflow-core)
-version: 1.3
+version: 1.4
 last_validated: 2026-08-05
 official: true
 source: agent-generated
@@ -10,7 +10,7 @@ estimated_tokens: 2400
 ---
 
 # Governance Integration Decision Record
-**Version 1.1** — *Which v14 controls this repository enforces, which it merely follows, and which it only records.*
+**Version 1.4** — *Which v14 controls this repository enforces, which it merely follows, and which it only records.*
 
 ## Revision History
 | Version | Date       | Change   |
@@ -19,6 +19,7 @@ estimated_tokens: 2400
 | 1.1     | 2026-08-05 | Audit of v1.0's own tier claims (see §6). Two re-tiers: step 1 git sync **live → convention**, step 10 documentation standard **convention → live**. Seven risk-taxonomy violations and one false v14 step mapping corrected. `tests/test_governance_library.py` added so the tier claims in this record are now checked rather than asserted. |
 | 1.2     | 2026-08-05 | New §8: enforcing the Tier-0 prohibitions with a `PreToolUse` guard, and why `permissions.deny` lost to it. Three prohibitions and `rule-no-heredoc-stdin` move **convention → live**; `prohibition-commit-secrets` deliberately does not. Old §8 renumbered to §9. |
 | 1.3     | 2026-08-05 | New §9: what one session under the guard taught. `FileChanged` evaluated and rejected (literal-filename matcher vs a weekly-rotating ledger name); the Stop flags gain an mtime fallback. `live` split into `deny` / `ask` strengths via a tested `enforcement_mode` field, after an `ask` was waved through and broke the rule it guarded. Old §9 renumbered to §10. |
+| 1.4     | 2026-08-05 | New §10: the matcher-less `FileChanged` probe returned no evidence, recorded as inconclusive rather than negative — three confounders survive and none can be eliminated from inside one session. Old §10 renumbered to §11. |
 
 ---
 
@@ -278,7 +279,35 @@ The tier vocabulary itself was left at three values. Splitting `live` would have
 every artifact, both manifests, `GROWTH.md`, both READMEs and the template mirror — a
 large change for a distinction one field and one test capture.
 
-## 10. Re-checking this record
+## 10. The `FileChanged` probe — inconclusive, and left that way (2026-08-05)
+
+§9 rejected `FileChanged` on its matcher (literal filenames versus a ledger name that rolls
+over weekly) but left one sub-question open: does a **matcher-less** `FileChanged` watch
+everything? The reachable documentation does not say.
+
+Probed directly: a temporary matcher-less `FileChanged` entry pointing at a throwaway
+logging script, then a file written and deleted under `history/` by a shell process rather
+than an editing tool. **Nothing was logged.**
+
+That is *not* evidence the event does not fire. Three confounders survive, and none can be
+eliminated from inside one session:
+
+- hook registrations may need a session restart to take effect, unlike `permissions`, which
+  the docs say reloads live;
+- `FileChanged` requires Claude Code v2.1.146+, and this environment cannot report its own
+  version — the `claude` CLI is not on `PATH` here (§6, and `RETROSPECTIVE.md`);
+- an empty matcher may mean "watch nothing" rather than "watch everything", since this
+  event's matcher is a watch list of literal filenames rather than a filter.
+
+So the result is **inconclusive**, recorded as inconclusive. Reporting it as a negative
+would be the same overreach as the NIST citation §9 corrected. The mtime fallback ships
+regardless and was never contingent on this; the roadmap item stands.
+
+The probe deliberately used a throwaway script rather than a `--probe-filechanged` flag on
+`workflow_hook.py`: permanent surface on a stdlib hook to answer a one-off question is the
+objection already raised against `--no-write` (§7) and `--verify-sources` (§9).
+
+## 11. Re-checking this record
 
 Re-verify §2 whenever the Claude Code CLI or the plan's model lineup changes — the `opus` alias
 resolution and Fable's billing status have both already moved once. Re-run

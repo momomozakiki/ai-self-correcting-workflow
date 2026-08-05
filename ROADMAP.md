@@ -42,10 +42,11 @@ first `**Next action:**` line below and surfaces it at session start.
       every `live` tier naming an `enforced_by` that resolves to real code.
       Found and fixed seven drifts in the v14 integration. `--self-test` now runs
       in CI, gated on exit code.
-- [x] Harvest the first `05-domains/` rules. Three review checklists — SOLID, clean
-      code, security — written as questions rather than prescriptions so they carry
-      to any project. Harvested by research rather than from a mistake, which
-      `.ai/GROWTH.md` now documents as a fourth growth protocol. All `convention`.
+- [x] Harvest the `05-domains/` rules. **Ten** review categories, 80 items, every one
+      citing a source with an authority tier and a `confidence_level` derived by
+      `derive_confidence` rather than asserted. Written as questions, not
+      prescriptions. Conditional loading is manifest data read by both skills.
+      Full framework in `docs/checklist-system.md`.
 - [ ] Act on the SOLID/clean-code trial findings in `hooks/workflow_hook.py`:
       `run_self_test` (~166 lines) and `handle_stop` (~89) each fail the "describe it
       without saying *and*" question, and 16 `except Exception: pass/return/continue`

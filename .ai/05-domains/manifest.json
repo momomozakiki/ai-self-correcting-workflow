@@ -1,27 +1,206 @@
 {
   "folder": "05-domains",
-  "version": "1.1",
+  "version": "2.0",
   "last_updated": "2026-08-05",
-  "total_items": 3,
+  "total_items": 10,
   "items": [
     {
-      "id": "rule-solid-review",
-      "file": "rule-solid-review.json",
-      "applies_to": "object-oriented or module-structured code",
-      "enforcement_status": "convention"
-    },
-    {
-      "id": "rule-clean-code-review",
-      "file": "rule-clean-code-review.json",
-      "applies_to": "any code",
-      "enforcement_status": "convention"
+      "id": "rule-architecture-review",
+      "file": "rule-architecture-review.json",
+      "category": "architecture",
+      "priority": "HIGH",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 10
     },
     {
       "id": "rule-security-review",
       "file": "rule-security-review.json",
-      "applies_to": "credentials, untrusted input, access control, data leaving the process",
-      "enforcement_status": "convention"
+      "category": "security",
+      "priority": "CRITICAL",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 12
+    },
+    {
+      "id": "rule-code-quality-review",
+      "file": "rule-code-quality-review.json",
+      "category": "code-quality",
+      "priority": "MEDIUM",
+      "task_size_required": [
+        "typo_fix",
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 9
+    },
+    {
+      "id": "rule-error-handling-review",
+      "file": "rule-error-handling-review.json",
+      "category": "error-handling",
+      "priority": "HIGH",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 7
+    },
+    {
+      "id": "rule-performance-review",
+      "file": "rule-performance-review.json",
+      "category": "performance",
+      "priority": "MEDIUM",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 7
+    },
+    {
+      "id": "rule-testing-review",
+      "file": "rule-testing-review.json",
+      "category": "testing",
+      "priority": "HIGH",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 7
+    },
+    {
+      "id": "rule-api-review",
+      "file": "rule-api-review.json",
+      "category": "api",
+      "priority": "HIGH",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [
+        "http",
+        "rest",
+        "graphql",
+        "grpc"
+      ],
+      "enforcement_status": "convention",
+      "items": 8
+    },
+    {
+      "id": "rule-database-review",
+      "file": "rule-database-review.json",
+      "category": "database",
+      "priority": "HIGH",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [
+        "sql",
+        "postgresql",
+        "mysql",
+        "sqlite",
+        "nosql",
+        "mongodb"
+      ],
+      "enforcement_status": "convention",
+      "items": 7
+    },
+    {
+      "id": "rule-devops-review",
+      "file": "rule-devops-review.json",
+      "category": "devops",
+      "priority": "HIGH",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [
+        "docker",
+        "kubernetes",
+        "ci",
+        "terraform"
+      ],
+      "enforcement_status": "convention",
+      "items": 8
+    },
+    {
+      "id": "rule-audit-review",
+      "file": "rule-audit-review.json",
+      "category": "audit",
+      "priority": "MEDIUM",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 5
     }
   ],
-  "note": "Domain checklists, written as review questions and never as prescriptions: a question makes you look at the code, a prescription tells you what to type and stops working the moment the codebase differs from the one it was written for. All convention - nothing mechanically decides whether a class has one responsibility. See GROWTH.md for how these grow, and add technology-specific sets (rest-api, database, ...) the same way."
+  "selection": {
+    "note": "Conditional loading, defined here ONCE as data. Both skills/adaptive-workflow and skills/autonomous-task read this table; neither restates the logic. Load a rule when its task_size_required contains the declared task size AND (tech_stack_required is empty OR intersects the project's stack).",
+    "task_sizes": {
+      "typo_fix": "Single-line changes, comment or wording edits.",
+      "small_change": "A function added or logic updated within an existing module.",
+      "new_module": "A new feature, service, or module.",
+      "major_refactor": "Restructuring across module boundaries."
+    },
+    "task_size_is_declared": "The agent declares task size at Phase 1, before the work exists. It is deliberately NOT derived from `git diff --stat`: at planning time the diff is empty, and deriving it afterwards would load the checklists after the code they were meant to guide. Being a judgement, it is surfaced in plans/HANDOVER.md for a human to confirm.",
+    "contexts": {
+      "new_api": [
+        "api",
+        "security",
+        "error-handling",
+        "performance"
+      ],
+      "database_work": [
+        "database",
+        "performance",
+        "security"
+      ],
+      "authentication": [
+        "security",
+        "api",
+        "audit"
+      ],
+      "deployment": [
+        "devops",
+        "audit"
+      ],
+      "code_review": [
+        "code-quality",
+        "testing",
+        "security",
+        "architecture"
+      ],
+      "security_audit": [
+        "security",
+        "audit",
+        "api",
+        "devops"
+      ]
+    }
+  },
+  "note": "Domain checklists, written as review questions and never prescriptions: a question makes you look at the code; a prescription tells you what to type and stops working the moment the codebase differs from the one it was written for. All convention -- nothing mechanically decides whether a class has one responsibility. Every item cites a source with an authority tier, and confidence_level is DERIVED by workflow_hook.derive_confidence, never hand-set. See docs/checklist-system.md and GROWTH.md."
 }

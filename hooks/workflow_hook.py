@@ -25,7 +25,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List, Optional, Tuple
 
 STATE_TTL_SECONDS = 24 * 60 * 60  # stale session state older than this is purged
@@ -321,6 +321,53 @@ def check_workflow_updates(config: Dict[str, Any], project_root: Path) -> Option
 # Phase-3 breadcrumb (Stop hook)
 # --------------------------------------------------------------------------- #
 BREADCRUMB_MARKER = "<!-- workflow-hook: auto-breadcrumb -->"
+BREADCRUMB_PATH = "plans/UNFINISHED.md"
+
+
+def has_outstanding_plan(project_root: Path) -> bool:
+    """True if ``plans/UNFINISHED.md`` holds a *human* plan owed attention.
+
+    One definition, used by ``SessionStart`` (F4) and ``--self-test`` alike. The
+    hook's own breadcrumb does not count: it reports a dirty tree, and treating
+    it as an outstanding plan double-counts the very thing that produced it.
+    """
+    target = project_root / BREADCRUMB_PATH
+    if not target.is_file():
+        return False
+    try:
+        return BREADCRUMB_MARKER not in target.read_text(encoding="utf-8")
+    except Exception:
+        return True  # unreadable -- surface it rather than swallow it
+
+
+def dirty_excluding_breadcrumb(project_root: Path) -> bool:
+    """True if the tree has uncommitted work *other than* our own breadcrumb.
+
+    The Stop hook writes ``plans/UNFINISHED.md`` when the tree is dirty. That
+    file is itself untracked, so a naive dirty check sees it next session and
+    reports it as more unfinished work -- a loop that manufactures the state it
+    complains about and can never clear on its own.
+
+    ``BREADCRUMB_MARKER`` already distinguishes our file from a human-authored
+    plan (``write_unfinished_breadcrumb`` refuses to overwrite one), so the same
+    marker settles this. A human plan at that path is real uncommitted work and
+    still counts.
+    """
+    # -uall so git lists untracked files individually. Without it a wholly
+    # untracked `plans/` collapses to one "plans/" entry, and the breadcrumb
+    # inside it becomes indistinguishable from a directory of real work.
+    porcelain = _git(project_root, "status", "--porcelain", "-uall") or ""
+    for line in porcelain.splitlines():
+        path = line[3:].strip().strip('"')
+        if PurePosixPath(path.replace("\\", "/")).as_posix() != BREADCRUMB_PATH:
+            return True
+        target = project_root / BREADCRUMB_PATH
+        try:
+            if BREADCRUMB_MARKER not in target.read_text(encoding="utf-8"):
+                return True  # a human wrote this; it is real work
+        except Exception:
+            return True  # unreadable -- assume it matters
+    return False
 
 
 def write_unfinished_breadcrumb(project_root: Path, gs: Dict[str, Any],
@@ -977,8 +1024,7 @@ def handle_session_start(event: Dict[str, Any], config: Dict[str, Any],
     if next_action:
         parts.append(f"Roadmap next action (F4): {next_action}")
 
-    unfinished = project_root / "plans" / "UNFINISHED.md"
-    if unfinished.is_file():
+    if has_outstanding_plan(project_root):
         parts.append("⚠️ Unfinished plan detected (plans/UNFINISHED.md) — "
                      "F4: surface it and ask whether to continue or archive.")
 
@@ -1098,6 +1144,11 @@ def handle_stop(event: Dict[str, Any], config: Dict[str, Any],
     reminders: List[str] = []
 
     gs = git_status(project_root)
+    # Our own breadcrumb does not make the tree dirty -- otherwise writing it
+    # guarantees the next Stop fires again, forever. This only ever *clears* a
+    # false positive: git_status stays the authority on whether work exists.
+    if gs.get("dirty") and not dirty_excluding_breadcrumb(project_root):
+        gs["dirty"] = False
     if gs.get("dirty") and gs.get("branch") and gs.get("branch") != main_branch:
         reminders.append(
             f"Working tree is dirty on branch `{gs['branch']}`. "
@@ -1212,6 +1263,97 @@ def _has_frontmatter(path: Path) -> bool:
         return False
 
 
+def _declares_exclusion(path: Path) -> bool:
+    """True if the doc's own frontmatter opts out with ``exclude_from_ai: true``."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return False
+    if not lines or lines[0].strip() != "---":
+        return False
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        key, _, value = line.partition(":")
+        if key.strip() == "exclude_from_ai" and value.strip().lower() == "true":
+            return True
+    return False
+
+
+def is_excluded_doc(path: Path, config: Dict[str, Any], project_root: Path) -> bool:
+    """Single decision point for "is this doc held to the frontmatter rule?".
+
+    Three inputs, deliberately not one:
+
+    * ``.prov.md`` sidecars *are* the provenance mechanism for formats that
+      cannot carry frontmatter (GUIDE section 6.2); demanding it of them is
+      circular.
+    * ``documentation_exclude`` covers paths whose *defect is the missing
+      frontmatter* -- a staging or vendored tree. An in-file opt-out cannot
+      reach those, because reading it would require the frontmatter they lack.
+    * ``exclude_from_ai: true`` covers a doc that has frontmatter and still
+      wants out of context assembly, such as a sibling CHANGELOG (GUIDE 6.4).
+    """
+    if path.name.endswith(".prov.md"):
+        return True
+    try:
+        rel = path.resolve().relative_to(project_root.resolve()).as_posix()
+    except Exception:
+        rel = path.as_posix()
+    for prefix in config.get("documentation_exclude") or []:
+        if not isinstance(prefix, str) or not prefix:
+            continue
+        clean = prefix.replace("\\", "/").strip("/")
+        if rel == clean or rel.startswith(clean + "/"):
+            return True
+    return _declares_exclusion(path)
+
+
+# --------------------------------------------------------------------------- #
+# Source confidence (Golden Rule Research Protocol)
+# --------------------------------------------------------------------------- #
+# A checklist item's confidence is DERIVED from its own source fields, never
+# asserted by hand -- the same discipline `enforcement_mode` follows, and for
+# the same reason: a number nobody can recompute drifts.
+#
+# The protocol's determination table is a ladder of *thresholds*, not exact
+# keys: "authority >= 10 and consensus >= 3 and age > 5 years" means (10, 4, 6)
+# is also level 5. Ordered strongest-first; the first row that fits wins.
+#
+# Percentage ranges from the source table are deliberately not modelled. No
+# procedure distinguishes 94% from 96%, so the level survives and the false
+# precision does not.
+
+#                     authority, consensus, age_days,     level
+CONFIDENCE_MATRIX = [
+    (10, 3, 5 * 365, 5),   # Industry Standard  -- IETF/W3C/ISO/IEEE
+    (8,  2, 3 * 365, 4),   # Enterprise-Proven  -- NIST/OWASP/vendor docs
+    (6,  1, 365,     3),   # Community-Validated
+    (4,  1, 0,       2),   # Emerging
+]
+CONFIDENCE_FLOOR = 1       # Uncertain -- no authoritative source found
+
+
+def derive_confidence(source_authority: Any, source_consensus: Any,
+                      age_days: Any) -> int:
+    """Return the confidence level 1-5 implied by an item's own source fields.
+
+    Strictly a function of its arguments so the test and the runtime cannot
+    disagree. Non-numeric input yields the floor rather than raising: a
+    malformed item is uncertain, not fatal.
+    """
+    try:
+        authority = int(source_authority)
+        consensus = int(source_consensus)
+        age = float(age_days)
+    except (TypeError, ValueError):
+        return CONFIDENCE_FLOOR
+    for min_authority, min_consensus, min_age, level in CONFIDENCE_MATRIX:
+        if authority >= min_authority and consensus >= min_consensus and age > min_age:
+            return level
+    return CONFIDENCE_FLOOR
+
+
 def _outstanding_recurrences(retro: Path) -> List[str]:
     """Entries marked '(recurring)' that carry no '**Codified:**' line.
 
@@ -1297,10 +1439,11 @@ def run_self_test() -> int:
                f"{'' if checks['ledger_current'] else ' - not created yet'}")
 
     # --- unfinished plan -----------------------------------------------------
-    unfinished = project_root / "plans" / "UNFINISHED.md"
-    checks["no_unfinished"] = not unfinished.is_file()
+    checks["no_unfinished"] = not has_outstanding_plan(project_root)
+    breadcrumb_only = ((project_root / BREADCRUMB_PATH).is_file()
+                       and checks["no_unfinished"])
     out.append(f"[{' ok ' if checks['no_unfinished'] else 'warn'}] plans/UNFINISHED.md "
-               f"{'absent' if checks['no_unfinished'] else 'PRESENT - surface it (F4)'}")
+               f"{'absent' if not (project_root / BREADCRUMB_PATH).is_file() else ('auto-breadcrumb only - not a plan owed' if breadcrumb_only else 'PRESENT - surface it (F4)')}")
 
     # --- loop detection ------------------------------------------------------
     checks["loop_detection"] = bool((config.get("loop_detection") or {}).get("enabled", True))
@@ -1314,10 +1457,7 @@ def run_self_test() -> int:
         if not base.is_dir():
             continue
         for md in sorted(base.rglob("*.md")):
-            # `.prov.md` sidecars ARE the provenance mechanism for formats that
-            # cannot carry frontmatter (GUIDE section 6.2) -- demanding frontmatter
-            # on them would be circular.
-            if md.name.endswith(".prov.md"):
+            if is_excluded_doc(md, config, project_root):
                 continue
             if not _has_frontmatter(md):
                 missing_fm.append(str(md.relative_to(project_root)))
@@ -1330,9 +1470,42 @@ def run_self_test() -> int:
     else:
         out.append("[ ok ] every doc carries frontmatter")
 
-    # --- tier-0 prohibitions --------------------------------------------------
     gov = config.get("governance") or {}
     library_root = project_root / (gov.get("library_root") or DEFAULT_LIBRARY_ROOT)
+
+    # --- checklist source revalidation ---------------------------------------
+    # A cited standard moves on whether or not anyone re-reads it. Rather than
+    # tracking each source's version -- a hand-maintained file that itself goes
+    # stale silently -- this warns on age alone, uniformly and offline. The item
+    # carries `source_version`, so clearing a warning is one lookup.
+    interval = config.get("revalidation_interval_days", 180)
+    stale: List[str] = []
+    if interval:
+        cutoff = datetime.date.today() - datetime.timedelta(days=int(interval))
+        for rule_path in sorted((library_root / "05-domains").glob("rule-*.json")):
+            try:
+                rule = json.loads(rule_path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            for entry in rule.get("checklist") or []:
+                try:
+                    validated = datetime.date.fromisoformat(entry["last_validated"])
+                except Exception:
+                    continue
+                if validated < cutoff:
+                    stale.append(f"{entry.get('id')} ({entry.get('source_version')}, "
+                                 f"last validated {validated})")
+    checks["sources_current"] = not stale
+    if stale:
+        out.append(f"[warn] {len(stale)} checklist item(s) due revalidation "
+                   f"(>{interval}d):")
+        out += [f"         {s}" for s in stale[:10]]
+        if len(stale) > 10:
+            out.append(f"         ... and {len(stale) - 10} more")
+    elif interval:
+        out.append(f"[ ok ] checklist sources validated within {interval}d")
+
+    # --- tier-0 prohibitions --------------------------------------------------
     prohibitions = sorted((library_root / "02-market-rules" / "prohibitions").glob("prohibition-*.json"))
     checks["prohibitions_present"] = bool(prohibitions)
     out.append(f"[{' ok ' if prohibitions else 'warn'}] tier-0 prohibitions: "
@@ -1373,14 +1546,28 @@ def run_self_test() -> int:
         (5, "Optimized", ["recurrences_codified"]),
     ]
     level, name = 0, "Uninitialised"
+    blocked_at, blocked_by = None, []
     for value, label, required in levels:
-        if all(checks.get(k) for k in required):
+        failed = [k for k in required if not checks.get(k)]
+        if not failed:
             level, name = value, label
         else:
+            blocked_at, blocked_by = value, failed
             break
 
-    out += ["", "-" * 60, f"Governance maturity: level {level}/5 ({name})",
-            "  Reported, never enforced - see docs/governance-integration-decision.md"]
+    out += ["", "-" * 60, f"Governance maturity: level {level}/5 ({name})"]
+
+    # The ladder stops at the first gate it fails, so a single warn low down can
+    # hide every check that passes above it -- a reader sees "Repeatable" and
+    # concludes the governance is immature when only one box is unticked. Report
+    # what blocked the climb, and what is already passing beyond it.
+    if blocked_at is not None:
+        out.append(f"  blocked at level {blocked_at} by: {', '.join(blocked_by)}")
+        above = [k for _, _, required in levels[blocked_at:]
+                 for k in required if checks.get(k)]
+        if above:
+            out.append(f"  already passing above it: {', '.join(above)}")
+    out.append("  Reported, never enforced - see docs/governance-integration-decision.md")
 
     tracker_rel = gov.get("maturity_tracker") or DEFAULT_MATURITY_TRACKER
     tracker = project_root / tracker_rel
