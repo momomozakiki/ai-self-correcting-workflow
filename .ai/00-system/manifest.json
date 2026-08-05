@@ -1,8 +1,8 @@
 {
   "folder": "00-system",
   "version": "1.0",
-  "last_updated": "2026-08-04",
-  "total_items": 5,
+  "last_updated": "2026-08-05",
+  "total_items": 6,
   "items": [
     {
       "id": "agent-registry",
@@ -13,6 +13,12 @@
       "id": "autonomy-boundaries",
       "file": "autonomy-boundaries.json",
       "type": "system"
+    },
+    {
+      "id": "checklist-selection",
+      "file": "checklist-selection.json",
+      "type": "system",
+      "note": "the one table selecting checklists for 03-planning and 05-domains"
     },
     {
       "id": "governance",

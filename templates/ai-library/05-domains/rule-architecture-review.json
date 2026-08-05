@@ -10,6 +10,7 @@
   "enforcement_note": "Nothing mechanically decides whether coupling is 'low' or a module boundary is right. A linter measures fan-out; it cannot tell a justified dependency from an accidental one.",
   "overrideable": true,
   "priority": "HIGH",
+  "workflow_phase": "2",
   "task_size_required": [
     "new_module",
     "major_refactor"

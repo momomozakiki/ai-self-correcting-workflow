@@ -10,6 +10,7 @@
   "enforcement_note": "A query planner reports cost, not correctness. Nothing verifies a migration is reversible until it is run.",
   "overrideable": true,
   "priority": "HIGH",
+  "workflow_phase": "2",
   "task_size_required": [
     "small_change",
     "new_module",

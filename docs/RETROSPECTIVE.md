@@ -1,6 +1,6 @@
 ---
 title: Retrospective — mistakes, root causes, and what they became
-version: 1.2
+version: 1.3
 last_validated: 2026-08-05
 official: true
 source: agent-generated
@@ -18,6 +18,7 @@ estimated_tokens: 900
 | 1.0     | 2026-08-04 | Initial, seeded with two real mistakes from the v14 integration session. |
 | 1.1     | 2026-08-05 | New entry: an `ask` tier enforces the prompt, not the outcome — demonstrated within an hour of the Tier-0 guard shipping, and the cause of the Stop-hook false positive alongside it. |
 | 1.2     | 2026-08-05 | New entry: an instrument that manufactures the state it reports — the breadcrumb loop and the maturity ladder's masking, both correct by their own logic and both misleading. |
+| 1.3     | 2026-08-05 | Two entries. A standing caveat nobody tried to resolve (the CLI version, recoverable from the install path across two sessions) — **recurring**, and it owes a rule. And a negative control that proved nothing twice, because its baseline was already red and then because the control itself dirtied the tree. |
 
 ---
 
@@ -169,3 +170,57 @@ threshold is deliberately two: one mistake is noise, two is a pattern worth payi
   `--self-test`, where it is accurate without pretending to have measured anything.
 - **Codified:** not yet — first occurrence. If a second unverifiable check appears, this
   becomes a rule: *never add a health check without observing it pass and fail.*
+
+### 2026-08-05 — A standing caveat nobody tried to resolve (recurring)
+
+- **What:** "This environment cannot report its own Claude Code version" was written into
+  `docs/governance-integration-decision.md` §10 as one of three confounders keeping the
+  `FileChanged` probe inconclusive, and into `plans/HANDOVER.md` as an open item for the
+  user. It was asked of the user twice. The version was in the extension directory name —
+  `~/.vscode/extensions/anthropic.claude-code-2.1.221-win32-x64` — the entire time. One
+  directory listing.
+- **Why it matters:** The unresolved caveat was doing real work: it kept a probe
+  inconclusive and left two version gates open. Worse, it was *correct* — the CLI genuinely
+  is not on `PATH` — which is what let it survive. A caveat that is true about the method
+  tried reads exactly like a caveat that is true about the question, and only the second
+  deserves to stand.
+- **Root cause:** The previous entry's conclusion — "the CLI isn't on `PATH` here" — was
+  reused as though it settled the *question* rather than one *approach* to it. Once written
+  down, it was cited rather than retested. Asking the user is the most expensive fallback
+  and it was reached first.
+- **Fix:** Version read from the install path; `§10`'s confounder list cut from three to
+  two; `--self-test` now prints where to find the version when `claude` is not on `PATH`,
+  so the next reader does not repeat the search.
+- **Codified:** **yes — this is the second occurrence of the same shape.** The
+  2026-08-04 entry above added a check that could never pass; this one kept a caveat that
+  never needed to stand. Both are claims about the environment adopted without a probe.
+  The rule, now in `.ai/03-planning/rule-verification-planning-review.json` as `VER-PLN-02`
+  and in the GROWTH.md sourcing rule: **a claim that something cannot be determined is
+  itself a claim, and needs one attempt at determining it before it is recorded.** Escalating
+  to the user counts as an attempt only after the local ones are exhausted.
+
+### 2026-08-05 — A negative control that proved nothing, twice
+
+- **What:** Building `.ai/03-planning/`, the control broke a rule file eight ways and
+  reported "8/8 caught". Both halves were false. The **baseline was already failing** (13
+  failures from an in-flight mirror), so every run reported `FAILED` regardless. Fixed
+  that, and it was still wrong: the control's own `.bak` sat inside `.ai/`, and writing a
+  broken file diverged `.ai/` from `templates/`, so **`TemplateParity` failed on every
+  breakage** whether or not the intended check fired.
+- **Why it matters:** A negative control exists to answer "does this test catch this
+  defect". A pass/fail count answers "is anything red", which is a different question that
+  looks identical in the output. The first version would have shipped a folder whose
+  invariants were unverified, with evidence appearing to say otherwise — the precise
+  failure this repo exists to prevent, inside the instrument built to prevent it.
+- **Root cause:** Counting failures instead of naming them. A count cannot distinguish
+  "the check I wrote caught it" from "something unrelated was already broken".
+- **Fix:** The control now asserts the **name** of the test that must catch each breakage,
+  requires a green baseline and says so loudly when it is not, keeps its backup outside
+  `.ai/`, and mirrors each broken file into `templates/` so parity noise cannot masquerade
+  as a catch. Result: 14/14, each attributed to the check that should catch it. Two
+  breakages were reattributed in the process — they tripped the manifest-agreement check
+  before reaching the phase check, which is correct layering the first version would have
+  mislabelled as success.
+- **Codified:** not yet — first occurrence of *this* lesson. If a second control reports a
+  count rather than an attribution, it becomes a rule: *a negative control names the test,
+  or it is not a control.*

@@ -20,6 +20,7 @@ estimated_tokens: 2400
 | 1.2     | 2026-08-05 | New §8: enforcing the Tier-0 prohibitions with a `PreToolUse` guard, and why `permissions.deny` lost to it. Three prohibitions and `rule-no-heredoc-stdin` move **convention → live**; `prohibition-commit-secrets` deliberately does not. Old §8 renumbered to §9. |
 | 1.3     | 2026-08-05 | New §9: what one session under the guard taught. `FileChanged` evaluated and rejected (literal-filename matcher vs a weekly-rotating ledger name); the Stop flags gain an mtime fallback. `live` split into `deny` / `ask` strengths via a tested `enforcement_mode` field, after an `ask` was waved through and broke the rule it guarded. Old §9 renumbered to §10. |
 | 1.4     | 2026-08-05 | New §10: the matcher-less `FileChanged` probe returned no evidence, recorded as inconclusive rather than negative — three confounders survive and none can be eliminated from inside one session. Old §10 renumbered to §11. |
+| 1.5     | 2026-08-05 | §10 narrowed: this environment is **Claude Code 2.1.221**, read from the VS Code extension directory. The version confounder is eliminated (`FileChanged` exists here; the `opus` alias resolves to Opus 5), leaving two. Two prior sessions recorded the version as unobtainable without checking the install path. |
 
 ---
 
@@ -289,19 +290,44 @@ Probed directly: a temporary matcher-less `FileChanged` entry pointing at a thro
 logging script, then a file written and deleted under `history/` by a shell process rather
 than an editing tool. **Nothing was logged.**
 
-That is *not* evidence the event does not fire. Three confounders survive, and none can be
-eliminated from inside one session:
+That is *not* evidence the event does not fire. Three confounders survived the probe, and
+none could be eliminated from inside that session:
 
 - hook registrations may need a session restart to take effect, unlike `permissions`, which
   the docs say reloads live;
-- `FileChanged` requires Claude Code v2.1.146+, and this environment cannot report its own
-  version — the `claude` CLI is not on `PATH` here (§6, and `RETROSPECTIVE.md`);
+- ~~`FileChanged` requires Claude Code v2.1.146+, and this environment cannot report its own
+  version~~ — **eliminated 2026-08-05, see below**;
 - an empty matcher may mean "watch nothing" rather than "watch everything", since this
   event's matcher is a watch list of literal filenames rather than a filter.
 
 So the result is **inconclusive**, recorded as inconclusive. Reporting it as a negative
 would be the same overreach as the NIST citation §9 corrected. The mtime fallback ships
 regardless and was never contingent on this; the roadmap item stands.
+
+### The version confounder, eliminated (2026-08-05)
+
+**This environment runs Claude Code 2.1.221**, read from the VS Code extension directory
+name (`anthropic.claude-code-2.1.221-win32-x64`). The `claude` CLI is genuinely not on
+`PATH` — `RETROSPECTIVE.md` records the failed `env_check` entry that assumed it would be —
+but the *extension install path* carries the version and was never checked. `/status` does
+not help either: it is a CLI-terminal command and the extension does not carry it.
+
+Two gates resolve:
+
+| Gate | Needs | Result |
+|---|---|---|
+| `FileChanged` event exists | v2.1.146+ | **available** — the confounder is gone |
+| `opus` alias → Opus 5 | v2.1.219+ | **resolves correctly** — §2's caveat is settled here |
+
+The probe stays **inconclusive on two confounders instead of three**. That is a narrower
+claim, not a different one, and the correct move is to narrow it rather than to let a
+resolved uncertainty keep earning its place in the record.
+
+*Method note, since it is the reusable part:* the version was recoverable from the
+filesystem the whole time. Two sessions recorded "this environment cannot report its own
+version" and asked the user instead. The answer was one directory listing away. An
+unverifiable claim is worth one attempt at verification before it becomes a standing
+caveat.
 
 The probe deliberately used a throwaway script rather than a `--probe-filechanged` flag on
 `workflow_hook.py`: permanent surface on a stdlib hook to answer a one-off question is the

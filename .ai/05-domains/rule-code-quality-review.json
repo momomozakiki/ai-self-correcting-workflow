@@ -10,6 +10,7 @@
   "enforcement_note": "A formatter enforces layout and a linter finds unused names; neither can tell whether a name reveals intent or whether an abstraction earned its place. Duplication detectors find identical text, not the same decision expressed twice.",
   "overrideable": true,
   "priority": "MEDIUM",
+  "workflow_phase": "2",
   "task_size_required": [
     "typo_fix",
     "small_change",

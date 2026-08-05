@@ -1,6 +1,6 @@
 ---
 title: Growing the governance library
-version: 1.3
+version: 1.4
 last_validated: 2026-08-05
 official: false
 source: agent-generated
@@ -14,6 +14,23 @@ estimated_tokens: 400
 Seeded empty rather than pre-filled. A rule that nobody hit yet is a guess; a rule harvested
 from a real mistake is knowledge. The library grows through three protocols, all triggered
 from the Phase 3 retrospective.
+
+## Which folder a checklist belongs in
+
+Two folders, two phases, and the distinction is not cosmetic:
+
+| Folder | Phase | Reviews | Gated on tech stack? |
+|---|---|---|---|
+| `03-planning/` | 1 | The **plan**, before code exists | Never |
+| `05-domains/` | 2 | The **code**, once it does | Yes, where it applies |
+
+`05-domains/` reviews code *against* the plan, so it structurally cannot see a defect *in*
+the plan — it will happily confirm that a well-built thing was built well when the thing
+should not have been built. If your question is answerable before any code is written, it
+belongs in `03-planning/`.
+
+Which rules load is decided by one table, `00-system/checklist-selection.json`, for both
+folders. Do not add a second table to a folder manifest: two tables are two answers.
 
 ## Breadth - a new domain folder
 A task needed a domain with no rules at all. Create `05-domains/<domain>/`, add a
@@ -44,9 +61,15 @@ the code; a prescription tells them what to type and stops being right the momen
 codebase differs from the one it was written for. General enough to carry to another
 project, specific enough that a violation is recognisable.
 
-**Then run it against real code before keeping it.** A checklist that finds nothing in a
-thousand lines is too vague to be worth loading, and you will not discover that by reading
-it. Record what the trial found, including which questions did not apply.
+**Then run it against real work before keeping it** — real code for a `05-domains/` rule,
+a real plan for an `03-planning/` one. A checklist that finds nothing in a thousand lines
+is too vague to be worth loading, and you will not discover that by reading it. Record what
+the trial found, including which questions did not apply.
+
+Trial it against something you wrote, not something convenient. `03-planning/` was first
+run against the plan that created it and returned ten findings on its own author — an
+absent out-of-scope list, an unstated rollback, and an unnamed assumption among them. A
+checklist that flatters the plan it shipped with has not been tested.
 
 A researched rule is `convention` unless you can name the hook or test that enforces it,
 and it is **proposed, not ratified** — surface it in the handover so a human decides

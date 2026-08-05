@@ -10,6 +10,7 @@
   "enforcement_note": "Nothing here is measured automatically. A benchmark proves a number; it does not prove the number matters to a user.",
   "overrideable": true,
   "priority": "MEDIUM",
+  "workflow_phase": "2",
   "task_size_required": [
     "new_module",
     "major_refactor"

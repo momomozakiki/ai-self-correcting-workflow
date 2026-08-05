@@ -10,6 +10,7 @@
   "enforcement_note": "Nothing verifies that a caught exception was handled rather than hidden. Coverage tools show the line ran, not that the recovery was correct.",
   "overrideable": true,
   "priority": "HIGH",
+  "workflow_phase": "2",
   "task_size_required": [
     "small_change",
     "new_module",

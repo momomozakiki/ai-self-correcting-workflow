@@ -32,7 +32,11 @@ first `**Next action:**` line below and surfaces it at session start.
       It is the right mechanism — it watches the disk, so it sees writes from any
       process — but the watch list is literal filenames and our ledger name rolls
       over weekly, so a static matcher would go stale in seven days. The mtime
-      fallback covers it meanwhile (GUIDE §7.3, decision doc §9).
+      fallback covers it meanwhile (GUIDE §7.3, decision doc §9). The matcher-less
+      probe remains inconclusive on **two** confounders, not three: this
+      environment is Claude Code 2.1.221, so the event exists here (decision
+      doc §10). Settling the rest needs a session restart with the probe
+      registered, which one session cannot do to itself.
 
 ## Active Epic: Governance library growth
 
@@ -47,6 +51,18 @@ first `**Next action:**` line below and surfaces it at session start.
       `derive_confidence` rather than asserted. Written as questions, not
       prescriptions. Conditional loading is manifest data read by both skills.
       Full framework in `docs/checklist-system.md`.
+- [x] Harvest the `03-planning/` rules. **Five** plan-review categories, 31 items,
+      answered at Phase 1 before code exists — the phase `05-domains/` structurally
+      cannot reach, since it reviews code *against* the plan. Selection moved to
+      `.ai/00-system/checklist-selection.json` with a `workflow_phase` axis so one
+      table serves both folders. Trialled against its own plan: 10 of 31 items
+      found something.
+- [ ] Verify a plan actually gets reviewed. `VER-PLN-04` asked this of the plan that
+      built `03-planning/` and the answer was no: the tests check the checklists'
+      *structure*, nothing checks that the questions were ever put to a plan. Probably
+      a `Stop`-hook flag akin to `ledger_touched`, but a plan is not a file the hook
+      can see, so this may be honestly unenforceable — in which case say so in the
+      `enforcement_note` rather than leaving the gap unnamed.
 - [ ] Act on the SOLID/clean-code trial findings in `hooks/workflow_hook.py`:
       `run_self_test` (~166 lines) and `handle_stop` (~89) each fail the "describe it
       without saying *and*" question, and 16 `except Exception: pass/return/continue`

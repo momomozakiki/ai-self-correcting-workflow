@@ -84,18 +84,29 @@ acceptance criteria including only the necessary process steps. Optionally
 confirm the plan with the user.
 
 **Declare `task_size` here**, before the work exists — `typo_fix`,
-`small_change`, `new_module` or `major_refactor`. It selects which
-`.ai/05-domains/` review checklists load in Phase 2, so it has to be decided
-while it can still shape the work. It is a judgement, not a measurement:
-deriving it from `git diff --stat` would give an empty diff at the moment you
-need the answer. Note it in the closing summary so it can be challenged.
+`small_change`, `new_module` or `major_refactor`. It selects which review
+checklists load, so it has to be decided while it can still shape the work. It
+is a judgement, not a measurement: deriving it from `git diff --stat` would give
+an empty diff at the moment you need the answer. **State it in the plan, with
+your reason**, so the user can object while objecting still costs nothing —
+not afterwards in the summary, when the run is already committed.
 
-**The selection rules live in `.ai/05-domains/manifest.json` under `selection` —
-read them there rather than from a copy.** A rule loads when its
-`task_size_required` includes your declared size *and* its `tech_stack_required`
-is either empty or intersects the project's stack. That intersection is what
-keeps SQL rules out of a NoSQL project and keeps a typo fix from pulling in
-eighty items.
+**Then review the plan against `.ai/03-planning/`.** Those five checklists ask
+whether the problem is stated separately from the solution, whether each
+acceptance criterion is verifiable and singular, what the rollback is, which
+alternative was rejected and why, and how this will be proven — before any code
+exists. A plan is the cheapest artifact to fix and the most expensive to get
+wrong: everything downstream inherits its mistakes, and `.ai/05-domains/` cannot
+catch them because it reviews code against the plan, not the plan itself.
+
+**The selection rules live in `.ai/00-system/checklist-selection.json` — read
+them there rather than from a copy.** One table covers both folders. A rule
+loads when its `workflow_phase` matches the phase you are in, its
+`task_size_required` includes your declared size, *and* its
+`tech_stack_required` is either empty or intersects the project's stack. That
+intersection keeps SQL rules out of a NoSQL project and keeps a typo fix from
+pulling in eighty items. Phase-1 rules are never stack-gated — a plan's problem
+statement is no better for being written in Go.
 
 ## Phase 2 — Execute
 

@@ -1,6 +1,6 @@
 {
   "id": "rule-task-checklist",
-  "version": "1.1",
+  "version": "1.2",
   "last_updated": "2026-08-05",
   "category": "planning",
   "type": "phase-rule",
@@ -11,9 +11,11 @@
   "overrideable": false,
   "workflow_phase": "1",
   "maps_to_v14_step": 6,
-  "rule": "Produce a task-specific checklist with acceptance criteria before writing code.",
+  "rule": "Produce a task-specific checklist with acceptance criteria before writing code, then review that plan against .ai/03-planning/.",
   "condition": null,
-  "ai_action": "Assess scope, doc impact, provenance need and ledger steps; emit a concrete bullet checklist.",
+  "ai_action": "Assess scope, doc impact, provenance need and ledger steps; emit a concrete bullet checklist; declare task_size with a reason. Then load the .ai/03-planning/ rules selected for this task and answer them against the plan you just wrote.",
+  "reviewed_by": ".ai/03-planning/",
+  "reviewed_by_note": "This rule said to produce a plan checklist but supplied nothing to interrogate it with, so a plan was reviewed by nothing: 05-domains/ reviews code against the plan and cannot see a defect in the plan itself. 03-planning/ closes that. Still `convention` -- naming a review folder does not make anything run it.",
   "risk_source": "design",
   "risk_weight": 5,
   "provenance": {

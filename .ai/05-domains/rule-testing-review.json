@@ -10,6 +10,7 @@
   "enforcement_note": "Coverage percentage is measurable and nearly meaningless on its own: it shows a line executed, not that a wrong result would fail the build. Nothing mechanically checks that an assertion is the right one.",
   "overrideable": true,
   "priority": "HIGH",
+  "workflow_phase": "2",
   "task_size_required": [
     "small_change",
     "new_module",

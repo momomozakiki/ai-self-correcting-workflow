@@ -10,6 +10,7 @@
   "enforcement_note": "Nothing in this repository inspects a pipeline. These are read by a human or an agent looking at the diff.",
   "overrideable": true,
   "priority": "HIGH",
+  "workflow_phase": "2",
   "task_size_required": [
     "new_module",
     "major_refactor"

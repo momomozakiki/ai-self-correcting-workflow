@@ -1,0 +1,82 @@
+{
+  "id": "checklist-selection",
+  "version": "1.0",
+  "last_updated": "2026-08-05",
+  "enforcement_status": "convention",
+  "enforcement_note": "Nothing forces the agent to read this table or to load what it selects; loading happens at prompt time, inside the agent's own reasoning, where no hook runs. tests/test_governance_library.py::ChecklistSelection enforces that the table stays internally consistent -- every category it names has a rule file, every rule is reachable -- which is the part that can be checked. Whether it was consulted cannot.",
+  "note": "The single table governing which checklists load. Both .ai/03-planning/ and .ai/05-domains/ are selected from here, and both skills read this file rather than restating the logic. It lived in 05-domains/manifest.json until plan-review checklists arrived and a second copy would have been needed -- two tables are two answers to one question.",
+  "selection_rule": "Load a checklist rule when its workflow_phase matches the phase you are in AND its task_size_required contains the declared task size AND (its tech_stack_required is empty OR intersects the project's stack). Within Phase 2, `contexts` narrows further to what the task actually touches.",
+  "task_sizes": {
+    "typo_fix": "Single-line changes, comment or wording edits.",
+    "small_change": "A function added or logic updated within an existing module.",
+    "new_module": "A new feature, service, or module.",
+    "major_refactor": "Restructuring across module boundaries."
+  },
+  "task_size_is_declared": "The agent declares task size at Phase 1, before the work exists. It is deliberately NOT derived from `git diff --stat`: at planning time the diff is empty, and deriving it afterwards would load the checklists after the code they were meant to guide. Being a judgement, it is stated in the plan so the user can object while objecting is still cheap.",
+  "phases": {
+    "1": {
+      "folder": "03-planning",
+      "when": "Designing the task, before any code exists. Reviews the plan.",
+      "categories": [
+        "problem-definition",
+        "requirements",
+        "risk-and-reversibility",
+        "alternatives-and-rationale",
+        "verification-planning"
+      ],
+      "note": "Phase-1 rules are never gated on tech stack. A plan's problem statement is no better or worse for being written in Go, so a stack filter here would only ever exclude a question that still applied."
+    },
+    "2": {
+      "folder": "05-domains",
+      "when": "Reviewing work that exists. Reviews the code.",
+      "categories": [
+        "architecture",
+        "security",
+        "code-quality",
+        "error-handling",
+        "performance",
+        "testing",
+        "api",
+        "database",
+        "devops",
+        "audit"
+      ],
+      "note": "Phase-2 rules narrow by `contexts` below and by tech stack, because a SQL question genuinely does not apply to a project with no database."
+    }
+  },
+  "contexts": {
+    "new_api": [
+      "api",
+      "security",
+      "error-handling",
+      "performance"
+    ],
+    "database_work": [
+      "database",
+      "performance",
+      "security"
+    ],
+    "authentication": [
+      "security",
+      "api",
+      "audit"
+    ],
+    "deployment": [
+      "devops",
+      "audit"
+    ],
+    "code_review": [
+      "code-quality",
+      "testing",
+      "security",
+      "architecture"
+    ],
+    "security_audit": [
+      "security",
+      "audit",
+      "api",
+      "devops"
+    ]
+  },
+  "contexts_note": "Phase-2 only. Phase 1 has no context map: which questions a plan must answer does not depend on what the plan turns out to touch, and a plan that has not yet decided whether it needs a database still has to say what problem it solves."
+}

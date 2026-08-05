@@ -45,27 +45,37 @@ authorised. That is a *report*, not a question: say what you stopped at and why.
 
 ## Loading the right checklists
 
-`.ai/05-domains/` holds ten review checklists. Loading all of them for a typo fix wastes
-the context budget; loading none for a new API misses the point. **The selection rules are
-data, in `.ai/05-domains/manifest.json` under `selection` — read them there.** They are
-deliberately not restated here, because a copy is a second thing to keep right.
+Two folders, two phases. **`.ai/03-planning/`** holds five checklists that review the
+*plan*, at Phase 1, before code exists. **`.ai/05-domains/`** holds ten that review the
+*code*, at Phase 2. Loading all of them for a typo fix wastes the context budget; loading
+none for a new API misses the point. **The selection rules are data, in
+`.ai/00-system/checklist-selection.json` — read them there.** One table covers both
+folders, and it is deliberately not restated here, because a copy is a second thing to
+keep right.
 
-Two inputs you supply:
+Three inputs you supply:
 
+- **`workflow_phase`** — `1` while designing the task, `2` once there is work to review.
+  On an unattended run you pass through both, so both sets apply in turn. Skipping Phase 1
+  is the expensive mistake: nothing downstream reviews the plan, and every later checklist
+  measures the code against a plan it assumes was sound.
 - **`task_size`** — declare it at Phase 1, before the work exists. It is a judgement, not a
   measurement: deriving it from `git diff --stat` would mean the diff is empty when you
   need the answer, and correct only once the code you were meant to guide is already
-  written. Because it is a judgement, it goes in the handover for a human to confirm.
+  written. State it and your reason in the plan, and again in the handover.
 - **`tech_stack`** — what the project actually uses. A rule whose `tech_stack_required` is
   empty applies everywhere; otherwise it loads only on an intersection. This is what keeps
-  SQL rules out of a NoSQL project.
+  SQL rules out of a NoSQL project. Phase-1 rules never gate on it.
 
-Then answer the loaded items against the code you wrote, and report the answers —
-including the ones that pass. A checklist that only ever surfaces problems reads as noise.
+Then answer the loaded items — the Phase-1 ones against the plan, the Phase-2 ones against
+the code you wrote — and report the answers, including the ones that pass. A checklist that
+only ever surfaces problems reads as noise. Where a plan simply does not address an item,
+that absence *is* the answer; do not fill it in from what you intended.
 
 ## Researching a golden rule
 
-When the task touches a domain with no checklist in `.ai/05-domains/`:
+When the task touches a domain with no checklist in `.ai/03-planning/` or
+`.ai/05-domains/`:
 
 - Research it, then write the checklist **as questions**, not prescriptions.
   *"Does this class have one reason to change?"* — not *"use interface X"*. A

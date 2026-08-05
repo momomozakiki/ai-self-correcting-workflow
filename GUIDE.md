@@ -1,6 +1,6 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 5.3
+version: 5.4
 last_validated: 2026-08-05
 official: true
 source: agent-generated
@@ -10,7 +10,7 @@ estimated_tokens: 8200
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 5.3 – Centralized, Configurable, Self‑Improving, Governed*
+*Version 5.4 – Centralized, Configurable, Self‑Improving, Governed*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
@@ -20,9 +20,9 @@ folded there per §6.3 when this table passed ~8 rows.
 
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
+| 5.4     | 2026-08-05 | §13: **plan review.** `05-domains/` reviews code against the plan and so cannot see a defect in the plan; `03-planning/` adds 5 sourced categories, 31 items, answered at Phase 1. The selection table moves to `.ai/00-system/checklist-selection.json` and gains a `workflow_phase` axis, so one table serves both folders. |
 | 5.3     | 2026-08-05 | §13: the checklist system lands — ten sourced categories in `05-domains/`, `confidence_level` derived rather than asserted, and conditional loading defined once as manifest data. §7.3/§7.4: the Stop hook stops counting its own breadcrumb as work, and `--self-test` now reports which gate blocked the maturity climb rather than only the floor. New [`docs/checklist-system.md`](docs/checklist-system.md). |
 | 5.2     | 2026-08-05 | §7.3: the Stop flags gain a modification-time fallback, because `PostToolUse` sees only the editing tools and both failure directions showed up in practice. §13: `live` now distinguishes `deny` from `ask` strength via a tested `enforcement_mode`, after an `ask` was waved through and the rule it guarded was broken anyway. |
-| 5.1     | 2026-08-05 | New §7.5: why the Tier-0 guard is a `PreToolUse` hook rather than a `permissions.deny` rule, and why it emits both `deny` and `ask`. §7.1/§7.3 gain the `PreToolUse` event and the fail-open consequence; §13 records the four re-tierings. Revision History folded per §6.3. |
 
 ---
 
@@ -737,10 +737,12 @@ rules instead of prose.
 
 ```
 .ai/
-├── 00-system/              config, agent registry, autonomy boundaries, maturity tracker
+├── 00-system/              config, agent registry, autonomy boundaries, maturity
+│                           tracker, checklist-selection.json (the one loading table)
 ├── 01-phases/              one rule file per workflow step (Phase 0-3 + v14 step mapping)
 ├── 02-market-rules/        immutable golden rules; prohibitions/ is Tier 0
-├── 05-domains/             technology rules      — empty, grows per retrospective
+├── 03-planning/            plan review, Phase 1  — 5 rules, 31 sourced items
+├── 05-domains/             code review, Phase 2  — 10 rules, 80 sourced items
 ├── 06-components/          blueprints            — empty, grows per retrospective
 ├── 08-behavioral-metrics/  hook-written JSONL, and what is deliberately absent
 ├── 09-variants/            forks awaiting ratification
@@ -801,20 +803,31 @@ protocol; a researched rule is *proposed* until a human ratifies it. Each is tri
 against real code before being kept, because a checklist that finds nothing is too vague to
 be worth loading.
 
-**Ten categories, 80 items, every one sourced.** Each item cites a document with an
+**`03-planning/` reviews the plan, before any of that.** Ten categories of code review
+still cannot see a defect one level up: `05-domains/` reviews code *against* the plan, so
+it will confirm that a well-built thing was built well when the thing should not have been
+built at all. Until this folder existed, `rule-task-checklist` told the agent to produce a
+plan checklist and supplied nothing to interrogate it with — **a plan was reviewed by
+nothing.** Five rules, 31 items, answered at Phase 1: is the problem stated separately from
+the solution, is each acceptance criterion verifiable and singular, what is the rollback,
+which alternative was rejected, and can the proposed check actually fail. Never gated on
+tech stack — a plan's problem statement is no better for being written in Go.
+
+**Fifteen categories, 111 items, every one sourced.** Each item cites a document with an
 authority tier, and its `confidence_level` is *derived* by
 `hooks/workflow_hook.py::derive_confidence` and recomputed by test — never typed by hand.
 An item that cannot be sourced does not ship. `--self-test` warns when an item's
-`last_validated` passes `revalidation_interval_days`. The full framework, the ten
-categories, and the five citation defects found in the source documents are in
-[`docs/checklist-system.md`](docs/checklist-system.md).
+`last_validated` passes `revalidation_interval_days`. The full framework, both folders, and
+the citation defects found along the way — including **IEEE 1012-2016, superseded by
+1012-2024** — are in [`docs/checklist-system.md`](docs/checklist-system.md).
 
 **Conditional loading keeps this affordable.** The selection rules live once, as data, in
-`.ai/05-domains/manifest.json`; both skills read them rather than restating them. A rule
-loads when its `task_size_required` includes the size declared at Phase 1 *and* its
-`tech_stack_required` is empty or intersects the project's stack. Measured: a typo fix
-loads 9 items, a new REST API 34, and a project with no database in its stack loads no
-database rule at all — which is what makes the §6.4 token budget hold.
+`.ai/00-system/checklist-selection.json`; both skills read them rather than restating them,
+and both folders are selected from the one table. A rule loads when its `workflow_phase`
+matches the phase in progress, its `task_size_required` includes the size declared at Phase
+1, *and* its `tech_stack_required` is empty or intersects the project's stack. Measured: a
+typo fix loads 9 items, a new REST API 34, and a project with no database in its stack
+loads no database rule at all — which is what makes the §6.4 token budget hold.
 
 **`06-components/` is still empty, and stays that way until a pattern earns a blueprint.**
 `BLUEPRINT_SCHEMA.md` defines the shape; the bar is that the pattern has already shipped

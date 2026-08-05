@@ -1535,7 +1535,14 @@ def run_self_test() -> int:
     if env_lines:
         out.append("Environment:")
         out += env_lines
+        # Printed rather than probed: `claude` is not on PATH under the VS Code
+        # extension, and an env_check that always fails trains the reader to skip
+        # the whole block (docs/RETROSPECTIVE.md, 2026-08-04). The second line
+        # exists because two sessions here recorded the version as unobtainable
+        # before anyone looked at the install path, where it had been all along.
         out.append("  note: the `opus` alias resolves to Opus 5 only on Claude Code v2.1.219+")
+        out.append("  note: no `claude` on PATH? the VS Code extension directory name "
+                   "carries the version (~/.vscode/extensions/anthropic.claude-code-*)")
 
     # --- maturity -------------------------------------------------------------
     levels = [

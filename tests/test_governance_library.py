@@ -83,8 +83,29 @@ def phase_rules():
     return sorted((LIBRARY / "01-phases").glob("rule-*.json"))
 
 
+def planning_rules():
+    return sorted((LIBRARY / "03-planning").glob("rule-*.json"))
+
+
 def domain_rules():
     return sorted((LIBRARY / "05-domains").glob("rule-*.json"))
+
+
+def checklist_rules():
+    """Every rule carrying a ``checklist`` -- both phases, one list.
+
+    Planning rules review the plan and domain rules review the code, but they
+    make identical claims about their items: sourced, derived confidence,
+    phrased as a question. Keeping two lists would mean remembering to widen
+    both, and the folder added second is the one that gets forgotten.
+    """
+    return planning_rules() + domain_rules()
+
+
+def checklist_manifests():
+    """(folder name, manifest) for every folder of checklist rules."""
+    return [(folder, load_json(LIBRARY / folder / "manifest.json"))
+            for folder in ("03-planning", "05-domains")]
 
 
 def prohibitions():
@@ -94,14 +115,16 @@ def prohibitions():
 def artifacts():
     """Every rule and prohibition file, as (relative path, parsed dict) pairs.
 
-    Domain rules are included deliberately: a checklist harvested into
-    ``05-domains/`` is an artifact making the same claims as a phase rule, so it
-    answers to the same schema, taxonomy and honesty checks. Scoping this to
-    ``01-phases/`` would create a folder where half the invariants quietly did
-    not apply -- which is how the drift this module exists to catch gets in.
+    Checklist rules are included deliberately: a checklist harvested into
+    ``03-planning/`` or ``05-domains/`` is an artifact making the same claims as
+    a phase rule, so it answers to the same schema, taxonomy and honesty checks.
+    Scoping this to ``01-phases/`` would create a folder where half the
+    invariants quietly did not apply -- which is how the drift this module
+    exists to catch gets in, and did: ``05-domains/`` escaped six invariants
+    until this was widened the first time.
     """
     return [(p.relative_to(REPO_ROOT).as_posix(), load_json(p))
-            for p in phase_rules() + domain_rules() + prohibitions()]
+            for p in phase_rules() + checklist_rules() + prohibitions()]
 
 
 def manifests():
@@ -410,8 +433,8 @@ PRIORITIES = ("CRITICAL", "HIGH", "MEDIUM", "LOW")
 
 
 def checklist_items():
-    """Every (rule path, item) pair across the domain checklists."""
-    for path in domain_rules():
+    """Every (rule path, item) pair across the planning and domain checklists."""
+    for path in checklist_rules():
         rule = load_json(path)
         for entry in rule.get("checklist") or []:
             yield path.name, entry
@@ -505,50 +528,129 @@ class ChecklistItems(unittest.TestCase):
 
 
 class ChecklistSelection(unittest.TestCase):
-    """Conditional loading is data, defined once, and must stay resolvable."""
+    """Conditional loading is data, defined once, and must stay resolvable.
+
+    "Once" is the load-bearing word. The table lived in
+    ``05-domains/manifest.json`` until plan-review checklists arrived and a
+    second copy would have been needed; it now sits in
+    ``00-system/checklist-selection.json`` and both folders are selected from
+    it. :meth:`test_no_folder_manifest_defines_its_own_selection` is what stops
+    the second copy coming back.
+    """
+
+    SELECTION_PATH = LIBRARY / "00-system" / "checklist-selection.json"
 
     def setUp(self):
-        self.manifest = load_json(LIBRARY / "05-domains" / "manifest.json")
+        self.selection = load_json(self.SELECTION_PATH)
+        self.manifests = checklist_manifests()
 
+    def _all_items(self):
+        for folder, manifest in self.manifests:
+            for item in manifest["items"]:
+                yield folder, item
+
+    # --- per-rule gating fields -------------------------------------------- #
     def test_task_sizes_come_from_a_closed_vocabulary(self):
-        for item in self.manifest["items"]:
-            with self.subTest(rule=item["id"]):
+        for folder, item in self._all_items():
+            with self.subTest(folder=folder, rule=item["id"]):
                 self.assertTrue(item.get("task_size_required"))
                 for size in item["task_size_required"]:
                     self.assertIn(size, TASK_SIZES)
 
     def test_priorities_come_from_a_closed_vocabulary(self):
-        for item in self.manifest["items"]:
-            with self.subTest(rule=item["id"]):
+        for folder, item in self._all_items():
+            with self.subTest(folder=folder, rule=item["id"]):
                 self.assertIn(item.get("priority"), PRIORITIES)
+
+    def test_phases_come_from_a_closed_vocabulary(self):
+        declared = set(self.selection["phases"])
+        for folder, item in self._all_items():
+            with self.subTest(folder=folder, rule=item["id"]):
+                self.assertIn(
+                    item.get("workflow_phase"), declared,
+                    f"{item['id']}: phase {item.get('workflow_phase')!r} is not a "
+                    f"phase the selection table knows about {sorted(declared)}")
 
     def test_manifest_agrees_with_the_rule_files(self):
         """The index is an index, not a second opinion."""
-        for item in self.manifest["items"]:
-            rule = load_json(LIBRARY / "05-domains" / item["file"])
-            with self.subTest(rule=item["id"]):
-                for field in ("category", "priority", "task_size_required",
-                              "tech_stack_required"):
+        for folder, item in self._all_items():
+            rule = load_json(LIBRARY / folder / item["file"])
+            with self.subTest(folder=folder, rule=item["id"]):
+                for field in ("category", "priority", "workflow_phase",
+                              "task_size_required", "tech_stack_required"):
                     self.assertEqual(rule.get(field), item.get(field),
                                      f"{item['id']}: manifest and rule disagree "
                                      f"on {field}")
                 self.assertEqual(len(rule.get("checklist") or []), item.get("items"))
 
-    def test_every_context_maps_to_categories_that_exist(self):
-        categories = {i["category"] for i in self.manifest["items"]}
-        for context, wanted in self.manifest["selection"]["contexts"].items():
-            with self.subTest(context=context):
-                missing = set(wanted) - categories
-                self.assertEqual(set(), missing,
-                                 f"{context} selects categories with no rule file")
+    # --- the single selection table ---------------------------------------- #
+    def test_no_folder_manifest_defines_its_own_selection(self):
+        """One table, or the two will answer differently and both look right."""
+        for folder, manifest in self.manifests:
+            with self.subTest(folder=folder):
+                self.assertNotIn(
+                    "selection", manifest,
+                    f"{folder}/manifest.json carries its own selection block -- "
+                    f"the one table is {self.SELECTION_PATH.name}")
 
-    def test_every_category_is_reachable_from_some_context(self):
-        """A checklist nothing can select is a checklist nothing will run."""
-        selectable = {c for wanted in self.manifest["selection"]["contexts"].values()
-                      for c in wanted}
-        categories = {i["category"] for i in self.manifest["items"]}
-        self.assertEqual(set(), categories - selectable,
+    def test_each_phase_points_at_the_folder_that_holds_it(self):
+        for phase, block in self.selection["phases"].items():
+            with self.subTest(phase=phase):
+                self.assertTrue(
+                    (LIBRARY / block["folder"]).is_dir(),
+                    f"phase {phase} names folder {block['folder']}, which does not exist")
+
+    def test_phase_categories_match_the_rules_on_disk(self):
+        """Both directions: no phantom category, no unreachable rule.
+
+        A category in the table with no rule file selects nothing; a rule whose
+        category the table omits can never be selected. Either way the rule does
+        not run, and only one of the two is visible by reading the folder.
+        """
+        for phase, block in self.selection["phases"].items():
+            folder = block["folder"]
+            manifest = load_json(LIBRARY / folder / "manifest.json")
+            on_disk = {i["category"] for i in manifest["items"]}
+            declared = set(block["categories"])
+            with self.subTest(phase=phase, direction="table -> disk"):
+                self.assertEqual(set(), declared - on_disk,
+                                 f"phase {phase} lists categories with no rule file")
+            with self.subTest(phase=phase, direction="disk -> table"):
+                self.assertEqual(set(), on_disk - declared,
+                                 f"{folder} holds categories the table cannot select")
+
+    def test_every_context_maps_to_categories_that_exist(self):
+        categories = {item["category"] for _, item in self._all_items()}
+        for context, wanted in self.selection["contexts"].items():
+            with self.subTest(context=context):
+                self.assertEqual(
+                    set(), set(wanted) - categories,
+                    f"{context} selects categories with no rule file")
+
+    def test_every_phase_two_category_is_reachable_from_some_context(self):
+        """A checklist nothing can select is a checklist nothing will run.
+
+        Phase 1 is exempt by design: its rules are selected by phase alone, so
+        `contexts` -- which narrows by what the code touches -- has nothing to
+        say about a plan that has not decided what it touches yet.
+        """
+        selectable = {c for wanted in self.selection["contexts"].values() for c in wanted}
+        phase_two = set(self.selection["phases"]["2"]["categories"])
+        self.assertEqual(set(), phase_two - selectable,
                          "these categories are unreachable by any task context")
+
+    def test_planning_rules_are_never_gated_on_tech_stack(self):
+        """A plan's problem statement is no better or worse for being written in Go.
+
+        A stack filter at Phase 1 could only ever exclude a question that still
+        applied, and would do it silently.
+        """
+        for path in planning_rules():
+            rule = load_json(path)
+            with self.subTest(rule=path.stem):
+                self.assertEqual(
+                    [], rule.get("tech_stack_required"),
+                    f"{path.stem}: gates on tech stack, but it reviews a plan")
 
 
 class EnforcementStrength(unittest.TestCase):
