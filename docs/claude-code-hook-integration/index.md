@@ -441,7 +441,7 @@ This is the live config for this repo:
     "enabled": true,
     "directory": "history"
   },
-  "source_directories": ["hooks", "skills", "schemas", "templates"],
+  "source_directories": ["hooks", ".claude/skills", "schemas", "templates"],
   "documentation_directories": ["docs"],
   "env_check": {
     "tool_paths": {

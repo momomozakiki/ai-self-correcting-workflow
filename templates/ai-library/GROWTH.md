@@ -84,7 +84,7 @@ and survived review, never in advance of that.
 
 ## The self-hardening rule
 A mistake recorded **twice** in `docs/RETROSPECTIVE.md` stops being a note and becomes
-structure: a checklist item in `skills/adaptive-workflow/SKILL.md` and a rule file under
+structure: a checklist item in `.claude/skills/adaptive-workflow/SKILL.md` and a rule file under
 `01-phases/`. `--self-test` reports recurring entries that have not yet been codified;
 reaching maturity level 5 requires that none are outstanding.
 

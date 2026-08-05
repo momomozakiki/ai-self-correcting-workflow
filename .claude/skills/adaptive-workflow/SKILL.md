@@ -130,41 +130,12 @@ plan, await approval, continue.
   the occasional legitimate heredoc shouldn't become a wall. Answering the prompt
   isn't the fix — writing the file is.
 
-**Conditional triggers (apply during and after each change):**
+**Then apply the conditional triggers** — the "if you did X, record Y" table,
+including the mandatory ledger entry:
+[references/conditional-triggers.md](references/conditional-triggers.md).
 
-| Trigger | Action |
-|---------|--------|
-| New pattern / rule / gotcha | Append to `.ai/best_practices.md` (with example). |
-| New naming convention | Append to `.ai/naming_conventions.md`. |
-| Change to public API / architecture / data flow | Update `docs/*.md` (dated). |
-| Doc created / updated | Apply the Documentation Standard: frontmatter (provenance + version) + `last_validated` refresh + a Revision History row; fold into a folder per §6.4 if it outgrows one question / its token budget, or its Revision History passes ~8 rows (relocate history to a sibling `CHANGELOG.md`). |
-| Non-obvious technical decision | Decision log in `plans/archive/<slug>/execution_log.md`. |
-| New significant directory with a distinct responsibility (large/monorepo projects) | Optionally add a `SCOPE.md` describing its role + DO/DON'T rules; link it from the parent's `SCOPE.md` (Progressive Disclosure Guide §3.1). Skip for small projects. |
-| Repeatable mistake | Warning in best practices / retro note. |
-| **Any intentional change** (not a trivial typo/whitespace edit) | **Append a ledger entry** to `history/YYYY-Www.md`. Add an optional `**Risk:**` line using one of `privilege \| design \| behavioral \| structural \| accountability` when the change carries real risk — omit it when it doesn't, or the field stops meaning anything. |
-| Mistake worth remembering | Entry in `docs/RETROSPECTIVE.md`. If it's already there, append `(recurring)` to the heading — it now owes a rule file under `.ai/01-phases/` and a line here. |
-| New rule harvested from a real mistake | Add the rule file, update the folder's `manifest.json` in the same edit, mirror it into `templates/ai-library/`, and set `enforcement_status` honestly: `live` needs an `enforced_by` list naming real code, `convention` needs an `enforcement_note` saying what the real mechanism is. `tests/test_governance_library.py` checks all of it. See `.ai/GROWTH.md`. |
-| External doc without provenance | Ask for the official URL, then add the doc frontmatter (provenance fields). |
-| Completed task affects roadmap | Update the roadmap. |
-| Epic finished | Move it to `## Completed Epics`. |
-
-**Ledger (mandatory).** Log every qualifying change in `history/YYYY-Www.md`
-(create on first change of the week). Substantial → full `What / Why / Refs`;
-trivial/routine → one-line note. Tags: `[design] [doc] [code] [workflow]
-[config] [decision] [data]`. Reference commit SHA and/or plan slug.
-
-**Documentation Standard (mandatory for every doc).** On creating or updating a
-doc, add the YAML frontmatter block (provenance + version) and a Revision History
-row; bump `version` on each non-trivial edit. Refresh `last_validated` **only when
-you re-confirm the content is correct** (a content review) — a mechanical or
-frontmatter-only edit leaves it unchanged, so it never overstates when the content was
-last validated. For an external doc, ask "Is this from an official/authoritative
-source? URL?" and set `official`/`source` accordingly. Agent-generated docs get
-`official: false` + today's `last_validated` when the content is authored/reviewed now
-(not for a frontmatter backfill on pre-existing content). If unconfirmed, mark
-`official: unknown`.
-Non-commentable formats (JSON, code) use a sidecar `.prov.md`. Split oversized docs
-per the Progressive Disclosure Guide. Full spec: `GUIDE.md` §6.
+**Every doc you create or update** takes the frontmatter, provenance and folding
+rules in [references/doc-frontmatter.md](references/doc-frontmatter.md).
 
 ## Phase 3 — Closure
 
@@ -186,65 +157,17 @@ per the Progressive Disclosure Guide. Full spec: `GUIDE.md` §6.
 
 ---
 
-## Documentation frontmatter
+## Reference files
 
-Markdown / HTML (place at the very top of the file):
-```markdown
----
-title: <Title>
-version: 1.0                     # bump MINOR for content, MAJOR for restructure
-last_validated: YYYY-MM-DD       # date you last re-confirmed the CONTENT is correct
-official: false                  # true | false | unknown
-source: agent-generated          # URL | agent-generated | user-provided, origin unknown
-tags: [<retrieval tags>]
-applies_when: "<when this doc is relevant>"
-estimated_tokens: <int>
----
+- [references/conditional-triggers.md](references/conditional-triggers.md) — the
+  Phase 2 trigger table and the ledger format.
+- [references/doc-frontmatter.md](references/doc-frontmatter.md) — the
+  Documentation Standard: frontmatter, sidecars, folding.
+- [references/contributing-upstream.md](references/contributing-upstream.md) —
+  classifying and contributing a fix to the workflow itself.
 
-# <Title>
-**Version 1.0** — *<one-line scope>*
-
-## Revision History
-| Version | Date       | Change   |
-|---------|------------|----------|
-| 1.0     | YYYY-MM-DD | Initial. |
-```
-
-Sidecar (for JSON/code) — `config.json` → `config.json.prov.md`:
-```markdown
-# Provenance for config.json
-- version: 1.0
-- last_validated: YYYY-MM-DD
-- official: false
-- source: agent-generated
-- notes: ...
-```
-
-**Folding into a folder (GUIDE.md §6.4):** a flat `docs/<name>.md` folds into
-`docs/<name>/` when it breaks the "Rule of One Question" / exceeds its layer's token
-budget (split per `docs/Progressive Disclosure Documentation Guide.md` — `index.md`
-holds canonical frontmatter; children carry lightweight frontmatter + a link back),
-**or** when its in-file Revision History passes ~8 rows. On folding, relocate the full
-history to a sibling `CHANGELOG.md` (copy `templates/docs/CHANGELOG_TEMPLATE.md`);
-keep only the latest ≤3 rows + a link in `index.md`. That `CHANGELOG.md` is a sibling
-peer marked `exclude_from_ai: true`, so it stays out of the active token budget.
-
-## Contributing improvements upstream
-
-When you find a flaw or missing trigger in the workflow itself, classify it and
-log the discovery in the project ledger with a `[workflow]` tag:
-
-- **High** (a.k.a. **Critical** — breaks invariants / data loss / security): fix
-  locally on `fix/<desc>` now, push, open a PR; may use the fix immediately.
-- **Medium** (missing trigger, ambiguity, non-critical bug): open a
-  `proposal/<desc>` PR with a plan; **do not** apply locally until merged.
-- **Low / non-critical**: open an issue; optionally a draft branch, no PR.
-
-"High" is the top tier; "Critical" is just another name for it, not a level above.
-If you vendored the files (no submodule to push to), file a GitHub issue via the
-**Workflow bug / flaw report** template instead of pushing a branch.
-
-See `.claude/workflow-core/CONTRIBUTING.md` for the full process.
+Writing or restructuring a skill is its own job — see the
+[skill-authoring](../skill-authoring/SKILL.md) skill.
 
 ---
 
@@ -252,9 +175,9 @@ See `.claude/workflow-core/CONTRIBUTING.md` for the full process.
 
 - **Phase 0:** git sync · env check · load docs (+provenance) · unfinished plan
   & roadmap · daily update check.
-- **Phase 1:** assess scope/docs/provenance/ledger · chunk via roadmap · write
-  checklist.
+- **Phase 1:** assess scope/docs/provenance/ledger · declare `task_size` · chunk
+  via roadmap · write checklist · review it against `.ai/03-planning/`.
 - **Phase 2:** implement → lint/test → apply triggers (ledger, docs, provenance,
   roadmap) → log obstacles.
-- **Phase 3:** archive plan · final ledger entry · roadmap · commit & push ·
-  confirm the three closure conditions.
+- **Phase 3:** archive plan · final ledger entry · roadmap · retrospective ·
+  commit & push · confirm the three closure conditions.

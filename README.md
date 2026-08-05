@@ -13,7 +13,7 @@ repository so every adopting project shares one source of truth for *process*.
 > rule them all.*
 
 Full reference: **[`GUIDE.md`](GUIDE.md)** · Agent manual:
-**[`skills/adaptive-workflow/SKILL.md`](skills/adaptive-workflow/SKILL.md)**
+**[`.claude/skills/adaptive-workflow/SKILL.md`](.claude/skills/adaptive-workflow/SKILL.md)**
 
 ## What's here
 
@@ -23,12 +23,16 @@ workflow-core/
 ├── CHANGELOG.md · ROADMAP.md · CONTRIBUTING.md
 ├── history/FORMAT.md            # This repo's own change-history ledger
 ├── hooks/workflow_hook.py       # Fail-soft hook dispatcher (stdlib only)
-├── skills/adaptive-workflow/    # Agent process manual (SKILL.md)
+├── .claude/skills/              # The skills themselves — the only path Claude Code discovers
+│   ├── adaptive-workflow/       #   Agent process manual (SKILL.md + references/)
+│   ├── autonomous-task/ · handover/
+│   └── skill-authoring/         #   How to structure and size a skill
 ├── schemas/                     # config_schema.json + hook_contract.md
 ├── docs/                        # Documentation Standard refs (Progressive Disclosure Guide, etc.)
 ├── templates/                   # What adopting projects copy in
+│   ├── skills/                  #   Mirror of .claude/skills/, copied into the adopter's own
 │   └── docs/                    #   DOC · CHANGELOG · SCOPE templates
-└── tests/test_hook.py           # Synthetic-event tests (unittest)
+└── tests/                       # Synthetic-event, governance and skill tests (unittest)
 ```
 
 ## Quick start — adopt in a project
@@ -77,8 +81,9 @@ python -m unittest discover -s .claude/workflow-core/tests   # sanity-check
 ```
 
 **Vendored (copied, no submodule)?** Re-copy the changed files (`hooks/`,
-`schemas/`, `skills/`, `GUIDE.md`, `CONTRIBUTING.md`, `templates/`,
-`.github/ISSUE_TEMPLATE/`), or migrate to the submodule model per
+`schemas/`, `GUIDE.md`, `CONTRIBUTING.md`, `templates/`,
+`.github/ISSUE_TEMPLATE/`), and re-copy `templates/skills/*` into your own
+`.claude/skills/` — or migrate to the submodule model per
 [`GUIDE.md`](GUIDE.md) §8.1.
 
 **Found a flaw?** Report it upstream — open a *Workflow bug / flaw report* issue

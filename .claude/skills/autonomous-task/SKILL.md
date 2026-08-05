@@ -102,7 +102,8 @@ but only after it has actually worked, not on the expectation that it will.
 
 ## The loop
 
-Follow the Phase 0–3 discipline in `skills/adaptive-workflow/SKILL.md`. It is unchanged;
+Follow the Phase 0–3 discipline in the [adaptive-workflow](../adaptive-workflow/SKILL.md)
+skill. It is unchanged;
 this skill only removes the mid-task check-in. Two points bear repeating because they are
 where an unattended run goes wrong:
 

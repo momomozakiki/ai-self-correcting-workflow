@@ -15,8 +15,8 @@
 
 This project follows the Adaptive Self-Correcting Workflow. The full reference
 lives in `GUIDE.md`; the agent operating manual is the `adaptive-workflow` skill
-(`skills/adaptive-workflow/SKILL.md`). Hooks provide ambient reminders — treat
-them as helpful nudges, not blockers.
+(`.claude/skills/adaptive-workflow/SKILL.md`). Hooks provide ambient reminders —
+treat them as helpful nudges, not blockers.
 
 ### Tier 0 — absolute prohibitions (never overrideable)
 - Never force-push a shared branch. Never commit secrets. Never rewrite published
@@ -57,7 +57,7 @@ them as helpful nudges, not blockers.
 - **Tests must stay dependency-free.** The hook is stdlib-only so adopters can
   vendor it without a dependency tree. Run: `python -m unittest discover -s tests`.
 - When changing hook behaviour, update `schemas/hook_contract.md`, `GUIDE.md`
-  §7, and `skills/adaptive-workflow/SKILL.md` together to prevent drift.
+  §7, and `.claude/skills/adaptive-workflow/SKILL.md` together to prevent drift.
   `schemas/hook_contract.md` is the **only** place the state-key list lives.
 - **Health check:** `python hooks/workflow_hook.py --self-test` validates the
   config and reports a governance maturity level. Exit code reflects validation
@@ -69,12 +69,19 @@ them as helpful nudges, not blockers.
   `tests/test_governance_library.py` enforces this: `live` needs an `enforced_by`
   list resolving to real code, `convention` needs an `enforcement_note`. Any edit
   under `.ai/` must be mirrored into `templates/ai-library/` in the same commit.
-- **Autonomous runs.** `skills/autonomous-task/SKILL.md` removes `AskUserQuestion` for the
-  turn and says what to do instead: read the repo, then official docs, then take the
-  conservative option and record the assumption. It ends by invoking `skills/handover/`,
+- **Autonomous runs.** `.claude/skills/autonomous-task/SKILL.md` removes `AskUserQuestion`
+  for the turn and says what to do instead: read the repo, then official docs, then take the
+  conservative option and record the assumption. It ends by invoking the `handover` skill,
   which writes `plans/HANDOVER.md` — the user's entire view of a run they didn't watch.
   Autonomy means not asking the user to arbitrate; it is **not** licence to click through
   a guard's `ask`.
+- **Skills live in `.claude/skills/` because that is one of the only places Claude Code
+  looks** — a repo-root `skills/` folder is discovered by nothing, and every frontmatter
+  field in it is silently inert. Don't "tidy" them back out. Authoring rules are in the
+  `skill-authoring` skill; `tests/test_skills.py` enforces structure, size and the old
+  path staying gone, and mirrors `.claude/skills/` into `templates/skills/` for adopters.
+  **A newly created top-level skills directory needs a Claude Code restart** before it is
+  watched.
 - **Review checklists** live in `.ai/05-domains/`, phrased as questions rather than
   prescriptions so they carry to any project and leave judgement intact. All `convention`.
   `.ai/06-components/` stays empty until a pattern has shipped and survived review —

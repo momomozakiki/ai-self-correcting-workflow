@@ -43,4 +43,4 @@ a task size outside the closed vocabulary. It cannot check that the table was co
 
 - `.ai/03-planning/manifest.json`, `.ai/05-domains/manifest.json` — indexes, not second opinions
 - `docs/checklist-system.md` — the canonical description of the whole system
-- `skills/adaptive-workflow/SKILL.md`, `skills/autonomous-task/SKILL.md` — both read this file
+- `.claude/skills/adaptive-workflow/SKILL.md`, `.claude/skills/autonomous-task/SKILL.md` — both read this file

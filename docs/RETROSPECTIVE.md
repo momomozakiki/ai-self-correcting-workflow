@@ -224,3 +224,38 @@ threshold is deliberately two: one mistake is noise, two is a pattern worth payi
 - **Codified:** not yet — first occurrence of *this* lesson. If a second control reports a
   count rather than an attribution, it becomes a rule: *a negative control names the test,
   or it is not a control.*
+
+### 2026-08-06 — The skills were never loaded, and nothing said so
+
+- **What:** The three skills lived in a repo-root `skills/` directory. Claude Code discovers
+  skills at `~/.claude/skills/`, the project `.claude/skills/` (plus nested ones below the
+  working directory) and plugin directories — **and nowhere else**. So none of them was ever
+  a skill: `/adaptive-workflow` did not exist, no description ever triggered an automatic
+  load, and the `disallowed-tools: AskUserQuestion` on `autonomous-task` — the field whose
+  entire job is to physically remove the tool — was inert for its whole life. They appeared
+  to work only because `CLAUDE.md` named their file paths in prose, so the agent read them
+  as ordinary files.
+- **Why it matters:** This is the repository's own stated failure mode, in the repository
+  itself: **enforcement claimed and not present**. `CLAUDE.md` requires `live` artifacts to
+  name real enforcing code and forbids implying enforcement that does not exist. A
+  frontmatter field in an undiscovered directory is precisely that — a control that reads as
+  binding, cannot bind, and reports nothing either way. The governance library was audited
+  to five decimal places while the mechanism delivering it was disconnected.
+- **Root cause:** The location was never verified against the documentation, because
+  nothing about it looked like a claim. `skills/` at the repo root is a reasonable-looking
+  directory, and every artifact inside it was correct. The defect was in the one property
+  no test covered and no reviewer would think to check — *whether the runtime can see it at
+  all*.
+- **Fix:** Moved to `.claude/skills/`; `tests/test_skills.py` now fails if the old path
+  reappears anywhere outside the append-only records, and checks the properties that
+  otherwise fail silently (entrypoint casing, unknown frontmatter keys, the 500-line cap,
+  the ~5,000-token compaction budget, link resolution, adopter-template parity). Harvested
+  into `.ai/05-domains/rule-skill-authoring-review.json` per GROWTH.md, and into the
+  `skill-authoring` skill.
+- **Codified:** yes — `.ai/05-domains/rule-skill-authoring-review.json` (`SKA-LOC-01`) and
+  `tests/test_skills.py::SkillStructure`.
+- **The general lesson, which is larger than skills:** *an artifact's correctness is not its
+  effectiveness.* Every check in this repository asked whether the content was right. None
+  asked whether anything was reading it. For each control here that is claimed to be live,
+  the question "what would I observe if it silently stopped running?" has to have an answer
+  — and if the answer is "nothing", that is the finding.

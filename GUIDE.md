@@ -66,9 +66,11 @@ workflow-core/
 │   └── YYYY-Www.md
 ├── hooks/
 │   └── workflow_hook.py          # Generic dispatcher, reads project config
-├── skills/
-│   └── adaptive-workflow/
-│       └── SKILL.md              # Agent process manual
+├── .claude/skills/               # The only path Claude Code discovers skills at
+│   ├── adaptive-workflow/        # Agent process manual (SKILL.md + references/)
+│   ├── autonomous-task/          # Unattended runs (removes AskUserQuestion)
+│   ├── handover/                 # The review checklist an unattended run leaves
+│   └── skill-authoring/          # How to structure, size and split a skill
 ├── schemas/
 │   ├── hook_contract.md          # Validated I/O shapes + --self-test contract
 │   └── config_schema.json        # Schema for project workflow_config.json
@@ -76,9 +78,12 @@ workflow-core/
 │   ├── CLAUDE.md.fragment        # Blocks to include in a project’s CLAUDE.md
 │   ├── settings.json.hooks       # Hook definitions for .claude/settings.json
 │   ├── workflow_config.json      # Default configuration (to be customized)
+│   ├── skills/                   # Mirror of .claude/skills/ — adopters copy this
 │   └── ai-library/               # Governance library scaffold for adopters
 ├── tests/
-│   └── test_hook.py              # Synthetic event tests for the hook dispatcher
+│   ├── test_hook.py              # Synthetic event tests for the hook dispatcher
+│   ├── test_governance_library.py  # Integrity of the .ai/ library
+│   └── test_skills.py            # Skill structure, size, location and parity
 └── CONTRIBUTING.md               # How to propose improvements
 ```
 
@@ -90,6 +95,8 @@ my-project/
 ├── .claude/
 │   ├── workflow-core/            # Git submodule pointing to central repo
 │   │   └── (contents above)
+│   ├── skills/                   # Copied from workflow-core/templates/skills/ —
+│   │   └── adaptive-workflow/    #   Claude Code discovers skills only here
 │   ├── settings.json             # Merged with templates/settings.json.hooks
 │   └── workflow_config.json      # Project-specific paths/feature flags
 ├── .ai/                          # Living docs (if used)
@@ -813,7 +820,7 @@ the solution, is each acceptance criterion verifiable and singular, what is the 
 which alternative was rejected, and can the proposed check actually fail. Never gated on
 tech stack — a plan's problem statement is no better for being written in Go.
 
-**Fifteen categories, 111 items, every one sourced.** Each item cites a document with an
+**Sixteen categories, 119 items, every one sourced.** Each item cites a document with an
 authority tier, and its `confidence_level` is *derived* by
 `hooks/workflow_hook.py::derive_confidence` and recomputed by test — never typed by hand.
 An item that cannot be sourced does not ship. `--self-test` warns when an item's

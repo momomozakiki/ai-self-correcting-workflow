@@ -7,7 +7,38 @@ and are called out so adopting projects can adjust their `workflow_config.json`.
 
 ## [Unreleased]
 
+### Fixed
+- **The skills now live where Claude Code discovers them.** `skills/` →
+  `.claude/skills/`. Claude Code loads skills from `~/.claude/skills/`, a project
+  `.claude/skills/` (plus nested ones below the working directory) and plugin
+  directories, and from nowhere else — there is no setting that registers an
+  alternative root. The skills at the repo root were therefore never loaded *as
+  skills*: no `/adaptive-workflow` command existed, no `description` ever triggered
+  an automatic load, and the `disallowed-tools: AskUserQuestion` on
+  `autonomous-task` was inert. They worked only because `CLAUDE.md` named their
+  file paths in prose.
+  **Adopters must act:** copy `templates/skills/*` into your own `.claude/skills/`
+  (the submodule's copy is not discovered from `.claude/workflow-core/`), and
+  restart Claude Code once if `.claude/skills/` is new. See the updated
+  `templates/CLAUDE.md.fragment`.
+
 ### Added
+- **`skill-authoring` skill and `tests/test_skills.py`.** The authoring rules —
+  discovery locations, the progressive-disclosure layout, naming, and the verified
+  frontmatter reference — plus a stdlib-only test that enforces them: entrypoint
+  presence and casing, kebab-case names, `name`/directory agreement, description
+  length, the documented 500-line body cap, unknown frontmatter keys (an
+  unrecognised key is ignored silently at runtime), markdown link resolution, the
+  old path staying gone, and `templates/skills/` parity. It warns past a
+  ~5,000-token proxy, measured in characters rather than lines, because
+  auto-compaction re-attaches only the first 5,000 tokens of each skill. 15 of its
+  25 tests are negative controls asserting the named violation each defect produces.
+- **`.ai/05-domains/rule-skill-authoring-review.json`** (8 items, `convention`),
+  harvested from the defect above per `GROWTH.md`, and mirrored into
+  `templates/ai-library/`.
+- **`adaptive-workflow` split** into a 183-line `SKILL.md` plus three
+  `references/` (conditional triggers and the ledger, the Documentation Standard,
+  upstream contribution), so it stays inside the compaction budget as it grows.
 - **Governance library (`.ai/`) and the v14 integration.** Instantiated the
   imported Self-Growing Checklist Ecosystem v14 as a chunked rule library, with an
   adopter scaffold at `templates/ai-library/`. Every artifact declares an

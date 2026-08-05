@@ -1,7 +1,7 @@
 {
   "id": "checklist-selection",
-  "version": "1.0",
-  "last_updated": "2026-08-05",
+  "version": "1.1",
+  "last_updated": "2026-08-06",
   "enforcement_status": "convention",
   "enforcement_note": "Nothing forces the agent to read this table or to load what it selects; loading happens at prompt time, inside the agent's own reasoning, where no hook runs. tests/test_governance_library.py::ChecklistSelection enforces that the table stays internally consistent -- every category it names has a rule file, every rule is reachable -- which is the part that can be checked. Whether it was consulted cannot.",
   "note": "The single table governing which checklists load. Both .ai/03-planning/ and .ai/05-domains/ are selected from here, and both skills read this file rather than restating the logic. It lived in 05-domains/manifest.json until plan-review checklists arrived and a second copy would have been needed -- two tables are two answers to one question.",
@@ -39,7 +39,8 @@
         "api",
         "database",
         "devops",
-        "audit"
+        "audit",
+        "skill-authoring"
       ],
       "note": "Phase-2 rules narrow by `contexts` below and by tech stack, because a SQL question genuinely does not apply to a project with no database."
     }
@@ -76,6 +77,10 @@
       "audit",
       "api",
       "devops"
+    ],
+    "skill_work": [
+      "skill-authoring",
+      "code-quality"
     ]
   },
   "contexts_note": "Phase-2 only. Phase 1 has no context map: which questions a plan must answer does not depend on what the plan turns out to touch, and a plan that has not yet decided whether it needs a database still has to say what problem it solves."

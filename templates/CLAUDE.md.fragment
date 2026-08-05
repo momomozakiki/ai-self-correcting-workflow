@@ -7,7 +7,15 @@
 
 This project follows the Adaptive Self-Correcting Workflow. The full reference
 lives in `.claude/workflow-core/GUIDE.md`; the agent operating manual is the
-`adaptive-workflow` skill (`.claude/workflow-core/skills/adaptive-workflow/SKILL.md`).
+`adaptive-workflow` skill, at `.claude/skills/adaptive-workflow/SKILL.md`.
+
+**The skills are copied, not referenced.** Claude Code discovers skills only under
+`.claude/skills/` (and `~/.claude/skills/`), so copy them out of the submodule:
+`cp -r .claude/workflow-core/templates/skills/* .claude/skills/`. Re-copy after a
+`git submodule update --remote`, or whenever the upstream changelog reports a skill
+change — a copy nobody resyncs silently goes stale. If `.claude/skills/` did not
+exist before, restart Claude Code once so the new directory is watched.
+
 Hooks provide ambient reminders — treat them as helpful nudges, not blockers.
 
 ### Tier 0 — absolute prohibitions (never overrideable)

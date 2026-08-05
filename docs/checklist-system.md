@@ -1,6 +1,6 @@
 ---
 title: The checklist system — sourcing, confidence, and conditional loading
-version: 1.1
+version: 1.2
 last_validated: 2026-08-05
 official: false
 source: agent-generated
@@ -17,6 +17,7 @@ review plans as well as code.*
 ## Revision History
 | Version | Date | Change |
 |---------|------|--------|
+| 1.2 | 2026-08-06 | Adds `rule-skill-authoring-review` (8 items) to `05-domains/`, harvested from the skills-directory defect: eleven categories, 88 items for code review. Updates the skill paths to `.claude/skills/`. |
 | 1.1 | 2026-08-05 | Adds §5a: plan review. `.ai/03-planning/` (5 rules, 31 items) reviews the plan at Phase 1; the selection table moves to `.ai/00-system/checklist-selection.json` and gains a `workflow_phase` axis. |
 | 1.0 | 2026-08-05 | Consolidates the two staging documents. Records what was adopted, what was made workable, what was dropped, and the three citation defects found in the originals. |
 
@@ -122,8 +123,8 @@ strongest available argument for adopting it.
 
 Loading all fifteen checklists for a typo fix wastes the context budget GUIDE §6.4 exists
 to protect; loading none for a new API misses the point. **The selection rules live once,
-as data, in `.ai/00-system/checklist-selection.json`.** Both `skills/adaptive-workflow` and
-`skills/autonomous-task` read them there; neither restates the logic, because a copy is a
+as data, in `.ai/00-system/checklist-selection.json`.** Both `.claude/skills/adaptive-workflow`
+and `.claude/skills/autonomous-task` read them there; neither restates the logic, because a copy is a
 second thing to keep right.
 
 A rule loads when its `workflow_phase` matches the phase in progress, its
@@ -162,8 +163,8 @@ nothing.
 ## 5a. Plan review — the phase the checklists were missing
 
 Every rule in `.ai/05-domains/` says the same thing in its `ai_action`: *work through the
-checklist against the code in question*. That is ten categories and eighty items, all of
-which need code to exist before they can be answered. `rule-task-checklist` told the agent
+checklist against the code in question*. That is eleven categories and 88 items, all of
+which need work to exist before they can be answered. `rule-task-checklist` told the agent
 to produce a plan checklist and supplied nothing to interrogate it with.
 
 **So a plan was reviewed by nothing.** Not lightly — structurally. `05-domains/` reviews
@@ -237,14 +238,14 @@ A checklist that returned nothing here would have been too vague to keep.
 | Source authority scale, mandatory citation | Adopted; tested |
 | Confidence levels 1–5 | Adopted as a **derived** value; tested |
 | Confidence *percentages* | **Dropped** — unmeasurable |
-| Ten-category taxonomy | Adopted; all ten built |
+| Ten-category taxonomy | Adopted; all ten built. An eleventh, `skill-authoring`, was later harvested from a real defect rather than imported — which is the growth path `GROWTH.md` describes |
 | Per-item IDs, remediation hints | Adopted; tested |
 | Conditional loading | Adopted as manifest data |
 | Revalidation triggers | **Changed** to timer-based; version detection needs a manifest that itself goes stale |
 | Performance tracking | **Changed**: metrics append to `.ai/08-behavioral-metrics/`, never into rule files — mutable rule files would break `TemplateParity` on every run |
 | Confidence self-adjustment (±2) | **Dropped.** The agent that applied a rule would also decide its own false-positive rate, then feed that grade back into whether the rule is trusted. No ground truth anywhere in the loop. Drift is reported for human ratification instead |
 | `next_validation` date | **Dropped** — nothing scheduled it |
-| ~200 items | **80 delivered** for code review, **31 more** for plan review. Every one sourced; the shortfall is the sourcing rule working, not an omission |
+| ~200 items | **88 delivered** for code review, **31 more** for plan review. Every one sourced; the shortfall is the sourcing rule working, not an omission |
 | Code review as the only review | **Extended.** Both source documents assumed a checklist reviews code. `03-planning/` reviews the plan — see §5a |
 
 ## 7. Adding a checklist
