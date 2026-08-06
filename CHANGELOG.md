@@ -47,7 +47,29 @@ and are called out so adopting projects can adjust their `workflow_config.json`.
   restart Claude Code once if `.claude/skills/` is new. See the updated
   `templates/CLAUDE.md.fragment`.
 
+- **`.claude/settings.local.json` is now in the repo's `.gitignore`.** It was untracked
+  only because of a machine-global git ignore rule, which no clone inherits — on any
+  other checkout `git add -A` would commit your personal permission grants.
+- **Corrected two wrong statements shipped in the previous release.**
+  `disallowed-tools` **does** have a documented version floor — v2.1.152 (27 May 2026) —
+  recorded here previously as "no documented minimum" because the skills docs page states
+  none. Floors live in the release notes. The same release added **`/reload-skills`**, so
+  the "restart Claude Code" advice for a skills directory the watcher missed is superseded;
+  restart is now only the fallback.
+
 ### Added
+- **`claude-code-layout` skill and `tests/test_claude_layout.py`.** Where Claude Code
+  configuration must live to be loaded at all, and a test that enforces it. The organising
+  distinction: `skills/`, `agents/`, `commands/`, `output-styles/`, `rules/` and
+  `workflows/` are **discovered by location** — put them elsewhere and they are inert —
+  while **hooks are registered** in `settings.json`, so their scripts may live anywhere but
+  a missing registration makes them unreachable. Note there is no `.claude/hooks/`
+  discovery; a `hooks/hooks.json` file is plugin structure, and following third-party
+  guides that claim otherwise will silently unwire your guard.
+- **`SessionStart` now emits `reloadSkills`** when `.claude/skills/` exists, so a skill
+  added between sessions is picked up without a restart. **`PostToolUse` emits a one-time
+  skill advisory** when a file under `.claude/skills/` is edited. Both advisory; new state
+  key `skill_nudged` (see `schemas/hook_contract.md`).
 - **`skill-authoring` skill and `tests/test_skills.py`.** The authoring rules —
   discovery locations, the progressive-disclosure layout, naming, and the verified
   frontmatter reference — plus a stdlib-only test that enforces them: entrypoint

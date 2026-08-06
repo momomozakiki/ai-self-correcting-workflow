@@ -259,3 +259,56 @@ threshold is deliberately two: one mistake is noise, two is a pattern worth payi
   asked whether anything was reading it. For each control here that is claimed to be live,
   the question "what would I observe if it silently stopped running?" has to have an answer
   — and if the answer is "nothing", that is the finding.
+
+### 2026-08-06 — The guard we shipped to other people was never wired (recurring)
+
+- **What:** `templates/settings.json.hooks`, the fragment adopters merge into their
+  `.claude/settings.json`, had no `PreToolUse` block and no `defaultMode`. `PreToolUse` is
+  the only event the Tier-0 guard runs on. So in **every adopting project**, force-pushing a
+  protected branch was not denied, deleting `history/` or `plans/archive/` was not denied,
+  and history rewrites and heredocs never asked — while `CLAUDE.md`, `GUIDE.md` §7 and four
+  `.ai/02-market-rules/prohibitions/*.json` files all declared those prohibitions `live`,
+  with `enforced_by` naming real `guard_*` symbols. Measured: **0 of 3** Tier-0 probes denied
+  under the template, 3 of 3 under this repo's own settings.
+- **Why it matters:** this is the skills defect one layer out, and worse in two ways. It is
+  security-adjacent, and it travels — the repository that wrote the rule was the only place
+  the rule worked. Everyone who trusted the documentation got nothing.
+- **Root cause:** `SettingsWiring` read `.claude/settings.json` and nothing else. Its own
+  docstring said so — *"a file no other test reads"* — which was written as a justification
+  for the class existing, and was simultaneously an exact description of the hole. **We
+  tested the copy we use, not the copy we ship.** `EnforcementHonesty` then passed for the
+  wrong reason: it resolves `enforced_by` to real symbols, and a symbol can be real and
+  unreachable at the same time.
+- **Fix:** the template carries the `PreToolUse` block and `defaultMode`; `SettingsWiring`
+  runs its four assertions over both configs with a per-config expected dispatcher path;
+  `test_claude_layout.py` independently asserts both files register the same hook events.
+  `CHANGELOG.md` carries merge instructions and a verification step for existing installs.
+- **Codified:** yes — `tests/test_governance_library.py::SettingsWiring` and
+  `tests/test_claude_layout.py::HookRegistration`.
+- **Marked recurring** against the 2026-08-06 skills entry above. Both are the same defect:
+  an artifact that is correct and reaches nothing. That is now twice, so per `GROWTH.md` it
+  is structure, not a note. **The rule: for anything this repository distributes, the test
+  must read the distributed copy.** A test that reads only the dogfooded copy proves the
+  dogfooding, not the product.
+
+### 2026-08-06 — A reference page is not the whole record
+
+- **What:** I recorded "no documented minimum version for `disallowed-tools`" in
+  `verified-facts.md`, and told the user firmly that stating a floor "would mean inventing
+  one". A version floor exists: **v2.1.152, 27 May 2026**, in the release notes. The same
+  release added `/reload-skills`, which made the "restart Claude Code" guidance I had
+  propagated into four places — including the adopter-facing fragment — stale on arrival.
+- **Why it matters:** the user's guide was right and I overrode it with a confident,
+  well-argued negative. A recorded absence is harder to dislodge than an open question,
+  because it reads as having been checked.
+- **Root cause:** I treated one page as the whole documentation. The reasoning was actually
+  sound — the skills docs page annotates twelve version floors and gives none for that field,
+  so the absence looked like evidence. It was evidence *about that page*. Floors live in the
+  release notes; hook output shapes live in the hooks reference. Three sources, different
+  contents.
+- **Fix:** `verified-facts.md` now opens with a table naming which source carries which kind
+  of fact, and states the rule directly: check the release notes before recording an absence.
+  A version-floor table sourced from the release notes replaces the "known unknown".
+- **Codified:** not yet — first occurrence of *this* lesson. If a second confident absence
+  turns out to be documented elsewhere, it becomes a rule: *an absence is a claim, and a
+  claim needs its sources enumerated before it ships.*
