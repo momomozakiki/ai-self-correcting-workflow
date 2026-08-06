@@ -1,28 +1,28 @@
 ---
 title: Adaptive Self-Correcting Workflow for AI Coding Agents
-version: 4.6
-last_validated: 2026-07-18
+version: 5.4
+last_validated: 2026-08-05
 official: true
 source: agent-generated
-tags: [workflow, governance, reference, hooks, provenance]
+tags: [workflow, governance, reference, hooks, provenance, runtime]
 applies_when: "Understanding, adopting, or modifying the Adaptive Self-Correcting Workflow itself."
-estimated_tokens: 6600
+estimated_tokens: 8200
 ---
 
 # Adaptive Self‑Correcting Workflow for AI Coding Agents  
-*Version 4.6 – Centralized, Configurable, Self‑Improving*
+*Version 5.4 – Centralized, Configurable, Self‑Improving, Governed*
 
 **Central Workflow Repository:** `ai-self-correcting-workflow` (this repository)
 
 ## Revision History
+Latest three only — the full history lives in [`GUIDE_CHANGELOG.md`](GUIDE_CHANGELOG.md),
+folded there per §6.3 when this table passed ~8 rows.
+
 | Version | Date       | Change                                                                                     |
 |---------|------------|--------------------------------------------------------------------------------------------|
-| 4.6     | 2026-07-18 | §4 Phase-3 commit step: standardized on `git commit -m` and cautioned against heredocs / `-F -` (Bash-safety-layer rejection) and a bare `git commit` (editor hang). Mirrored in `hooks/workflow_hook.py`, `docs/claude-code-hook-integration.md`, and `SKILL.md`. |
-| 4.5     | 2026-07-18 | §6.3/§6.5: clarified `last_validated` semantics — it records the last **content** review, not the last edit. A mechanical/frontmatter-only edit bumps `version` + adds a history row but leaves `last_validated` unchanged. Resolves an internal contradiction; mirrored in `DOC_TEMPLATE.md` + `SKILL.md`. |
-| 4.4     | 2026-07-11 | §6.4: added a pointer to the Progressive Disclosure Guide's new §3.1 (optional distributed `SCOPE.md` scaling tier) and §5.1 (content-quality rules), harvested from an incoming AI-documentation guide. |
-| 4.3     | 2026-07-10 | §6.3/§6.4: added the lazy **doc-folding** convention — bound the in-file Revision History (~8 rows / ≤3 kept) and relocate full history to a sibling Episodic `CHANGELOG.md` (`exclude_from_ai: true`). Renamed §6.4 to "Folding a document into a folder". |
-| 4.2     | 2026-07-10 | §6 recast as the unified Documentation Standard (frontmatter provenance + versioning + Progressive Disclosure splitting); added this frontmatter/Revision History. |
-| 4.1     | (prior)    | Centralized, configurable, self‑improving baseline (pre‑frontmatter).                       |
+| 5.4     | 2026-08-05 | §13: **plan review.** `05-domains/` reviews code against the plan and so cannot see a defect in the plan; `03-planning/` adds 5 sourced categories, 31 items, answered at Phase 1. The selection table moves to `.ai/00-system/checklist-selection.json` and gains a `workflow_phase` axis, so one table serves both folders. |
+| 5.3     | 2026-08-05 | §13: the checklist system lands — ten sourced categories in `05-domains/`, `confidence_level` derived rather than asserted, and conditional loading defined once as manifest data. §7.3/§7.4: the Stop hook stops counting its own breadcrumb as work, and `--self-test` now reports which gate blocked the maturity climb rather than only the floor. New [`docs/checklist-system.md`](docs/checklist-system.md). |
+| 5.2     | 2026-08-05 | §7.3: the Stop flags gain a modification-time fallback, because `PostToolUse` sees only the editing tools and both failure directions showed up in practice. §13: `live` now distinguishes `deny` from `ask` strength via a tested `enforcement_mode`, after an `ask` was waved through and the rule it guarded was broken anyway. |
 
 ---
 
@@ -55,23 +55,48 @@ workflow-core/
 ├── GUIDE.md                      # This document (the full workflow reference)
 ├── CHANGELOG.md                  # Semantic versioning of workflow changes
 ├── ROADMAP.md                    # Planned improvements to the workflow itself
+├── .ai/                          # Governance library (§13) — this repo's own instance
+├── docs/
+│   ├── RETROSPECTIVE.md          # Mistakes → rules (the self-hardening loop)
+│   ├── governance-integration-decision.md   # Which controls are enforced, and why
+│   ├── claude-code-hook-integration/        # Hook integration guide (folded)
+│   └── self-growing-checklist-ecosystem/    # Imported v14 reference (folded)
 ├── history/                      # The workflow’s own ledger (practice what you preach)
 │   ├── FORMAT.md
 │   └── YYYY-Www.md
-├── hooks/
-│   └── workflow_hook.py          # Generic dispatcher, reads project config
-├── skills/
-│   └── adaptive-workflow/
-│       └── SKILL.md              # Agent process manual
+├── .claude/                      # Everything Claude Code reads
+│   ├── settings.json             # Registers the hook — the guard's only wiring
+│   ├── workflow_config.json      # This repo's own config (read by the hook, not Claude Code)
+│   ├── hooks/
+│   │   └── workflow_hook.py      # Generic dispatcher. NOT discovered by location:
+│   │                             #   it runs only because settings.json names it
+│   ├── skills/                   # The only path Claude Code discovers skills at
+│   │   ├── adaptive-workflow/    # Agent process manual (SKILL.md + references/)
+│   │   ├── autonomous-task/      # Unattended runs (removes AskUserQuestion)
+│   │   ├── claude-code-layout/   # Where configuration must live to load at all
+│   │   ├── handover/             # The review checklist an unattended run leaves
+│   │   └── skill-authoring/      # How to structure, size and split a skill
+│   ├── rules/                    # Topic-scoped instructions loaded with CLAUDE.md
+│   │   ├── repo-conventions.md   #   Unconditional — must survive /compact
+│   │   ├── governance-library.md #   Unconditional
+│   │   └── claude-code-layout.md #   paths:-scoped to .claude/**
+│   └── agents/
+│       └── layout-auditor.md     # Read-only wiring audit
 ├── schemas/
-│   ├── hook_contract.md          # Validated I/O shapes
+│   ├── hook_contract.md          # Validated I/O shapes + --self-test contract
 │   └── config_schema.json        # Schema for project workflow_config.json
 ├── templates/
 │   ├── CLAUDE.md.fragment        # Blocks to include in a project’s CLAUDE.md
 │   ├── settings.json.hooks       # Hook definitions for .claude/settings.json
-│   └── workflow_config.json      # Default configuration (to be customized)
+│   ├── workflow_config.json      # Default configuration (to be customized)
+│   ├── skills/                   # Mirror of .claude/skills/ — adopters copy this
+│   ├── rules/                    # Mirror of .claude/rules/
+│   ├── agents/                   # Mirror of .claude/agents/
+│   └── ai-library/               # Governance library scaffold for adopters
 ├── tests/
-│   └── test_hook.py              # Synthetic event tests for the hook dispatcher
+│   ├── test_hook.py              # Synthetic event tests for the hook dispatcher
+│   ├── test_governance_library.py  # Integrity of the .ai/ library
+│   └── test_skills.py            # Skill structure, size, location and parity
 └── CONTRIBUTING.md               # How to propose improvements
 ```
 
@@ -83,7 +108,13 @@ my-project/
 ├── .claude/
 │   ├── workflow-core/            # Git submodule pointing to central repo
 │   │   └── (contents above)
-│   ├── settings.json             # Merged with templates/settings.json.hooks
+│   ├── skills/                   # Copied from workflow-core/templates/skills/ —
+│   │   └── adaptive-workflow/    #   Claude Code discovers skills only here
+│   ├── rules/                    # Copied from templates/rules/ — loaded with CLAUDE.md
+│   ├── agents/                   # Copied from templates/agents/
+│   ├── settings.json             # MERGED with templates/settings.json.hooks, never
+│   │                             #   overwritten. Its hook commands must name
+│   │                             #   .claude/workflow-core/.claude/hooks/workflow_hook.py
 │   └── workflow_config.json      # Project-specific paths/feature flags
 ├── .ai/                          # Living docs (if used)
 ├── docs/
@@ -156,6 +187,11 @@ Items marked with `[ ]` are actionable steps; the agent should tick them off men
 
 ### Phase 0 – Fixed Invariants (Always do first)
 
+> **Tier 0 — absolute prohibitions.** Never force-push a shared branch, never
+> commit secrets, never rewrite published history, never delete the ledger or plan
+> archive. These are not overrideable by config or by instruction. Full set:
+> `.ai/02-market-rules/prohibitions/`.
+
 - [ ] **F1 – Git sync**  
   `git fetch && git pull --rebase`.  
   Check for a dirty working tree; if dirty, ask user how to handle (continue, stash, commit, etc.).
@@ -213,6 +249,17 @@ For each bullet in the task‑specific plan, **implement, validate, and apply co
 #### Implementation & Validation
 - [ ] Write code / docs / design as planned.
 - [ ] Immediately run linter, formatter, and relevant tests. Fix failures before moving on.
+- [ ] **Verify reversibility before destructive work.** Git is the rollback
+  mechanism: make sure a clean commit checkpoint exists before anything hard to
+  undo. If an operation can't be reversed, say so *before* running it.
+- [ ] **Watch for loops.** If the same call repeats with identical arguments and
+  no progress, change the approach rather than retrying — vary the arguments,
+  read the error, or ask. The `PostToolUse` hook flags this at 3 consecutive
+  identical calls (§7.3), but noticing first is cheaper than being told.
+- [ ] **Never feed a program or message over heredoc stdin.** Write the script to
+  a file and run the file; use the editing tools for source changes. Shell and
+  tool layers mangle escape sequences, and the corruption is silent until a
+  pattern misses. Same root cause as the `git commit -F -` caveat in Phase 3.
 - [ ] If an obstacle arises, **log it**, propose an updated plan, await user approval, then continue.
 
 #### Conditional Update Triggers (apply **during and after** each change)
@@ -262,6 +309,12 @@ Log everything else that a reviewer would care about.
   - Append a closure entry summarizing the task.
 
 - [ ] **Update roadmap** if triggered (check completed item, adjust future epics, move finished epics to `## Completed Epics`).
+
+- [ ] **Retrospective** — if the task produced a mistake worth remembering, add an
+  entry to `docs/RETROSPECTIVE.md`. If the same mistake is already there, append
+  `(recurring)` to its heading; it now owes a rule file under `.ai/01-phases/` and
+  a checklist item in `SKILL.md`. `--self-test` reports recurring entries that are
+  still uncodified. Two occurrences is the threshold: one is noise, two is a pattern.
 
 - [ ] **Commit & push**  
   `git add -A`  
@@ -425,13 +478,17 @@ Its `estimated_tokens` therefore stay **outside** the active token budget; only
 ## 7. Hook System Architecture
 
 ### 7.1 Dispatcher
-A single Python script (`hooks/workflow_hook.py`) is invoked for `SessionStart`, `PostToolUse`, and `Stop`. It reads the event from stdin JSON, loads the project’s `workflow_config.json`, and branches to the appropriate handler. Every handler is wrapped in a try‑except that ensures the process exits with code 0 (fail‑soft).
+A single Python script (`.claude/hooks/workflow_hook.py`) is invoked for `SessionStart`, `PreToolUse`, `PostToolUse`, and `Stop`. It reads the event from stdin JSON, loads the project’s `workflow_config.json`, and branches to the appropriate handler. Every handler is wrapped in a try‑except that ensures the process exits with code 0 (fail‑soft).
+
+Fail‑soft cuts both ways once one of those handlers is a guard: a crash in `PreToolUse` means the tool call proceeds. The dispatcher **fails open** and is not a security boundary. §7.5 states the limits; the `enforcement_note` on every artifact that depends on it repeats them, so `live` is never read as “unbypassable”.
 
 ### 7.2 Per‑Session State
 State is persisted across invocations using a temporary JSON file: `Path(tempfile.gettempdir()) / "workflow_hook_state_{session_id}.json"` (`session_id` sanitized). This file contains:
 - `source_changed` (bool) – any edit to a configured source directory this session.
 - `ledger_touched` (bool) – the current week’s ledger file was created or modified during the session.
 - `stop_block_count` (int) – how many times the Stop hook has blocked.
+- `doc_nudged` / `skill_nudged` (bool) – the one-time `PostToolUse` advisories have fired.
+- `main_branch_detected` (str | null) – the auto-detected default branch, memoised on the first `Stop` so one session probes git at most once (see §7.4).
 - Timestamp of session start (for stale cleanup).
 
 `SessionStart` clears stale state files older than 24 hours and resets flags.
@@ -443,7 +500,17 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 - Runs environment checks using paths and version flags from config (respecting `null` version_flag to only verify existence).
 - Parses the `**Next action:**` line from the configured roadmap file.
 - **F5 update check (opt-in):** when `workflow_update_check.enabled` is true and the configured `submodule_path` is a linked git repo, fetches it at most once per day (gated by `.ai/.workflow_check_date`) and, if it is behind `{remote}/{branch}`, appends a `🔄 Workflow updates available` notice. Detection only — never auto-applies. Off by default; see §9.
-- Outputs: `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "..."}}` and optionally a `sessionTitle`.
+- **Asks Claude Code to re-scan the skill directories** (`reloadSkills: true`) when `.claude/skills/` exists. Live change detection does not watch a top-level skills directory that did not exist when the session started, so a skill added between sessions can sit on disk unloaded with no diagnostic — the mechanical form of the defect that had this repository's own skills invisible for months. Gated on the directory existing, so the flag means something when it appears.
+- Outputs: `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "...", "reloadSkills": true}}` and optionally a `sessionTitle`.
+
+#### PreToolUse
+- Matcher: `Bash|PowerShell` — both, because `Bash(...)` and `PowerShell(...)` are separate permission namespaces and a Bash‑only guard is bypassed by the other tool.
+- Splits the command on the separators the permission matcher recognises (`&&`, `||`, `|&`, `;`, `|`, `&`, newline) and evaluates every subcommand, so a prohibited call cannot hide behind a benign one.
+- Emits `permissionDecision: "deny"` for a force‑push whose destination resolves to a protected branch, and for a deletion aimed at `tier0_guard.protected_paths`.
+- Emits `permissionDecision: "ask"` for a history rewrite (`--amend`, `rebase`, `reset --hard`, `filter-branch`) and for heredoc stdin (`<<`, `-F -`, `--file=-`, bare `git commit`) — cases where the command alone cannot settle the question. A `deny` anywhere outranks an `ask` anywhere.
+- Emits **nothing** otherwise. Silence defers to the normal permission flow; returning `"allow"` would *approve* the call and auto‑approve every shell command in the session.
+- Holds no session state and consults git only after a force flag has already been parsed — it runs before every shell call, so it must cost nothing on the ones that are not pushes.
+- Full contract, including the guard table and the known limits, in `schemas/hook_contract.md`. Design rationale in §7.5.
 
 #### PostToolUse
 - Matcher: `Edit|Write|MultiEdit`.
@@ -451,20 +518,63 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 - If any path falls under a source directory, sets `source_changed` flag in state.
 - If any path falls under the ledger directory, sets `ledger_touched` flag.
 - Once per session, if source changed but no documentation file from the configured doc directories has been touched, emits an advisory nudge: *“Consider updating docs and the weekly ledger if this change is worth tracing.”*
+- Once per session, if an edited path is under `.claude/skills/`, emits a **skill advisory** (`skill_nudged`) pointing at the `skill-authoring` and `claude-code-layout` skills, `tests/test_skills.py` + `tests/test_claude_layout.py`, and the `templates/skills/` mirror. Skills fail silently in every direction — a misplaced directory loads nothing, an unrecognised frontmatter key is ignored, an over-budget body is truncated — so the moment just after a skill file is written is the only cheap place to say so. It cannot block: `PostToolUse` fires after the write.
 - Outputs: same `hookSpecificOutput` structure; advisory only.
 
 #### Stop
 - Reads current state file.
 - If `stop_block_count >= max_blocks` (from config, default 2) or if `stop_hook_active` is true in the event payload, exits without blocking.
 - Otherwise, checks conditions:
-  - If working tree is dirty on a non‑main branch, prepare a commit reminder.
+  - If working tree is dirty on a branch other than the resolved main branch (§7.4), prepare a commit reminder.
   - If `source_changed` is true but `ledger_touched` is false, prepare a ledger reminder (for source‑code changes only; closure still mandates logging everything).
   - If the working tree is dirty on **any** branch, write a Phase‑3 breadcrumb to `plans/UNFINISHED.md` (see below) — this happens whether or not the hook blocks.
 - If any reminder is needed, increments `stop_block_count` in state, outputs `{"decision": "block", "reason": "..."}`, and exits 0. If no reminders, exits 0 with no output (allowing the session to end).
 
 **Phase‑3 breadcrumb:** on a dirty tree the hook writes/refreshes `plans/UNFINISHED.md` (timestamp, branch, `git status --porcelain` file list, pending closure steps) so the next `SessionStart` (F4) surfaces the unfinished work — durable even if the reminder is ignored or the session is force‑closed. The file starts with the marker `<!-- workflow-hook: auto-breadcrumb -->`; the hook overwrites only its own marked breadcrumb and **never** clobbers a human‑authored `UNFINISHED.md`. This directly closes the failure mode where a session ends mid‑closure leaving a dirty tree and no trace.
 
-**Important:** The Stop hook’s *ledger* detection relies on the session state file, not `git diff` against HEAD (which would include pre‑session changes). This ensures we only nag for things done *this session*. The dirty‑tree commit reminder and breadcrumb use live `git status`.
+**Important:** The Stop hook’s *ledger* detection is session‑scoped, not `git diff` against HEAD (which would include pre‑session changes). This ensures we only nag for things done *this session*. The dirty‑tree commit reminder and breadcrumb use live `git status`.
+
+**Why the flags alone were not enough.** `source_changed` and `ledger_touched` are set by `PostToolUse`, which fires only for `Edit|Write|MultiEdit`. Anything written another way is invisible to it — and both failure directions showed up in practice within a day of the guard shipping. A ledger appended by a shell redirect reads as untouched, so the reminder fires on a session where the entry was already written, committed and pushed; a reminder that fires when the work *was* done trains you to dismiss it. Worse, a source file rewritten by `sed -i` reads as unchanged, so the reminder never fires at all.
+
+So the flags are now a fast path, backed by a modification‑time check against `session_start_ts` (`stop_hook.mtime_fallback`, default on). That stays session‑scoped as this section requires, while being blind to *how* a file was written. Claude Code’s `FileChanged` event would be the better mechanism — it watches the disk and so sees writes from any process — but its matcher is a list of **literal filenames**, and our ledger filename rolls over every Monday; a static watch list would go stale in a week, which is the mistake already recorded in `docs/RETROSPECTIVE.md`. If that matcher ever accepts globs, revisit it (see `ROADMAP.md`).
+
+The source walk returns on the first file newer than the threshold and gives up after `mtime_scan_limit`, so it is bounded in both directions; it runs at every `Stop`. Two honest limits: `git checkout`/`pull` bump mtimes, so a pull touching the ledger can suppress a real reminder and one touching source can raise a spurious one; and if the state file is lost, `session_start_ts` becomes *now*, every mtime reads as older, and the reminder fires — the conservative direction.
+
+### 7.4 Resolving the main branch
+
+The dirty‑tree commit reminder needs to know which branch is “home”, because a dirty tree there is expected rather than a missed Phase‑3 closure. Assuming `main` mis‑fires on the many repositories whose default branch is `master`, `trunk`, or `develop`, so the hook resolves it in this order:
+
+1. **Explicit pin** — a non‑empty `stop_hook.main_branch` always wins. Detection never overrides a deliberate config value.
+2. **Auto‑detection** (`stop_hook.main_branch_autodetect`, default **true**) — reads the local ref `refs/remotes/<main_branch_remote>/HEAD` via `git symbolic-ref`. This is a local ref read with **no network access**, written by `git clone` and refreshable with `git remote set-head origin --auto`.
+3. **Optional remote probe** — only when `stop_hook.main_branch_probe_remote` is true, falls back to `git remote show <remote>` and parses its `HEAD branch:` line. This **contacts the remote**, so it is off by default: the Stop hook must never stall session close on a network round‑trip.
+4. **Default** — `main`.
+
+The resolved value is memoised in the session state (`main_branch_detected`), so a session probes at most once even across repeated `Stop` events, and the probe is skipped entirely when `Stop` short‑circuits on `stop_hook_active` / the block cap. Fail‑soft throughout: a git error at any step falls through to the next candidate.
+
+> **Edge case:** a repo with no remote (or a stale `origin/HEAD`) yields no detection and lands on `main`. If such a project's default branch is `master`, pin `stop_hook.main_branch` explicitly — or run `git remote set-head origin --auto` once to populate the ref.
+
+### 7.5 Why the Tier‑0 guard is a hook and not a deny rule
+
+Claude Code's `permissions.deny` is the stronger mechanism for anything a pattern can express: deny is evaluated before ask and allow, it applies in every permission mode including `bypassPermissions`, and a `PreToolUse` hook returning `"allow"` cannot loosen it. Where a pattern suffices, use a deny rule.
+
+It does not suffice here, for three reasons that are properties of the prohibitions rather than of the syntax:
+
+1. **Arguments reorder.** `Bash(git push --force*)` matches a literal prefix, so it misses `git push origin main --force` and `git push -f`. The docs warn directly that patterns constraining command *arguments* are fragile.
+2. **A deny rule carries no exceptions.** One broad enough to stop a force‑push to `main` also stops the same push to a topic branch you own. But the prohibition is *never force‑push a **shared** branch* — and whether a branch is shared is a fact about the repository, not about the command string.
+3. **Two shells.** `Bash(...)` and `PowerShell(...)` are separate namespaces. A rule list written for one is bypassed by the other.
+
+So the guard parses. Two decisions come out of it, and the split is the design:
+
+- **`deny`** where the prohibition is unambiguous from the command plus the repository — the destination branch is protected, the deletion target is inside the audit trail.
+- **`ask`** where it is not. Whether a commit is already published, or whether a particular heredoc is the dangerous kind, cannot be read off the command. Denying every candidate would block legitimate work; guessing would be worse. An `ask` still enforces — the call cannot proceed without a human — while a false positive costs one keystroke instead of a wall.
+
+That second decision is what made the guard worth building. `rule-no-heredoc-stdin` v1.0 declined a hook on the grounds that *“the false‑positive cost on legitimate heredocs was judged higher than the failure it prevents.”* That weighed a hard block. `ask` inverts the trade.
+
+**Limits, stated because a tier that overstates itself is the failure this library exists to prevent.** The dispatcher is fail‑soft, so an exception in the guard allows the call. Subcommand splitting does not honour quotes, so a separator inside a quoted string yields an extra fragment — over‑reporting, the safe direction. In `dontAsk` mode an `ask` becomes a silent block rather than a prompt. And the guard sees tool calls only, never a terminal opened outside Claude Code: OS‑level enforcement is the sandbox's job.
+
+**`ask` needs a human present; `deny` does not.** Verified 2026‑08‑06 by running both against the same registration. In a session with no one to prompt, a `deny` still blocked (`rm -rf history/` was refused and the command did not run) while two commands the guard returns `ask` for — a heredoc and `git rebase` — **ran with no prompt at all**. Not a silent block, as `dontAsk` produces: a silent *allow*. Re‑run interactively, the same `ask` surfaced as a prompt and was declined, which is what settled it. So the two decisions do not degrade alike. A `deny` is self‑resolving and holds regardless of session; an `ask` delegates to a person, and where there is no person the delegation resolves to allow. The two artifacts carrying `enforcement_mode: ask` are `live` on the strength of an interactive session, and say so. Treat an `ask` as a control over an attended session, not over an unattended one — and where a prohibition must hold unattended, it has to be a `deny`.
+
+One prohibition deliberately did **not** move. `prohibition-commit-secrets` stays `convention` because the guard sees the command, not the file contents being committed — it could only ever catch a secret typed inline, which would be enforcement theatre. Real coverage means scanning `git diff --cached`; that is on the roadmap, not claimed in the library.
 
 ---
 
@@ -474,9 +584,19 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 1. Add the workflow repository as a Git submodule:  
    `git submodule add <workflow-repo-url> .claude/workflow-core`
 2. Copy `templates/workflow_config.json` to `.claude/workflow_config.json` and adjust paths/feature flags.
-3. Merge `templates/settings.json.hooks` into `.claude/settings.json` (add the `hooks` block).
-4. Include the fragment `templates/CLAUDE.md.fragment` in the project’s `CLAUDE.md`.
-5. Initialize the ledger directory: `mkdir history && cp .claude/workflow-core/templates/history/FORMAT.md history/FORMAT.md`
+3. Merge `templates/settings.json.hooks` into `.claude/settings.json` — the `hooks` block
+   **and** `permissions.defaultMode`. Merge, don't copy: the file is a fragment, and
+   overwriting discards your own permissions and env.
+   **Then verify the guard is live**: attempt `git push --force` to your main branch and
+   confirm it is *denied*. If it is allowed, the `PreToolUse` entry did not take, and all four
+   Tier-0 prohibitions are documentation only.
+4. Copy the skills: `cp -r .claude/workflow-core/templates/skills/* .claude/skills/`. Claude
+   Code discovers skills only under `.claude/skills/`, so the submodule's own copy is not
+   loaded. Re-copy after each update.
+5. Add `.claude/settings.local.json` to your `.gitignore` — it holds personal permission
+   grants and must not be committed.
+6. Include the fragment `templates/CLAUDE.md.fragment` in the project’s `CLAUDE.md`.
+7. Initialize the ledger directory: `mkdir history && cp .claude/workflow-core/templates/history/FORMAT.md history/FORMAT.md`
 
 ### 8.2 Updating the Workflow
 From the project root:
@@ -603,6 +723,200 @@ The following is a condensed, one‑page checklist for the AI agent. It mirrors 
 
 ---
 
+## 12. The Imported 21-Step SOP → Phase 0–3 Mapping
+
+The [Self-Growing Checklist Ecosystem v14](docs/self-growing-checklist-ecosystem/index.md)
+specifies a 21-step Master Execution Checklist. **It is not adopted as a replacement
+numbering** — Phase 0–3 stays canonical, and renumbering would break every archived
+plan, ledger entry and hook reference for no behavioural gain. Instead each step maps
+to the phase that already owns it, with its enforcement tier attached.
+
+Tiers: **live** = a hook or test enforces it · **convention** = the agent follows it,
+nothing blocks · **declarative** = recorded only, not enforceable in this runtime.
+The reasoning behind each assignment is in
+[`docs/governance-integration-decision.md`](docs/governance-integration-decision.md).
+
+| v14 step | What it asks for | Lands in | Tier |
+|---|---|---|---|
+| 1 | Synchronize source control | Phase 0 · F1 | convention |
+| 2 | Check for pending work | Phase 0 · F1/F4 | live |
+| 3 | Check pending ratifications | Phase 0 · F4 (`UNFINISHED.md`) | live |
+| 4 | Validate the build environment | Phase 0 · F2 | live |
+| 5 | Check security vulnerabilities | Phase 2 (conditional on a lockfile) | convention |
+| 6 | Draft high-level plan | Phase 1 | convention |
+| 7 | Retrieve similar past context | Phase 0 · F3 + the weekly ledger | convention |
+| 8 | Load domain checklists | Phase 0 · F3 + `.ai/` manifests | convention |
+| 9 | Identify knowledge gaps / research | Phase 1 | convention |
+| 10 | Validate new knowledge | Phase 2 · Documentation Standard | live |
+| 11 | Split plan into stages | Phase 1 | convention |
+| 12 | Iterative technical audit | Phase 2 · lint + tests | live |
+| 13 | Performance scrutiny | Phase 2 (optional) | convention |
+| 14 | Verify reversibility | Phase 2 · reversibility item | live |
+| 15 | Check for agent loops | Phase 2 · `PostToolUse` loop detection (§7.3) | live |
+| 16 | Verify test coverage | Phase 2 · test suite | live |
+| 17 | Stage and commit | Phase 3 | live |
+| 18 | Push & open PR | Phase 3 | convention |
+| 19 | Generate validation checklist | Phase 3 · the user reviews | convention |
+| 20 | Wait for human sign-off | Phase 3 · the user approves | convention |
+| 21 | Retrospective & grow the library | Phase 3 · retrospective item | live |
+
+Steps with no row here — cryptographic identity, delegation, shadow-AI detection,
+sandboxed execution, RAG quality metrics — are **declarative or dropped**. They
+presuppose an agent fleet, key infrastructure, or API access that this runtime does
+not have (§14). They are recorded in `.ai/` with the reason attached rather than
+faked.
+
+---
+
+## 13. The Governance Library (`.ai/`)
+
+A chunked rule library instantiated from v14 §5. Small files, one manifest per
+folder, loaded on demand — the same progressive-disclosure idea as §6, applied to
+rules instead of prose.
+
+```
+.ai/
+├── 00-system/              config, agent registry, autonomy boundaries, maturity
+│                           tracker, checklist-selection.json (the one loading table)
+├── 01-phases/              one rule file per workflow step (Phase 0-3 + v14 step mapping)
+├── 02-market-rules/        immutable golden rules; prohibitions/ is Tier 0
+├── 03-planning/            plan review, Phase 1  — 5 rules, 31 sourced items
+├── 05-domains/             code review, Phase 2  — 10 rules, 80 sourced items
+├── 06-components/          blueprints            — empty, grows per retrospective
+├── 08-behavioral-metrics/  hook-written JSONL, and what is deliberately absent
+├── 09-variants/            forks awaiting ratification
+├── 10-ratification-archive/ decision history
+└── GROWTH.md               the three growth protocols + the self-hardening rule
+```
+
+**Every artifact declares an `enforcement_status`.** The rule is that no artifact
+may imply enforcement it doesn't have: a declarative field is written as `null` with
+its reason attached, never as a plausible-looking fake value. If you cannot name the
+hook or test that makes a rule *live*, it is `convention` — say so and mean it.
+
+**`live` covers two strengths, and the artifact must say which.** A guard that returns
+`deny` blocks outright. One that returns `ask` blocks until a human answers — and the
+human may wave it through, which happened within an hour of the guard shipping: the
+heredoc guard fired correctly, the prompt was approved, and the rule was broken anyway.
+Both are `live` by the definition above, because both produce a visible signal. They are
+not the same promise. So any artifact enforced by a `guard_*` symbol carries an
+`enforcement_mode`:
+
+| Strength | Meaning | Held to the code by |
+|----------|---------|---------------------|
+| `deny` | The call is blocked. No approval path. | `TestEnforcementModeMatchesGuard` — feeds the guard a command that must trip it and asserts the returned decision equals the declared mode |
+| `ask` | The call is blocked *until a human answers*; the answer may be yes. In `dontAsk` mode it becomes a silent block. | the same test |
+
+Flip an artifact to `ask` while its guard still denies and the suite goes red. The tier
+says a control exists; the mode says how much it promises.
+
+**And the declaration is tested.** `tests/test_governance_library.py` turns each of
+those sentences into an assertion: a `live` artifact must carry `enforced_by`, a list
+of `path::symbol` references resolved against the actual source; a `convention` must
+carry an `enforcement_note` saying what the real mechanism is; a `declarative` block
+must carry a `reason` and keep its values null. It also holds the manifests to the
+files on disk, `risk_source`/`risk_weight` to the CISA taxonomy in §11.3 of the
+imported spec, this section's step-mapping table to `01-phases/manifest.json`, and
+`.ai/` to its `templates/ai-library/` mirror. Written after an audit found seven
+taxonomy violations, a false step mapping and eight untraceable `live` claims in a
+library that had been correct-looking prose for exactly one commit.
+
+**Three prohibitions are now `live`, and one deliberately is not.** The Tier-0 set
+shipped as `convention` — prose the agent honours and the user reviews. The
+`PreToolUse` guard (§7.5) moved force-push-to-a-shared-branch and deleting the audit
+trail to a `deny`, and rewriting published history to an `ask`; `rule-no-heredoc-stdin`
+moved with them. `prohibition-commit-secrets` stayed `convention` because the guard
+sees the command, not the file contents being committed — the honest tier for a
+control that would only ever catch a secret typed inline. Every one of those artifacts
+states in its `enforcement_note` which decision it emits and that the dispatcher fails
+open, so `live` is never read as *unbypassable*.
+
+**`05-domains/` holds review checklists, written as questions.** *"Does this class have
+one reason to change?"* — not *"use an interface for every service"*. The distinction is
+the point: a question makes the agent look at the code and keeps its judgement intact,
+while a prescription tells it what to type and stops being right the moment the codebase
+differs from the one the rule was written for. All `convention` — nothing mechanically
+decides whether a class has one responsibility, and the checklists say so. Harvested by
+research rather than from a mistake, which `GROWTH.md` documents as a fourth growth
+protocol; a researched rule is *proposed* until a human ratifies it. Each is trialled
+against real code before being kept, because a checklist that finds nothing is too vague to
+be worth loading.
+
+**`03-planning/` reviews the plan, before any of that.** Ten categories of code review
+still cannot see a defect one level up: `05-domains/` reviews code *against* the plan, so
+it will confirm that a well-built thing was built well when the thing should not have been
+built at all. Until this folder existed, `rule-task-checklist` told the agent to produce a
+plan checklist and supplied nothing to interrogate it with — **a plan was reviewed by
+nothing.** Five rules, 31 items, answered at Phase 1: is the problem stated separately from
+the solution, is each acceptance criterion verifiable and singular, what is the rollback,
+which alternative was rejected, and can the proposed check actually fail. Never gated on
+tech stack — a plan's problem statement is no better for being written in Go.
+
+**Sixteen categories, 119 items, every one sourced.** Each item cites a document with an
+authority tier, and its `confidence_level` is *derived* by
+`.claude/hooks/workflow_hook.py::derive_confidence` and recomputed by test — never typed by hand.
+An item that cannot be sourced does not ship. `--self-test` warns when an item's
+`last_validated` passes `revalidation_interval_days`. The full framework, both folders, and
+the citation defects found along the way — including **IEEE 1012-2016, superseded by
+1012-2024** — are in [`docs/checklist-system.md`](docs/checklist-system.md).
+
+**Conditional loading keeps this affordable.** The selection rules live once, as data, in
+`.ai/00-system/checklist-selection.json`; both skills read them rather than restating them,
+and both folders are selected from the one table. A rule loads when its `workflow_phase`
+matches the phase in progress, its `task_size_required` includes the size declared at Phase
+1, *and* its `tech_stack_required` is empty or intersects the project's stack. Measured: a
+typo fix loads 9 items, a new REST API 34, and a project with no database in its stack
+loads no database rule at all — which is what makes the §6.4 token budget hold.
+
+**`06-components/` is still empty, and stays that way until a pattern earns a blueprint.**
+`BLUEPRINT_SCHEMA.md` defines the shape; the bar is that the pattern has already shipped
+and survived review. A blueprint written in advance is a guess with a filename — the same
+error as a rule harvested from imagination. See `.ai/GROWTH.md` for all four protocols and
+the self-hardening rule (a mistake recorded twice becomes structure).
+
+**Provenance.** `00-system/` config files carry `.prov.md` sidecars per §6.2. Rule
+files don't — they embed a `provenance` block in the JSON, which is what the sidecar
+convention exists to substitute for. One provenance record per artifact, in the
+artifact wherever the format allows it.
+
+**Health.** `python .claude/hooks/workflow_hook.py --self-test` validates the config and
+reports a governance maturity level (1–5) derived from real checks, writing
+`00-system/maturity-tracker.json`. The level is reported, never enforced — a young
+repository is not a broken one.
+
+---
+
+## 14. Runtime Assumptions
+
+The workflow is shaped by what its runtime can actually do. Verified against
+official sources on 2026-08-04; **re-check these before trusting §12's tiering**,
+because two of them have already moved once.
+
+| Fact | Source |
+|------|--------|
+| Claude Pro ($20/mo, $17 annual) **includes Claude Code** | [claude.com/pricing](https://claude.com/pricing) |
+| Claude Code authenticates with the subscription login. A set `ANTHROPIC_API_KEY` **overrides it** and bills per token | [support 11145838](https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-or-max-plan) |
+| Sonnet 5 is the default; Opus 5 is *"the strongest model on Claude Pro"* | [Opus 5 announcement](https://www.anthropic.com/news/claude-opus-5) |
+| **On Pro, Fable 5 bills pay-as-you-go usage credits** — it is not covered by plan limits | [support 15424964](https://support.claude.com/en/articles/15424964-claude-fable-5-on-your-plan) |
+| `opus` → Opus 5 on the Anthropic API, but **only on Claude Code v2.1.219+** (before that it resolved to Opus 4.8) | [model-config](https://code.claude.com/docs/en/model-config) |
+| Rolling 5-hour session window + weekly caps, **separate weekly cap for Opus**, shared with the Claude app | [costs](https://code.claude.com/docs/en/costs) |
+
+**Model policy.** Sonnet 5 for routine work; `/model opus` for hard passes.
+**Fable 5 is a paid escalation on Pro and must never be a shipped default** — not in
+a skill, not in subagent frontmatter, not in an `ANTHROPIC_DEFAULT_*` variable.
+
+**What the constraints rule out.** No API key means no embeddings, no vector search
+and no judge model, so v14's RAG quality metrics are dropped rather than deferred.
+One local agent means cryptographic identity, delegation and shadow-AI detection have
+no counterparty. Finite, separately-metered quota makes "chunk large tasks" a cost
+control, not just hygiene.
+
+**The `ANTHROPIC_API_KEY` trap.** A key left in the environment silently moves
+billing off the subscription. `SessionStart` and `--self-test` both warn about it.
+Warning only — API-key auth is legitimate, just rarely what you meant here.
+
+---
+
 ## Appendix A: Templates
 
 ### ISO‑Week Filename
@@ -651,4 +965,4 @@ estimated_tokens: <int>
 
 ---
 
-*End of Version 4.1 – The Adaptive Self‑Correcting Workflow. The single source of truth, powered by its community.*
+*End of Version 5.0 – The Adaptive Self‑Correcting Workflow. The single source of truth, powered by its community.*

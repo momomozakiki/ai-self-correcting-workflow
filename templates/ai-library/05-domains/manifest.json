@@ -1,0 +1,190 @@
+{
+  "folder": "05-domains",
+  "version": "2.1",
+  "last_updated": "2026-08-06",
+  "total_items": 11,
+  "items": [
+    {
+      "id": "rule-architecture-review",
+      "file": "rule-architecture-review.json",
+      "category": "architecture",
+      "priority": "HIGH",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 10
+    },
+    {
+      "id": "rule-security-review",
+      "file": "rule-security-review.json",
+      "category": "security",
+      "priority": "CRITICAL",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 12
+    },
+    {
+      "id": "rule-code-quality-review",
+      "file": "rule-code-quality-review.json",
+      "category": "code-quality",
+      "priority": "MEDIUM",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "typo_fix",
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 9
+    },
+    {
+      "id": "rule-error-handling-review",
+      "file": "rule-error-handling-review.json",
+      "category": "error-handling",
+      "priority": "HIGH",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 7
+    },
+    {
+      "id": "rule-performance-review",
+      "file": "rule-performance-review.json",
+      "category": "performance",
+      "priority": "MEDIUM",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 7
+    },
+    {
+      "id": "rule-testing-review",
+      "file": "rule-testing-review.json",
+      "category": "testing",
+      "priority": "HIGH",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 7
+    },
+    {
+      "id": "rule-api-review",
+      "file": "rule-api-review.json",
+      "category": "api",
+      "priority": "HIGH",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [
+        "http",
+        "rest",
+        "graphql",
+        "grpc"
+      ],
+      "enforcement_status": "convention",
+      "items": 8
+    },
+    {
+      "id": "rule-database-review",
+      "file": "rule-database-review.json",
+      "category": "database",
+      "priority": "HIGH",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [
+        "sql",
+        "postgresql",
+        "mysql",
+        "sqlite",
+        "nosql",
+        "mongodb"
+      ],
+      "enforcement_status": "convention",
+      "items": 7
+    },
+    {
+      "id": "rule-devops-review",
+      "file": "rule-devops-review.json",
+      "category": "devops",
+      "priority": "HIGH",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [
+        "docker",
+        "kubernetes",
+        "ci",
+        "terraform"
+      ],
+      "enforcement_status": "convention",
+      "items": 8
+    },
+    {
+      "id": "rule-audit-review",
+      "file": "rule-audit-review.json",
+      "category": "audit",
+      "priority": "MEDIUM",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 5
+    },
+    {
+      "id": "rule-skill-authoring-review",
+      "file": "rule-skill-authoring-review.json",
+      "category": "skill-authoring",
+      "priority": "HIGH",
+      "workflow_phase": "2",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [
+        "claude-code"
+      ],
+      "enforcement_status": "convention",
+      "items": 8
+    }
+  ],
+  "selection_note": "Selection is NOT defined here. The one table governing which checklists load -- for this folder and for 03-planning -- is 00-system/checklist-selection.json. It lived here until plan-review checklists arrived; a domain manifest cannot be the authority on a folder it does not contain.",
+  "note": "Domain checklists, run at Phase 2 against code that exists. Written as review questions and never prescriptions: a question makes you look at the code; a prescription tells you what to type and stops working the moment the codebase differs from the one it was written for. For whether the plan was worth writing code for, see 03-planning/. All convention -- nothing mechanically decides whether a class has one responsibility. Every item cites a source with an authority tier, and confidence_level is DERIVED by workflow_hook.derive_confidence, never hand-set. See docs/checklist-system.md and GROWTH.md."
+}

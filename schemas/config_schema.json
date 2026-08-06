@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/ai-self-correcting-workflow/schemas/config_schema.json",
   "title": "workflow_config.json",
-  "description": "Project-specific configuration for the Adaptive Self-Correcting Workflow. Maps generic workflow concepts onto concrete project paths and toggles features. Consumed by hooks/workflow_hook.py.",
+  "description": "Project-specific configuration for the Adaptive Self-Correcting Workflow. Maps generic workflow concepts onto concrete project paths and toggles features. Consumed by .claude/hooks/workflow_hook.py.",
   "type": "object",
   "additionalProperties": true,
   "properties": {
@@ -45,6 +45,18 @@
       "items": { "type": "string" },
       "default": ["docs", ".ai"]
     },
+    "documentation_exclude": {
+      "type": "array",
+      "description": "Path prefixes (relative to project_root) exempt from the --self-test frontmatter check. For staging or vendored trees whose defect IS the missing frontmatter, which an in-file `exclude_from_ai: true` cannot reach. Docs that DO carry frontmatter should use that field instead.",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "revalidation_interval_days": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Age at which --self-test warns that a checklist item's `last_validated` is stale and its source should be re-checked. Replaces a hand-maintained source-version manifest, which would itself go stale silently. 0 disables the warning.",
+      "default": 180
+    },
     "env_check": {
       "type": "object",
       "description": "Tools verified at SessionStart (F2).",
@@ -84,9 +96,114 @@
           "default": 2
         },
         "main_branch": {
-          "type": "string",
-          "description": "Name of the main/protected branch. The dirty-tree commit reminder is suppressed when on this branch.",
+          "type": ["string", "null"],
+          "description": "Name of the main/protected branch. The dirty-tree commit reminder is suppressed when on this branch. An explicit non-empty value always wins over auto-detection; omit it (or set null/\"\") to let main_branch_autodetect resolve it.",
           "default": "main"
+        },
+        "main_branch_autodetect": {
+          "type": "boolean",
+          "description": "When main_branch is unset, detect the default branch from the repo instead of assuming 'main'. Reads the local ref refs/remotes/<main_branch_remote>/HEAD (no network); falls back to DEFAULT 'main' if that ref is absent.",
+          "default": true
+        },
+        "main_branch_remote": {
+          "type": "string",
+          "description": "Remote whose HEAD is consulted by main_branch_autodetect.",
+          "default": "origin"
+        },
+        "main_branch_probe_remote": {
+          "type": "boolean",
+          "description": "Allow auto-detection to fall back to `git remote show <main_branch_remote>`, which CONTACTS THE REMOTE. Off by default so the Stop hook never makes a network call.",
+          "default": false
+        },
+        "mtime_fallback": {
+          "type": "boolean",
+          "description": "Back the source_changed / ledger_touched flags with a modification-time check against session_start_ts. PostToolUse only sees Edit/Write/MultiEdit, so without this a ledger appended by a shell redirect looks untouched and a source file rewritten by `sed -i` looks unchanged. Session-scoped, not a git diff — see GUIDE section 7.3.",
+          "default": true
+        },
+        "mtime_scan_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum files the source-directory walk inspects before giving up. Bounds the worst case (nothing changed); the walk already returns on the first file newer than the threshold. 0 disables the source half while leaving the ledger check active.",
+          "default": 2000
+        },
+        "mtime_prune": {
+          "type": "array",
+          "description": "Extra directory names to skip during the walk, on top of the built-in set (hidden directories, __pycache__, node_modules, dist, build, venv, site-packages, target).",
+          "items": { "type": "string" },
+          "default": []
+        }
+      }
+    },
+    "loop_detection": {
+      "type": "object",
+      "description": "Agent loop detection (imported framework section 15.4). PostToolUse tracks a signature of (tool_name, tool_input); when the same call repeats consecutively at the threshold, the hook emits an advisory and appends a line to log_path. Advisory only -- it never blocks.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Master switch. When false, no signatures are tracked and nothing is logged.",
+          "default": true
+        },
+        "repeat_threshold": {
+          "type": "integer",
+          "minimum": 2,
+          "description": "Consecutive identical tool calls required before the advisory fires. Values below 2 are clamped to 2.",
+          "default": 3
+        },
+        "log_path": {
+          "type": "string",
+          "description": "Path (relative to project_root unless absolute) of the JSONL loop log. Parent directories are created on first write.",
+          "default": ".ai/08-behavioral-metrics/loop_detection.jsonl"
+        }
+      }
+    },
+    "tier0_guard": {
+      "type": "object",
+      "description": "PreToolUse guard behind the Tier-0 prohibitions. Inspects Bash and PowerShell commands and emits permissionDecision 'deny' (force-push to a protected branch, deleting the audit trail) or 'ask' (history rewrite, heredoc stdin). Fail-open: an exception in the handler allows the call. In dontAsk mode an 'ask' becomes a silent block.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Master switch. When false the guard evaluates nothing and never emits a decision.",
+          "default": true
+        },
+        "protected_branches": {
+          "type": "array",
+          "description": "Extra branches treated as shared, in addition to the branch resolved by stop_hook.main_branch / main_branch_autodetect. A force-push whose target resolves to one of these is denied.",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "protected_paths": {
+          "type": "array",
+          "description": "Paths no command may delete. Defaults to the configured ledger directory plus 'plans/archive' -- exactly what the delete-ledger prohibition names. Widen it deliberately; a Tier-0 prohibition should not grow by implication.",
+          "items": { "type": "string" }
+        },
+        "escalate_history_rewrite": {
+          "type": "boolean",
+          "description": "Ask before `git commit --amend`, `git rebase`, `git reset --hard` and `git filter-branch`. Whether the commits are published is not visible from the command, so the guard escalates rather than guessing.",
+          "default": true
+        },
+        "escalate_heredoc": {
+          "type": "boolean",
+          "description": "Ask before heredoc stdin, `-F -` / `--file=-` / `-F /dev/stdin`, and a bare `git commit`.",
+          "default": true
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "description": "Governance library locations, consumed by `--self-test`. See docs/governance-integration-decision.md for which controls are enforced versus merely recorded.",
+      "additionalProperties": false,
+      "properties": {
+        "library_root": {
+          "type": "string",
+          "description": "Root of the chunked governance library.",
+          "default": ".ai"
+        },
+        "maturity_tracker": {
+          "type": "string",
+          "description": "Path that `--self-test` rewrites with the derived maturity level. Generated file -- do not hand-edit.",
+          "default": ".ai/00-system/maturity-tracker.json"
         }
       }
     },

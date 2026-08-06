@@ -1,0 +1,34 @@
+{
+  "id": "rule-env-check",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "category": "pre-flight",
+  "type": "phase-rule",
+  "tier": 1,
+  "enforcement": "MANDATORY",
+  "enforcement_status": "live",
+  "enforced_by": [
+    ".claude/hooks/workflow_hook.py::run_env_checks",
+    ".claude/hooks/workflow_hook.py::handle_session_start",
+    "tests/test_hook.py::TestSessionStart::test_env_check_missing_tool_reports_not_found"
+  ],
+  "overrideable": false,
+  "workflow_phase": "0",
+  "maps_to_v14_step": 4,
+  "rule": "Verify every tool in env_check.tool_paths, and warn if ANTHROPIC_API_KEY is set.",
+  "condition": null,
+  "ai_action": "Report each tool's version or found/not-found. Warn that a set ANTHROPIC_API_KEY moves billing off the Claude subscription.",
+  "risk_source": "design",
+  "risk_weight": 4,
+  "provenance": {
+    "source": "agent-generated during the v14 integration",
+    "authored": "2026-08-04",
+    "basis": "docs/self-growing-checklist-ecosystem/ + GUIDE.md"
+  },
+  "tags": [
+    "environment",
+    "pre-flight",
+    "f2",
+    "billing"
+  ]
+}

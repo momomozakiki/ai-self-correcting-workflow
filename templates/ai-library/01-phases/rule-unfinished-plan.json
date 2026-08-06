@@ -1,0 +1,33 @@
+{
+  "id": "rule-unfinished-plan",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "category": "pre-flight",
+  "type": "phase-rule",
+  "tier": 1,
+  "enforcement": "MANDATORY",
+  "enforcement_status": "live",
+  "enforced_by": [
+    ".claude/hooks/workflow_hook.py::handle_session_start",
+    ".claude/hooks/workflow_hook.py::write_unfinished_breadcrumb",
+    "tests/test_hook.py::TestStopBreadcrumb::test_dirty_tree_writes_breadcrumb_on_feature_branch"
+  ],
+  "overrideable": false,
+  "workflow_phase": "0",
+  "maps_to_v14_step": 2,
+  "rule": "Surface plans/UNFINISHED.md immediately if it exists, and note the next unchecked roadmap item.",
+  "condition": null,
+  "ai_action": "Surface the breadcrumb and ask whether to continue or archive it.",
+  "risk_source": "design",
+  "risk_weight": 6,
+  "provenance": {
+    "source": "agent-generated during the v14 integration",
+    "authored": "2026-08-04",
+    "basis": "docs/self-growing-checklist-ecosystem/ + GUIDE.md"
+  },
+  "tags": [
+    "handoff",
+    "roadmap",
+    "f4"
+  ]
+}

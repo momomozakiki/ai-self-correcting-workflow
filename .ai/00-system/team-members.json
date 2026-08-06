@@ -1,0 +1,12 @@
+{
+  "reviewers": [
+    {
+      "role": "maintainer",
+      "handle": "momomozakiki"
+    }
+  ],
+  "escalation": {
+    "enforcement_status": "convention",
+    "note": "Solo repository: the user is the reviewer and the escalation path."
+  }
+}

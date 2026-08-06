@@ -1,0 +1,84 @@
+{
+  "folder": "03-planning",
+  "version": "1.0",
+  "last_updated": "2026-08-05",
+  "total_items": 5,
+  "items": [
+    {
+      "id": "rule-problem-definition-review",
+      "file": "rule-problem-definition-review.json",
+      "category": "problem-definition",
+      "priority": "CRITICAL",
+      "workflow_phase": "1",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 6
+    },
+    {
+      "id": "rule-requirements-review",
+      "file": "rule-requirements-review.json",
+      "category": "requirements",
+      "priority": "HIGH",
+      "workflow_phase": "1",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 7
+    },
+    {
+      "id": "rule-risk-and-reversibility-review",
+      "file": "rule-risk-and-reversibility-review.json",
+      "category": "risk-and-reversibility",
+      "priority": "CRITICAL",
+      "workflow_phase": "1",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 7
+    },
+    {
+      "id": "rule-alternatives-and-rationale-review",
+      "file": "rule-alternatives-and-rationale-review.json",
+      "category": "alternatives-and-rationale",
+      "priority": "MEDIUM",
+      "workflow_phase": "1",
+      "task_size_required": [
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 5
+    },
+    {
+      "id": "rule-verification-planning-review",
+      "file": "rule-verification-planning-review.json",
+      "category": "verification-planning",
+      "priority": "HIGH",
+      "workflow_phase": "1",
+      "task_size_required": [
+        "small_change",
+        "new_module",
+        "major_refactor"
+      ],
+      "tech_stack_required": [],
+      "enforcement_status": "convention",
+      "items": 6
+    }
+  ],
+  "selection_note": "Selection is NOT defined here. The one table governing which checklists load -- for this folder and for 05-domains -- is 00-system/checklist-selection.json. Two tables would be two answers.",
+  "note": "Plan-review checklists, run at Phase 1 against the plan itself, before any code exists. 05-domains/ asks whether the code is right; this folder asks whether the plan was worth writing code for. Never gated on tech stack: a plan's problem statement is no better or worse for being written in Go. Every item cites a source with an authority tier, and confidence_level is DERIVED by workflow_hook.derive_confidence, never hand-set."
+}

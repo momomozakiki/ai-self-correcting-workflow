@@ -1,0 +1,33 @@
+{
+  "id": "rule-ledger-entry",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "category": "execution",
+  "type": "phase-rule",
+  "tier": 1,
+  "enforcement": "MANDATORY",
+  "enforcement_status": "live",
+  "enforced_by": [
+    ".claude/hooks/workflow_hook.py::handle_stop",
+    ".claude/hooks/workflow_hook.py::handle_post_tool_use",
+    "tests/test_hook.py::TestStop::test_ledger_reminder_when_source_changed_unlogged"
+  ],
+  "overrideable": false,
+  "workflow_phase": "2",
+  "maps_to_v14_step": 21,
+  "rule": "Log every intentional change to the weekly ledger history/YYYY-Www.md.",
+  "condition": null,
+  "ai_action": "Append What/Why/Refs for substantial changes, a one-liner for minor ones. Skip trivial typo/whitespace edits.",
+  "risk_source": "accountability",
+  "risk_weight": 6,
+  "risk_weight_note": "Below the accountability band (8-10). The band is written for a fleet where a missing audit trail means nobody can be identified afterwards. Here there is one operator and git already records who changed what; a missed ledger entry costs traceability of intent, which is recoverable by reading the diff. Weight left at the honest assessment rather than raised to clear the band.",
+  "provenance": {
+    "source": "agent-generated during the v14 integration",
+    "authored": "2026-08-04",
+    "basis": "docs/self-growing-checklist-ecosystem/ + GUIDE.md"
+  },
+  "tags": [
+    "ledger",
+    "traceability"
+  ]
+}

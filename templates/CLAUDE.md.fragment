@@ -7,8 +7,22 @@
 
 This project follows the Adaptive Self-Correcting Workflow. The full reference
 lives in `.claude/workflow-core/GUIDE.md`; the agent operating manual is the
-`adaptive-workflow` skill (`.claude/workflow-core/skills/adaptive-workflow/SKILL.md`).
+`adaptive-workflow` skill, at `.claude/skills/adaptive-workflow/SKILL.md`.
+
+**The skills are copied, not referenced.** Claude Code discovers skills only under
+`.claude/skills/` (and `~/.claude/skills/`), so copy them out of the submodule:
+`cp -r .claude/workflow-core/templates/skills/* .claude/skills/`. Re-copy after a
+`git submodule update --remote`, or whenever the upstream changelog reports a skill
+change — a copy nobody resyncs silently goes stale. If the skills do not show up,
+run `/reload-skills` (v2.1.152+): a skills directory that did not exist at session
+start is not watched. Restart only if that command is unavailable.
+
 Hooks provide ambient reminders — treat them as helpful nudges, not blockers.
+
+### Tier 0 — absolute prohibitions (never overrideable)
+- Never force-push a shared branch. Never commit secrets. Never rewrite published
+  history. Never delete the ledger or the plan archive.
+- Full set: `.ai/02-market-rules/prohibitions/` (see GUIDE §13).
 
 ### Fixed invariants — always do first (Phase 0)
 - **F1 Git sync:** `git fetch && git pull --rebase`. If the tree is dirty, ask
@@ -29,7 +43,28 @@ Hooks provide ambient reminders — treat them as helpful nudges, not blockers.
   `history/YYYY-Www.md` (skip only trivial typo/whitespace-only edits). Add doc
   frontmatter (provenance + version) to any new or updated document.
 - **Close (Phase 3):** archive the plan, write the final ledger entry, update
-  the roadmap, then commit & push. You are **not done** until `UNFINISHED.md`
-  is cleared, the ledger entry is written, and the commit is pushed.
+  the roadmap, log any mistake worth remembering in the retrospective, then
+  commit & push. You are **not done** until `UNFINISHED.md` is cleared, the
+  ledger entry is written, and the commit is pushed.
+
+### Guards
+- **Settle disputes by direct test:** when a claim about how the system behaves is
+  disputed or uncertain, run it rather than argue it — and test every competing
+  claim, not just the one you expect to win. If the user has to run it, write the
+  steps for someone with no expertise: what to do, what a pass looks like, what a
+  failure looks like.
+- **Reversibility:** git is the rollback mechanism — have a clean checkpoint
+  before anything hard to undo, and say so if an operation can't be reversed.
+- **Loops:** if a call repeats with identical arguments and no progress, change
+  the approach instead of retrying.
+- **No heredoc stdin:** write scripts to a file and run the file. Escapes get
+  mangled silently. For git use `git commit -m` or `-F <file>`, never `-F -`.
+- **Health check:** `python .claude/workflow-core/.claude/hooks/workflow_hook.py --self-test`.
+  It must print `RESULT: PASS` **and** `[ ok ] config valid against
+  schemas/config_schema.json`. A `validation skipped` line means the schema is
+  unreachable and the check is not actually running — exit 0 alone does not prove it ran.
+  **If you adopted before the dispatcher moved to `.claude/hooks/`,** your four hook
+  entries still name `.claude/workflow-core/hooks/workflow_hook.py` and none of them
+  fire. See the BREAKING note in `CHANGELOG.md` for the exact replacement.
 
 <!-- END adaptive-workflow fragment -->

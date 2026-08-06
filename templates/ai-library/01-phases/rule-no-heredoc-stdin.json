@@ -1,0 +1,38 @@
+{
+  "id": "rule-no-heredoc-stdin",
+  "version": "1.2",
+  "last_updated": "2026-08-05",
+  "category": "execution",
+  "type": "phase-rule",
+  "tier": 1,
+  "enforcement": "MANDATORY",
+  "enforcement_status": "live",
+  "enforcement_mode": "ask",
+  "enforcement_note": "ASK, not deny. guard_heredoc catches heredocs and here-strings, `-F -` / `--file=-` / `-F /dev/stdin`, and the bare `git commit` that opens an editor. v1.0 of this rule declined a hook because 'the false-positive cost on legitimate heredocs was judged higher than the failure it prevents' - that weighed a hard block. An `ask` inverts the trade: a false positive costs one keystroke, and the call still cannot proceed without a human. The detector excludes `<<` followed by a digit so a left shift is not mistaken for a heredoc. Limits: in `dontAsk` mode an `ask` becomes a silent block; the dispatcher is fail-soft, so an exception in the handler allows the call; and the guard only sees Bash and PowerShell tool calls. One further limit, verified 2026-08-06 rather than reasoned: in a session with no human to prompt, an `ask` resolves to a silent ALLOW. A heredoc ran unprompted while `rm -rf history/` was denied and blocked by the same registration in the same session; re-run interactively, the same guard's `ask` surfaced as a prompt and was declined. So this rule is `live` over an ATTENDED session. Unattended, it enforces nothing - which is a property of the `ask` decision, not of guard_heredoc.",
+  "enforced_by": [
+    ".claude/hooks/workflow_hook.py::guard_heredoc",
+    ".claude/hooks/workflow_hook.py::handle_pre_tool_use",
+    "tests/test_hook.py::TestTier0Guard",
+    ".claude/settings.json",
+    "tests/test_governance_library.py::SettingsWiring"
+  ],
+  "overrideable": false,
+  "workflow_phase": "2",
+  "maps_to_v14_step": null,
+  "maps_to_v14_step_reason": "No v14 ancestor. This rule was self-hardened locally from a mistake recorded twice in docs/RETROSPECTIVE.md, not imported from the 21-step SOP. It previously claimed step 12 (`iterative technical audit`), which is neither what the rule does nor its tier - GUIDE section 12 calls step 12 live, and this rule is convention.",
+  "rule": "Never feed a program or a multi-line message to a command over heredoc stdin.",
+  "condition": null,
+  "ai_action": "Write the script to a file and run the file; use the editing tools for source changes. For git, use `git commit -m` (repeatable) or `git commit -F <file>` - never `-F -`, a heredoc, or a bare `git commit`. Shell and tool layers mangle escape sequences and can reject stdin-fed commands, and the corruption is silent until a pattern misses.",
+  "risk_source": "design",
+  "risk_weight": 6,
+  "provenance": {
+    "source": "agent-generated during the v14 integration",
+    "authored": "2026-08-04",
+    "basis": "docs/self-growing-checklist-ecosystem/ + GUIDE.md"
+  },
+  "tags": [
+    "shell",
+    "heredoc",
+    "self-hardened"
+  ]
+}

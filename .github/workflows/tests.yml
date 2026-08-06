@@ -19,3 +19,12 @@ jobs:
       # install step — CI runs exactly what adopters run locally.
       - name: Run tests
         run: python -m unittest discover -s tests -v
+
+      # Gates on the exit code only, which reflects config-schema validation.
+      # Deliberately not asserting the tree stays clean afterwards: --self-test
+      # rewrites .ai/00-system/maturity-tracker.json with today's date, so a
+      # diff check would fail for the passage of time rather than a regression.
+      # Nor does it gate on the maturity level -- that is reported, never
+      # enforced (GUIDE section 13).
+      - name: Validate workflow config (--self-test)
+        run: python .claude/hooks/workflow_hook.py --self-test

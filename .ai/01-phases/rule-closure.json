@@ -1,0 +1,34 @@
+{
+  "id": "rule-closure",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "category": "retrospective",
+  "type": "phase-rule",
+  "tier": 1,
+  "enforcement": "MANDATORY",
+  "enforcement_status": "live",
+  "enforced_by": [
+    ".claude/hooks/workflow_hook.py::handle_stop",
+    ".claude/hooks/workflow_hook.py::write_unfinished_breadcrumb",
+    "tests/test_hook.py::TestStop::test_ledger_reminder_when_source_changed_unlogged",
+    "tests/test_hook.py::TestStopBreadcrumb"
+  ],
+  "overrideable": false,
+  "workflow_phase": "3",
+  "maps_to_v14_step": 21,
+  "rule": "Not done until UNFINISHED.md is cleared, the ledger entry is written, and the commit is pushed.",
+  "condition": null,
+  "ai_action": "Archive the plan, write the closure ledger entry, update the roadmap, commit and push.",
+  "risk_source": "accountability",
+  "risk_weight": 7,
+  "risk_weight_note": "Below the accountability band (8-10). Closure is the audit-trail control, so accountability is the right source, but the band assumes diffused ownership across a fleet. On a single-operator repo an unclosed session leaves a breadcrumb the next SessionStart surfaces, so the failure is loud and self-correcting. Weight left at the honest assessment rather than raised to clear the band.",
+  "provenance": {
+    "source": "agent-generated during the v14 integration",
+    "authored": "2026-08-04",
+    "basis": "docs/self-growing-checklist-ecosystem/ + GUIDE.md"
+  },
+  "tags": [
+    "closure",
+    "phase-3"
+  ]
+}

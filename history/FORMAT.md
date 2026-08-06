@@ -19,6 +19,31 @@ thumb: *if a reviewer would care, log it.*
 ## Tag vocabulary
 `[design]` `[doc]` `[code]` `[workflow]` `[config]` `[decision]` `[data]`
 
+## Risk field (optional)
+
+A change that carries real risk may add one `**Risk:**` line using one of five
+fixed slugs:
+
+| Slug | Covers |
+|------|--------|
+| `privilege` | Permissions, access scope, credentials, anything that widens what an agent can reach |
+| `design` | Flawed planning or logic: missing validation, a gap in the workflow itself |
+| `behavioral` | The agent acting unpredictably — loops, retries, drift from instructions |
+| `structural` | Composition and interaction between agents or components; cascading failure |
+| `accountability` | Ownership, auditability, traceability — who is answerable, and can you tell later |
+
+**This list is the ledger's own, and is deliberately not the CISA five.** The
+`risk_source` field on rule files under `.ai/` uses the CISA taxonomy proper —
+`component`, `design`, `capability`, `structural`, `accountability` — per §11.3 of
+the imported spec. These slugs describe risk from the *changing the repo* angle
+(`privilege`, `behavioral`) rather than the *acting autonomously* angle
+(`component`, `capability`), and they are frozen: entries already written use them,
+and rewriting the vocabulary would invalidate history for no gain. Earlier revisions
+of this file described these as the CISA categories, which was wrong.
+
+Omit the line when a change carries no notable risk — an always-present field stops
+carrying signal.
+
 ## Entry format
 
 Substantial changes use the full form:
@@ -30,6 +55,7 @@ Substantial changes use the full form:
 ### [design] docs/artifact/Scale Indicator.dc.html
 - **What:** Reworked ODB reference into full weighing-terminal layout.
 - **Why:** Round-2 UI/UX pass.
+- **Risk:** design — the layout drives operator actions; a wrong control placement misleads.
 - **Refs:** plan `plans/archive/2026-07-08_scale-indicator/plan.md` · commit b30333d
 ```
 

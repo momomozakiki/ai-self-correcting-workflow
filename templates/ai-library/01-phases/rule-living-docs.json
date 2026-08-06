@@ -1,0 +1,29 @@
+{
+  "id": "rule-living-docs",
+  "version": "1.0",
+  "last_updated": "2026-08-04",
+  "category": "pre-flight",
+  "type": "phase-rule",
+  "tier": 1,
+  "enforcement": "MANDATORY",
+  "enforcement_status": "convention",
+  "enforcement_note": "Nothing verifies a doc was actually read or is still accurate. The PostToolUse nudge in handle_post_tool_use fires once per session when source changes without a doc change, which prompts but does not check. `--self-test` verifies frontmatter is present, not that the content is current.",
+  "overrideable": false,
+  "workflow_phase": "0",
+  "maps_to_v14_step": 8,
+  "rule": "Load configured living docs and flag any missing frontmatter (provenance + version).",
+  "condition": null,
+  "ai_action": "Read each doc; flag missing frontmatter without blocking the session.",
+  "risk_source": "design",
+  "risk_weight": 5,
+  "provenance": {
+    "source": "agent-generated during the v14 integration",
+    "authored": "2026-08-04",
+    "basis": "docs/self-growing-checklist-ecosystem/ + GUIDE.md"
+  },
+  "tags": [
+    "documentation",
+    "provenance",
+    "f3"
+  ]
+}

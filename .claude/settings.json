@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "plan",
     "allow": [
       "Read",
       "Grep",
@@ -30,7 +31,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/hooks/workflow_hook.py\""
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_hook.py\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_hook.py\""
           }
         ]
       }
@@ -41,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/hooks/workflow_hook.py\""
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_hook.py\""
           }
         ]
       }
@@ -51,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/hooks/workflow_hook.py\""
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_hook.py\""
           }
         ]
       }
