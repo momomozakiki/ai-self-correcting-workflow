@@ -869,51 +869,78 @@ class SettingsWiring(unittest.TestCase):
     """Four ``live`` tiers rest on the guard being *registered*, not just written.
 
     ``resolve_enforcer`` proves ``guard_force_push`` exists in the source. It
-    cannot prove Claude Code ever calls it -- that depends on a hook entry in
-    ``.claude/settings.json``, a file no other test reads. Delete the entry and
-    the guard becomes unreachable code while every tier claim still resolves.
-    This class closes that gap.
+    cannot prove Claude Code ever calls it -- that depends on a hook entry in a
+    settings file. Delete the entry and the guard becomes unreachable code while
+    every tier claim still resolves. This class closes that gap.
+
+    It checks **both** configs, because for most of this repository's life it
+    checked only ``.claude/settings.json`` -- and
+    ``templates/settings.json.hooks``, the fragment adopters actually merge,
+    had no ``PreToolUse`` block at all. Every adopter ran with the four Tier-0
+    prohibitions documented as ``live`` and nothing enforcing them, and the
+    suite was green throughout. A test that reads only the copy its own
+    repository uses cannot see what ships.
     """
 
-    def setUp(self):
-        self.settings_path = REPO_ROOT / ".claude" / "settings.json"
-        self.assertTrue(self.settings_path.is_file(),
-                        f"{self.settings_path} missing")
-        self.settings = load_json(self.settings_path)
+    # (label, path, substring the dispatcher command must contain). The paths
+    # differ because an adopter reaches the dispatcher through the submodule.
+    CONFIGS = (
+        ("repo", REPO_ROOT / ".claude" / "settings.json",
+         "hooks/workflow_hook.py"),
+        ("adopter template", REPO_ROOT / "templates" / "settings.json.hooks",
+         ".claude/workflow-core/hooks/workflow_hook.py"),
+    )
 
-    def _pre_tool_use_entries(self):
-        return (self.settings.get("hooks") or {}).get("PreToolUse") or []
+    def configs(self):
+        for label, path, command in self.CONFIGS:
+            self.assertTrue(path.is_file(), f"{path} missing")
+            yield label, load_json(path), command
+
+    @staticmethod
+    def _pre_tool_use_entries(settings):
+        return (settings.get("hooks") or {}).get("PreToolUse") or []
 
     def test_a_pre_tool_use_hook_is_registered(self):
-        self.assertTrue(
-            self._pre_tool_use_entries(),
-            ".claude/settings.json registers no PreToolUse hook, so the Tier-0 "
-            "guard never runs -- four artifacts claim `live` on unreachable code")
+        for label, settings, _ in self.configs():
+            with self.subTest(config=label):
+                self.assertTrue(
+                    self._pre_tool_use_entries(settings),
+                    f"{label} registers no PreToolUse hook, so the Tier-0 guard "
+                    "never runs -- four artifacts claim `live` on unreachable code")
 
     def test_the_guard_covers_both_shells(self):
         """A Bash-only matcher is bypassed by the PowerShell tool on Windows."""
-        matchers = [e.get("matcher") or "" for e in self._pre_tool_use_entries()]
-        for tool in ("Bash", "PowerShell"):
-            with self.subTest(tool=tool):
-                self.assertTrue(
-                    any(tool in m for m in matchers),
-                    f"no PreToolUse matcher covers {tool}: {matchers}")
+        for label, settings, _ in self.configs():
+            matchers = [e.get("matcher") or ""
+                        for e in self._pre_tool_use_entries(settings)]
+            for tool in ("Bash", "PowerShell"):
+                with self.subTest(config=label, tool=tool):
+                    self.assertTrue(
+                        any(tool in m for m in matchers),
+                        f"{label}: no PreToolUse matcher covers {tool}: {matchers}")
 
     def test_the_registered_command_is_the_dispatcher(self):
-        commands = [
-            h.get("command") or ""
-            for entry in self._pre_tool_use_entries()
-            for h in (entry.get("hooks") or [])
-        ]
-        self.assertTrue(
-            any("workflow_hook.py" in c for c in commands),
-            f"PreToolUse is registered but not to the dispatcher: {commands}")
+        """The path differs per config, so matching on the filename is not enough."""
+        for label, settings, expected in self.configs():
+            commands = [
+                h.get("command") or ""
+                for entry in self._pre_tool_use_entries(settings)
+                for h in (entry.get("hooks") or [])
+            ]
+            with self.subTest(config=label):
+                self.assertTrue(
+                    any(expected in c for c in commands),
+                    f"{label}: PreToolUse is registered but not to {expected!r}: "
+                    f"{commands}")
 
     def test_default_mode_is_plan(self):
-        self.assertEqual(
-            "plan", (self.settings.get("permissions") or {}).get("defaultMode"),
-            "permissions.defaultMode is what makes planning the session default; "
-            "rule-task-checklist's enforcement_note describes it")
+        for label, settings, _ in self.configs():
+            with self.subTest(config=label):
+                self.assertEqual(
+                    "plan", (settings.get("permissions") or {}).get("defaultMode"),
+                    f"{label}: permissions.defaultMode is what makes planning the "
+                    "session default; rule-task-checklist's enforcement_note "
+                    "describes it")
 
     def test_artifacts_citing_settings_are_backed_by_this_class(self):
         """Nothing may name settings.json as an enforcer without these checks."""

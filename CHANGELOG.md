@@ -8,6 +8,31 @@ and are called out so adopting projects can adjust their `workflow_config.json`.
 ## [Unreleased]
 
 ### Fixed
+- **Adopters had no Tier-0 guard. Action required if you installed before this
+  release.** `templates/settings.json.hooks` — the fragment adopters merge into
+  `.claude/settings.json` — registered `SessionStart`, `PostToolUse` and `Stop`
+  but **no `PreToolUse` block**, and no `permissions.defaultMode`. `PreToolUse` is
+  the only event the guard runs on, so in every adopting project a force-push to a
+  protected branch was not denied, deleting `history/` or `plans/archive/` was not
+  denied, and history rewrites and heredocs never asked — while `CLAUDE.md`,
+  `GUIDE.md` §7 and `.ai/02-market-rules/prohibitions/*.json` all declared those
+  four prohibitions `live`. Measured before the fix: **0 of 3** Tier-0 probes
+  denied under the template, 3 of 3 under this repo's own settings.
+
+  **To fix an existing install — merge, do not copy:** open your
+  `.claude/settings.json`, add the `PreToolUse` entry from
+  `templates/settings.json.hooks` (matcher `Bash|PowerShell`, pointing at
+  `$CLAUDE_PROJECT_DIR/.claude/workflow-core/hooks/workflow_hook.py`), and add
+  `"defaultMode": "plan"` under `permissions`. Do **not** copy the file over your
+  settings — it is a fragment, and overwriting discards your own permissions, env
+  and any other hooks.
+
+  **Then verify, don't assume:** attempt `git push --force` to your main branch and
+  confirm it is **denied**. If it is allowed, the merge did not take.
+
+  `tests/test_governance_library.py::SettingsWiring` now checks both the repo's
+  settings and the adopter template; previously it read only the former, which is
+  why a shipped config with no guard stayed green.
 - **The skills now live where Claude Code discovers them.** `skills/` →
   `.claude/skills/`. Claude Code loads skills from `~/.claude/skills/`, a project
   `.claude/skills/` (plus nested ones below the working directory) and plugin
