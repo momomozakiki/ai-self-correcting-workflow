@@ -1,7 +1,7 @@
 # Frontmatter fields and string substitutions
 
 Source: <https://code.claude.com/docs/en/skills> — "Frontmatter reference" and "Available
-string substitutions". Verified 2026-08-06 against Claude Code v2.1.221.
+string substitutions". Verified 2026-08-06 against Claude Code v2.1.223.
 
 **All fields are optional.** Only `description` is recommended, so Claude knows when to use
 the skill. Any key not in this table is ignored silently — no error, no warning.

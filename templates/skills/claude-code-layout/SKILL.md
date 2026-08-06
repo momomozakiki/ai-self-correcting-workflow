@@ -5,6 +5,8 @@ description: Where Claude Code configuration must live to be loaded at all. Use 
 
 # Where Claude Code configuration lives
 
+Verified 2026-08-06 against Claude Code v2.1.223.
+
 A misplaced config file does not error. It is read by nothing, reports nothing, and leaves
 every document that describes it looking correct. This repository has shipped that defect three
 times — skills in a directory nobody scans, an adopter template with no `PreToolUse` guard, and
@@ -105,5 +107,30 @@ the time, so check which question you are asking.
 
 Hook *event* names are deliberately not listed here: there are 31 and they change release by
 release, so a copy would be stale on arrival. Read
-<https://code.claude.com/docs/en/hooks>. For writing the skill itself rather than placing it,
+<https://code.claude.com/docs/en/hooks>. The one checked copy lives in
+`tests/test_claude_layout.py::HOOK_EVENTS`, where a stale entry fails the build instead of
+misleading a reader. For writing the skill itself rather than placing it,
 see [skill-authoring](../skill-authoring/SKILL.md).
+
+## Who orchestrates
+
+Two modes, and the difference decides where intermediate results live:
+
+| | Subagents · skills · agent teams | Dynamic workflows (`.claude/workflows/*.js`) |
+|---|---|---|
+| Decides what runs next | **Claude**, turn by turn | **The script** |
+| Intermediate results land in | Claude's context window | Script variables |
+| What is reusable | The worker definition | The orchestration itself |
+
+So a long fan-out through subagents fills the context it was meant to protect, while a workflow
+returns only the final answer. `ultracode` sets effort to `xhigh` and lets Claude choose a
+workflow on its own.
+
+## Provenance
+
+This skill is the operative artifact — it is what Claude Code loads. The project's designated
+golden-rule document is [`docs/claude-code-layout-guide/`](../../../docs/claude-code-layout-guide/index.md),
+which also records three verified errors in the guide as received, including a hook-event
+blocking table contradicted by this repository's own running `Stop` hook. Where that document
+and the live docs disagree, the live docs win; where the running system disagrees with both,
+the running system wins.

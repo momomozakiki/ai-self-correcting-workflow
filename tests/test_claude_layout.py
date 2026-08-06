@@ -78,7 +78,7 @@ STANDARD_CLAUDE_DIRS = frozenset({
     "agent-memory", "hooks", "plugins", "workflow-core",
 })
 
-# Every hook event Claude Code supports, as of v2.1.221. Listed so a typo in a
+# Every hook event Claude Code supports, as of v2.1.223. Listed so a typo in a
 # settings file -- an event name that will simply never fire -- fails loudly.
 # https://code.claude.com/docs/en/hooks
 HOOK_EVENTS = frozenset({

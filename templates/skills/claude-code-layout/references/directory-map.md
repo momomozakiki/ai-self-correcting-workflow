@@ -1,6 +1,6 @@
 # Directory map — what reads each path, and how it fails
 
-Verified 2026-08-06 against Claude Code v2.1.221, from
+Verified 2026-08-06 against Claude Code v2.1.223, from
 <https://code.claude.com/docs/en/claude-directory>, `/docs/en/skills`, `/docs/en/hooks`,
 `/docs/en/sub-agents`, `/docs/en/workflows` and `/docs/en/settings`.
 
