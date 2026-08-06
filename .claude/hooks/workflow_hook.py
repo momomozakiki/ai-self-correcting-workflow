@@ -877,7 +877,13 @@ def guard_history_rewrite(tokens: List[str]) -> Optional[Tuple[str, str]]:
 
 
 def guard_heredoc(tokens: List[str], subcommand_text: str) -> Optional[Tuple[str, str]]:
-    """Escalate stdin-fed programs and messages, and the editor-opening bare commit."""
+    """Escalate stdin-fed programs and messages, and the editor-opening bare commit.
+
+    Caveat observed 2026-08-06, not a defect in this function: an `ask` returned
+    here is not guaranteed to reach a human. In a session with no one to prompt,
+    the same registration that *blocked* a `deny` let two `ask` commands run
+    silently. `deny` is self-resolving; `ask` depends on the session. See ROADMAP.
+    """
     if _HEREDOC.search(subcommand_text):
         return "ask", (
             "rule-no-heredoc-stdin: this feeds a heredoc to a command. Shell and tool "

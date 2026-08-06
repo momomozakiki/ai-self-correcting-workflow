@@ -38,6 +38,24 @@ the remaining 19 (no Phase 0–3 obligation attaches).
       `permissionDecision: "ask"`. GUIDE §7.5 documents `dontAsk` turning an `ask` into a silent
       *block*; what was observed was a silent *allow*, which is undocumented. Until this is
       understood, an `ask` cannot be treated as a control.
+      **Narrowed 2026-08-06 (post-move session), not closed.** A controlled run in a fresh
+      session eliminated every cause internal to this repository. Same session, same
+      `PreToolUse` registration, same `Bash|PowerShell` matcher, same script: `rm -rf history/`
+      was **denied and blocked**, while a heredoc and `git rebase --help` — both of which the
+      dispatcher returns `ask` for on replay — **ran with no prompt**. So the registration is
+      live, the matcher covers `Bash`, and `guard_heredoc`/`guard_history_rewrite` are correct.
+      No settings file carries `dontAsk`, a `permissions.deny`, or any mode override
+      (`.claude/settings.json`, `.claude/settings.local.json`, `~/.claude/settings.json`; no
+      managed-settings file exists). Independent corroboration that a session-level override is
+      in play: `.claude/settings.json` sets `defaultMode: "plan"` and plan mode was **not** in
+      effect either — a non-allowlisted write ran unprompted.
+      **Remaining hypothesis:** the runtime resolves `ask` → allow when the session has no one
+      to prompt (this session is flagged non-interactive) or was launched with permissions
+      bypassed. Not observable from inside a session, so it is recorded as a hypothesis.
+      **What would settle it:** run the identical heredoc in an *interactive* `claude` session
+      started with no bypass flag. If the prompt appears, the cause is the session launch mode
+      and `ask` is a real control under normal use; if it still runs silently, the cause is in
+      Claude Code's handling of `permissionDecision: "ask"` and belongs upstream.
 
 ---
 
