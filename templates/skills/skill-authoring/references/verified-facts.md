@@ -1,6 +1,6 @@
 # Verified facts about Claude Code skills
 
-Every claim below was checked on **2026-08-06** against Claude Code **v2.1.223**. Re-verify
+Verified 2026-08-06 against Claude Code v2.1.223 — every claim below. Re-verify
 before trusting any of it in a later version; several carry explicit version floors, which is
 evidence the surface moves.
 

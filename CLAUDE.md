@@ -52,42 +52,35 @@ treat them as helpful nudges, not blockers.
 
 <!-- END adaptive-workflow fragment -->
 
+## Settle disputes by direct test
+
+When a claim about how the system behaves is disputed or uncertain, **run it — don't argue
+it.** Use the docs to design the test, never in place of one, and test *every* competing claim,
+including your own. Report the raw output. If it genuinely cannot be executed, label it
+unproven and say what would settle it; the best-argued position is not a result.
+
+When the user has to run it, write the instructions in plain language: what to do, what a pass
+looks like, what a failure looks like, and why you cannot do it yourself. Assume no expertise.
+
+Ungated here on purpose — a `paths:`-scoped rule is not re-injected after `/compact`.
+Rule: `.ai/01-phases/rule-direct-test-disputes.json`.
+
 ## Project-specific notes
 
-- **Tests must stay dependency-free.** The hook is stdlib-only so adopters can
-  vendor it without a dependency tree. Run: `python -m unittest discover -s tests`.
-- When changing hook behaviour, update `schemas/hook_contract.md`, `GUIDE.md`
-  §7, and `.claude/skills/adaptive-workflow/SKILL.md` together to prevent drift.
-  `schemas/hook_contract.md` is the **only** place the state-key list lives.
-- **Health check:** `python .claude/hooks/workflow_hook.py --self-test` validates the
-  config and reports a governance maturity level. Exit code reflects validation
-  only — the level is reported, never enforced.
-- **Governance library** in `.ai/` (GUIDE §13). Every artifact declares
-  `enforcement_status`: `live` (a hook or test enforces it), `convention` (followed,
-  nothing blocks), `declarative` (recorded only). Never imply enforcement that
-  doesn't exist — write declarative fields as `null` with a reason, never faked.
-  `tests/test_governance_library.py` enforces this: `live` needs an `enforced_by`
-  list resolving to real code, `convention` needs an `enforcement_note`. Any edit
-  under `.ai/` must be mirrored into `templates/ai-library/` in the same commit.
-- **Autonomous runs.** `.claude/skills/autonomous-task/SKILL.md` removes `AskUserQuestion`
-  for the turn and says what to do instead: read the repo, then official docs, then take the
-  conservative option and record the assumption. It ends by invoking the `handover` skill,
-  which writes `plans/HANDOVER.md` — the user's entire view of a run they didn't watch.
-  Autonomy means not asking the user to arbitrate; it is **not** licence to click through
-  a guard's `ask`.
-- **Skills live in `.claude/skills/` because that is one of the only places Claude Code
-  looks** — a repo-root `skills/` folder is discovered by nothing, and every frontmatter
-  field in it is silently inert. Don't "tidy" them back out. Authoring rules are in the
-  `skill-authoring` skill; `tests/test_skills.py` enforces structure, size and the old
-  path staying gone, and mirrors `.claude/skills/` into `templates/skills/` for adopters.
-  A newly created top-level skills directory is not watched by live change detection — run
-  **`/reload-skills`** (v2.1.152+) rather than restarting.
-- **Review checklists** live in `.ai/05-domains/`, phrased as questions rather than
-  prescriptions so they carry to any project and leave judgement intact. All `convention`.
-  `.ai/06-components/` stays empty until a pattern has shipped and survived review —
-  `BLUEPRINT_SCHEMA.md` has the bar.
-- **Runtime:** Claude Code on a Claude Pro subscription, no API key (GUIDE §14).
-  Sonnet 5 for routine work, `/model opus` for hard passes. **Fable 5 bills usage
-  credits on Pro — never make it a default.**
-- **No heredoc stdin.** Write scripts to a file and run the file; use the editing
-  tools for source changes. Escapes get mangled silently.
+Split into `.claude/rules/`, which load alongside this file:
+
+- **[repo-conventions.md](.claude/rules/repo-conventions.md)** — stdlib-only constraint, the
+  four documents that drift together, the health check, autonomous runs, runtime and model
+  choice, commit hygiene, no heredoc stdin.
+- **[governance-library.md](.claude/rules/governance-library.md)** — `.ai/` enforcement tiers
+  and the `templates/ai-library/` mirror requirement.
+- **[claude-code-layout.md](.claude/rules/claude-code-layout.md)** — path-scoped to
+  `.claude/**`; discovered-vs-registered, the mirrors, frontmatter near-misses.
+
+**Skills live in `.claude/skills/`** because that is one of the only places Claude Code looks —
+a repo-root `skills/` folder is discovered by nothing and every frontmatter field in it is
+silently inert. Don't "tidy" them back out. If a new skill doesn't appear, run
+**`/reload-skills`** (v2.1.152+) rather than restarting.
+
+**Review checklists** live in `.ai/05-domains/`, phrased as questions rather than prescriptions
+so they carry to any project and leave judgement intact. All `convention`.

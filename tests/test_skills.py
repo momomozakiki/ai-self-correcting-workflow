@@ -489,5 +489,87 @@ class SkillTemplateParity(unittest.TestCase):
                     f"{rel}: .claude/skills/ and templates/skills/ have diverged")
 
 
+class VerificationStamps(unittest.TestCase):
+    """Files asserting Claude Code behaviour must say when they were last checked.
+
+    Claude Code ships several times a week. A reference file claiming what a
+    frontmatter field does, or which directories are discovered, is a claim about
+    a moving target -- and this repository has already carried one that went stale
+    within days of being written, against a runtime two versions newer, with
+    nothing observing it. The stamp is what makes staleness visible; without it
+    a wrong claim and a right one look identical.
+
+    The check is deliberately narrow. It does not know whether the *content* is
+    still true -- nothing here could. It only enforces that the claim is dated
+    and version-bound, so ``--self-test`` can nag when the date ages past
+    ``revalidation_interval_days``.
+    """
+
+    #: ``Verified 2026-08-06 against Claude Code v2.1.223`` -- surrounding prose is free.
+    STAMP = re.compile(
+        r"[Vv]erified\s+(?:on\s+)?\*{0,2}(\d{4}-\d{2}-\d{2})\*{0,2}\s+against\s+"
+        r"(?:Claude Code\s+)?\*{0,2}v(\d+\.\d+\.\d+)\*{0,2}")
+
+    #: A version reference is a claim about a specific release, so it dates itself
+    #: or it misleads.
+    VERSION_MENTION = re.compile(r"\bv\d+\.\d+\.\d+\b")
+
+    #: Sustained discussion of the product, rather than one passing mention.
+    #: A first draft counted keywords like "hook" and "frontmatter" instead, and
+    #: flagged `conditional-triggers.md` -- a file about *this repository's*
+    #: workflow triggers that names those things only in passing. A check that
+    #: cries wolf gets suppressed, so the trigger is narrower now: talking about
+    #: Claude Code repeatedly, or citing a version number.
+    PRODUCT_MENTION_THRESHOLD = 3
+
+    def stamped_files(self):
+        for path in sorted(SKILLS.rglob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            yield path.relative_to(REPO_ROOT).as_posix(), text
+
+    def needs_stamp(self, text):
+        return (text.lower().count("claude code") >= self.PRODUCT_MENTION_THRESHOLD
+                or bool(self.VERSION_MENTION.search(text)))
+
+    def test_files_asserting_behaviour_carry_a_stamp(self):
+        missing = [rel for rel, text in self.stamped_files()
+                   if self.needs_stamp(text) and not self.STAMP.search(text)]
+        self.assertEqual(
+            [], missing,
+            "These discuss Claude Code's own behaviour, or cite a version, but carry "
+            "no verification stamp. Add `Verified YYYY-MM-DD against Claude Code "
+            "vX.Y.Z`, or move the claims into a reference file that has one")
+
+    def test_stamps_are_well_formed_and_not_from_the_future(self):
+        import datetime
+        today = datetime.date.today()
+        for rel, text in self.stamped_files():
+            match = self.STAMP.search(text)
+            if not match:
+                continue
+            with self.subTest(file=rel):
+                stamped = datetime.date.fromisoformat(match.group(1))
+                self.assertLessEqual(
+                    stamped, today,
+                    f"{rel}: stamped {stamped}, which is in the future")
+
+    def test_all_stamps_agree_on_the_version(self):
+        """One re-verification pass, one version -- a split means one was forgotten.
+
+        This is the realistic drift: someone re-checks the file they are editing
+        and leaves its neighbour behind, so the tree claims two different
+        runtimes at once and neither reader can tell which is current.
+        """
+        versions = {}
+        for rel, text in self.stamped_files():
+            match = self.STAMP.search(text)
+            if match:
+                versions.setdefault(match.group(2), []).append(rel)
+        self.assertLessEqual(
+            len(versions), 1,
+            f"Verification stamps disagree on the Claude Code version: {versions}. "
+            "Re-verify the stragglers rather than editing the number")
+
+
 if __name__ == "__main__":
     unittest.main()

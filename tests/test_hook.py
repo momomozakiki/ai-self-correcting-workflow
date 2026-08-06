@@ -13,6 +13,7 @@ the hook. State is isolated per-test via a unique ``session_id`` and a temp
 ``CLAUDE_PROJECT_DIR``.
 """
 
+import datetime
 import io
 import json
 import os
@@ -842,6 +843,31 @@ class TestSelfTest(BaseCase):
         rc, out = self.run_self_test()
         self.assertEqual(rc, 1)
         self.assertIn("source_directories", out)
+
+    def _write_skill(self, stamp_date):
+        skill = self.project / ".claude" / "skills" / "demo"
+        skill.mkdir(parents=True, exist_ok=True)
+        (skill / "SKILL.md").write_text(
+            f"---\nname: demo\ndescription: d\n---\n\n"
+            f"Verified {stamp_date} against Claude Code v2.1.223.\n",
+            encoding="utf-8")
+
+    def test_a_stale_verification_stamp_is_reported(self):
+        """Backdated past the interval -- the warning must name the file."""
+        old = (datetime.date.today() - datetime.timedelta(days=400)).isoformat()
+        self._write_skill(old)
+        rc, out = self.run_self_test()
+        self.assertEqual(rc, 0, "a stale stamp is reported, never enforced")
+        self.assertIn("due re-verification", out)
+        self.assertIn("demo/SKILL.md", out.replace("\\", "/"))
+
+    def test_a_current_verification_stamp_is_not_reported(self):
+        """The other half of the control: a fresh stamp must stay silent."""
+        self._write_skill(datetime.date.today().isoformat())
+        rc, out = self.run_self_test()
+        self.assertEqual(rc, 0)
+        self.assertNotIn("due re-verification", out)
+        self.assertIn("skill verification stamps within", out)
 
     def test_writes_maturity_tracker(self):
         self.write_config({

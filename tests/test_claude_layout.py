@@ -295,6 +295,135 @@ class NonStandardFiles(unittest.TestCase):
             "like `skill/` or `rule/` is discovered by nothing and reports nothing")
 
 
+class RulePathsFrontmatter(unittest.TestCase):
+    """`paths:` is a glob list, and a malformed one matches nothing -- silently.
+
+    Criteria are from https://code.claude.com/docs/en/memory#path-specific-rules,
+    verified 2026-08-06 against v2.1.223. The bracket rule is the valuable one:
+    "A pattern with a `[` that can't be read as a bracket expression ... matches
+    nothing, and the rule's other patterns keep working." So a typo costs you the
+    rule with no error anywhere.
+    """
+
+    RULES = DOT_CLAUDE / "rules"
+
+    def rule_files(self):
+        if not self.RULES.is_dir():
+            return []
+        return sorted(self.RULES.rglob("*.md"))
+
+    @staticmethod
+    def paths_block(text):
+        """Return the `paths:` list, or None when the rule is unconditional."""
+        lines = text.splitlines()
+        if not lines or lines[0].strip() != "---":
+            return None
+        try:
+            end = next(i for i, l in enumerate(lines[1:], start=1) if l.strip() == "---")
+        except StopIteration:
+            return None
+        block, collecting = [], False
+        for line in lines[1:end]:
+            if line.strip().startswith("paths:"):
+                collecting = True
+                continue
+            if collecting:
+                stripped = line.strip()
+                if stripped.startswith("- "):
+                    block.append(stripped[2:].strip().strip('"').strip("'"))
+                elif stripped and not line.startswith((" ", "\t")):
+                    break
+        return block if collecting else None
+
+    def test_paths_lists_are_well_formed(self):
+        for path in self.rule_files():
+            patterns = self.paths_block(path.read_text(encoding="utf-8"))
+            if patterns is None:
+                continue  # unconditional rule -- loads at session start
+            with self.subTest(rule=path.name):
+                self.assertTrue(
+                    patterns,
+                    "`paths:` present but empty -- omit the field instead; a rule "
+                    "without it loads unconditionally, one with an empty list is "
+                    "ambiguous")
+                for pattern in patterns:
+                    bare = _unescaped_brackets(pattern)
+                    self.assertEqual(
+                        bare.count("["), bare.count("]"),
+                        f"{pattern!r}: unbalanced '[' is read as a bracket "
+                        "expression and matches NOTHING -- escape it as '\\['")
+                    self.assertLessEqual(
+                        _brace_expansion_size(pattern), 1000,
+                        f"{pattern!r}: exceeds the documented 1,000-pattern brace "
+                        "budget; Claude Code then uses it unexpanded and its "
+                        "literal braces match no files")
+
+    def test_unconditional_rules_carry_no_paths(self):
+        """Anything that must survive `/compact` must not be path-scoped.
+
+        Path-scoped rules "are not re-injected automatically" after compaction --
+        they reload only when a matching file is next read. A rule that must hold
+        unconditionally therefore cannot be gated.
+        """
+        for name in ("repo-conventions.md", "governance-library.md"):
+            path = self.RULES / name
+            if not path.is_file():
+                continue
+            with self.subTest(rule=name):
+                self.assertIsNone(
+                    self.paths_block(path.read_text(encoding="utf-8")),
+                    f"{name} must load every session; a `paths:` gate would drop "
+                    "it after /compact until a matching file happens to be read")
+
+
+class TemplateMirrors(unittest.TestCase):
+    """`.claude/rules/` and `.claude/agents/` ship to adopters too.
+
+    Same reasoning as ``templates/skills/`` and ``templates/ai-library/``: adopters
+    vendor this repo at ``.claude/workflow-core/``, where these directories sit at
+    a nested path Claude Code does not read as theirs. They copy from
+    ``templates/``. A directory added here and not there is a directory adopters
+    never get.
+    """
+
+    PAIRS = (("rules", DOT_CLAUDE / "rules", REPO_ROOT / "templates" / "rules"),
+             ("agents", DOT_CLAUDE / "agents", REPO_ROOT / "templates" / "agents"))
+
+    def test_mirrors_exist_and_match(self):
+        for label, source, template in self.PAIRS:
+            with self.subTest(tree=label):
+                if not source.is_dir():
+                    self.skipTest(f".claude/{label}/ absent")
+                self.assertTrue(template.is_dir(),
+                                f"templates/{label}/ missing -- adopters get nothing")
+                src = {p.relative_to(source).as_posix() for p in source.rglob("*.md")}
+                tpl = {p.relative_to(template).as_posix() for p in template.rglob("*.md")}
+                self.assertEqual(src, tpl, f"templates/{label}/ has drifted")
+                for rel in sorted(src):
+                    self.assertEqual(
+                        (source / rel).read_bytes(), (template / rel).read_bytes(),
+                        f"{label}/{rel}: source and template have diverged")
+
+
+def _unescaped_brackets(pattern):
+    r"""Drop backslash-escaped brackets before counting.
+
+    ``photos \[2024/**`` is the *documented* way to match a literal '['. A first
+    draft counted raw characters and rejected it -- flagging the correct form as
+    the error. Found by running the check against the docs' own example rather
+    than reasoning about it.
+    """
+    return re.sub(r"\\.", "", pattern)
+
+
+def _brace_expansion_size(pattern):
+    """Product of brace-group sizes -- the documented budget is per rule, per pattern."""
+    total = 1
+    for group in re.findall(r"\{([^{}]*)\}", pattern):
+        total *= max(1, group.count(",") + 1)
+    return total
+
+
 class LocalSettingsAreIgnored(unittest.TestCase):
     """A machine-global ignore rule protects one checkout, not the repository."""
 

@@ -64,13 +64,24 @@ workflow-core/
 ├── history/                      # The workflow’s own ledger (practice what you preach)
 │   ├── FORMAT.md
 │   └── YYYY-Www.md
-├── hooks/
-│   └── workflow_hook.py          # Generic dispatcher, reads project config
-├── .claude/skills/               # The only path Claude Code discovers skills at
-│   ├── adaptive-workflow/        # Agent process manual (SKILL.md + references/)
-│   ├── autonomous-task/          # Unattended runs (removes AskUserQuestion)
-│   ├── handover/                 # The review checklist an unattended run leaves
-│   └── skill-authoring/          # How to structure, size and split a skill
+├── .claude/                      # Everything Claude Code reads
+│   ├── settings.json             # Registers the hook — the guard's only wiring
+│   ├── workflow_config.json      # This repo's own config (read by the hook, not Claude Code)
+│   ├── hooks/
+│   │   └── workflow_hook.py      # Generic dispatcher. NOT discovered by location:
+│   │                             #   it runs only because settings.json names it
+│   ├── skills/                   # The only path Claude Code discovers skills at
+│   │   ├── adaptive-workflow/    # Agent process manual (SKILL.md + references/)
+│   │   ├── autonomous-task/      # Unattended runs (removes AskUserQuestion)
+│   │   ├── claude-code-layout/   # Where configuration must live to load at all
+│   │   ├── handover/             # The review checklist an unattended run leaves
+│   │   └── skill-authoring/      # How to structure, size and split a skill
+│   ├── rules/                    # Topic-scoped instructions loaded with CLAUDE.md
+│   │   ├── repo-conventions.md   #   Unconditional — must survive /compact
+│   │   ├── governance-library.md #   Unconditional
+│   │   └── claude-code-layout.md #   paths:-scoped to .claude/**
+│   └── agents/
+│       └── layout-auditor.md     # Read-only wiring audit
 ├── schemas/
 │   ├── hook_contract.md          # Validated I/O shapes + --self-test contract
 │   └── config_schema.json        # Schema for project workflow_config.json
@@ -79,6 +90,8 @@ workflow-core/
 │   ├── settings.json.hooks       # Hook definitions for .claude/settings.json
 │   ├── workflow_config.json      # Default configuration (to be customized)
 │   ├── skills/                   # Mirror of .claude/skills/ — adopters copy this
+│   ├── rules/                    # Mirror of .claude/rules/
+│   ├── agents/                   # Mirror of .claude/agents/
 │   └── ai-library/               # Governance library scaffold for adopters
 ├── tests/
 │   ├── test_hook.py              # Synthetic event tests for the hook dispatcher
@@ -97,7 +110,11 @@ my-project/
 │   │   └── (contents above)
 │   ├── skills/                   # Copied from workflow-core/templates/skills/ —
 │   │   └── adaptive-workflow/    #   Claude Code discovers skills only here
-│   ├── settings.json             # Merged with templates/settings.json.hooks
+│   ├── rules/                    # Copied from templates/rules/ — loaded with CLAUDE.md
+│   ├── agents/                   # Copied from templates/agents/
+│   ├── settings.json             # MERGED with templates/settings.json.hooks, never
+│   │                             #   overwritten. Its hook commands must name
+│   │                             #   .claude/workflow-core/.claude/hooks/workflow_hook.py
 │   └── workflow_config.json      # Project-specific paths/feature flags
 ├── .ai/                          # Living docs (if used)
 ├── docs/

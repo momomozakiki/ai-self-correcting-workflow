@@ -5,6 +5,8 @@ description: Structure, size and split a Claude Code skill. Use when creating a 
 
 # Authoring a skill
 
+Verified 2026-08-06 against Claude Code v2.1.223.
+
 One skill, one responsibility. A skill that needs "and" in its description is two skills.
 
 Everything here is verified against the official documentation; the citations and check dates
@@ -114,10 +116,47 @@ class have one reason to change?" survives contact with a codebase it wasn't wri
    there; the parity test fails otherwise.
 3. Skills carry **no** doc-standard frontmatter (no `version`/`last_validated`) — their
    frontmatter belongs to Claude Code's schema. The ledger traces their history instead.
+   A reference file that asserts Claude Code behaviour instead carries an inline
+   **verification stamp** (below), which `tests/test_skills.py::VerificationStamps` checks.
 4. Log the change in `history/YYYY-Www.md`.
 5. If the new skill does not appear, run **`/reload-skills`** (v2.1.152+) — a skills directory
    that did not exist at session start is not watched by live change detection. Restart only
    if the reload is unavailable; a restart discards the conversation, the reload does not.
+
+## Verification stamps, and how to refresh them
+
+Any file here that asserts how Claude Code behaves carries a stamp, in this exact shape so a
+test can read it:
+
+```
+Verified YYYY-MM-DD against Claude Code vX.Y.Z
+```
+
+The wording around it is free; the date and the `vX.Y.Z` are not. A claim about a product that
+ships several times a week is worthless without one, and this repository has already shipped a
+stamp that went stale within days with nothing observing it.
+
+**To refresh — the procedure, not a vibe:**
+
+1. **Read the installed version:** `ls ~/.vscode/extensions/anthropic.claude-code-*` and take
+   the **highest**, not the first. Several coexist; reading the first is how v2.1.223 was
+   recorded as v2.1.221.
+2. **Diff the release notes** from the stamped version to that one:
+   <https://github.com/anthropics/claude-code/releases>.
+3. **Re-read each cited doc page in full** — not the section you remember.
+4. **Confirm or correct every claim**, then update the stamp.
+5. **Log the re-verification in the ledger**, including anything that changed.
+
+This is deliberately manual. An automated check would have to scrape release notes, which means
+a dependency and a parser, in a repository that stays stdlib-only so adopters can vendor it.
+What *is* automated is the nagging: `VerificationStamps` fails on a malformed or missing stamp,
+and `--self-test` reports one older than `revalidation_interval_days` (default 180) — reported,
+never enforced.
+
+**Step 3 is the one people skip.** Twice now an absence was recorded from a partial read —
+`disallowed-tools`' version floor (it was in the release notes) and subagent
+`effort`/`maxTurns` (they were in the field table). *A reference page is not the whole record*,
+and "not on the page I read" is not "not documented".
 
 ## Reference files
 

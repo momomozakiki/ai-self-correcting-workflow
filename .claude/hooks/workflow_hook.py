@@ -74,6 +74,14 @@ def find_config_path() -> Optional[Path]:
     return None
 
 
+#: ``Verified 2026-08-06 against Claude Code v2.1.223``. Kept identical to
+#: ``tests/test_skills.py::VerificationStamps.STAMP`` -- the test enforces the
+#: shape, ``--self-test`` reports the age, and they must read the same thing.
+STAMP_RE = re.compile(
+    r"[Vv]erified\s+(?:on\s+)?\*{0,2}(\d{4}-\d{2}-\d{2})\*{0,2}\s+against\s+"
+    r"(?:Claude Code\s+)?\*{0,2}v(\d+\.\d+\.\d+)\*{0,2}")
+
+
 def find_schema_path() -> Optional[Path]:
     """Locate ``schemas/config_schema.json`` by walking upward from this file.
 
@@ -1566,6 +1574,44 @@ def run_self_test() -> int:
             out.append(f"         ... and {len(stale) - 10} more")
     elif interval:
         out.append(f"[ ok ] checklist sources validated within {interval}d")
+
+    # --- skill verification stamps -------------------------------------------
+    # Same argument as above, applied to claims about Claude Code itself, which
+    # ships several times a week. `tests/test_skills.py::VerificationStamps`
+    # enforces that the stamp exists and is well-formed; only *age* is judged
+    # here, because a date going quietly out of range is not a build failure --
+    # it is a prompt to re-read the docs. Reported, never enforced.
+    stale_stamps: List[str] = []
+    skills_root = project_root / ".claude" / "skills"
+    if interval and skills_root.is_dir():
+        cutoff = datetime.date.today() - datetime.timedelta(days=int(interval))
+        for md in sorted(skills_root.rglob("*.md")):
+            try:
+                text = md.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            match = STAMP_RE.search(text)
+            if not match:
+                continue
+            try:
+                stamped = datetime.date.fromisoformat(match.group(1))
+            except ValueError:
+                continue
+            if stamped < cutoff:
+                rel = md.relative_to(project_root).as_posix()
+                stale_stamps.append(f"{rel} (v{match.group(2)}, stamped {stamped})")
+    checks["skill_stamps_current"] = not stale_stamps
+    if stale_stamps:
+        out.append(f"[warn] {len(stale_stamps)} skill file(s) due re-verification "
+                   f"(>{interval}d):")
+        out += [f"         {s}" for s in stale_stamps[:10]]
+        if len(stale_stamps) > 10:
+            out.append(f"         ... and {len(stale_stamps) - 10} more")
+        out.append("         Refresh per `.claude/skills/skill-authoring/SKILL.md`: "
+                   "read the highest installed version, diff the release notes, "
+                   "re-read each cited page in full.")
+    elif interval and skills_root.is_dir():
+        out.append(f"[ ok ] skill verification stamps within {interval}d")
 
     # --- tier-0 prohibitions --------------------------------------------------
     prohibitions = sorted((library_root / "02-market-rules" / "prohibitions").glob("prohibition-*.json"))
