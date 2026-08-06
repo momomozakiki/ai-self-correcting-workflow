@@ -562,9 +562,19 @@ One prohibition deliberately did **not** move. `prohibition-commit-secrets` stay
 1. Add the workflow repository as a Git submodule:  
    `git submodule add <workflow-repo-url> .claude/workflow-core`
 2. Copy `templates/workflow_config.json` to `.claude/workflow_config.json` and adjust paths/feature flags.
-3. Merge `templates/settings.json.hooks` into `.claude/settings.json` (add the `hooks` block).
-4. Include the fragment `templates/CLAUDE.md.fragment` in the project’s `CLAUDE.md`.
-5. Initialize the ledger directory: `mkdir history && cp .claude/workflow-core/templates/history/FORMAT.md history/FORMAT.md`
+3. Merge `templates/settings.json.hooks` into `.claude/settings.json` — the `hooks` block
+   **and** `permissions.defaultMode`. Merge, don't copy: the file is a fragment, and
+   overwriting discards your own permissions and env.
+   **Then verify the guard is live**: attempt `git push --force` to your main branch and
+   confirm it is *denied*. If it is allowed, the `PreToolUse` entry did not take, and all four
+   Tier-0 prohibitions are documentation only.
+4. Copy the skills: `cp -r .claude/workflow-core/templates/skills/* .claude/skills/`. Claude
+   Code discovers skills only under `.claude/skills/`, so the submodule's own copy is not
+   loaded. Re-copy after each update.
+5. Add `.claude/settings.local.json` to your `.gitignore` — it holds personal permission
+   grants and must not be committed.
+6. Include the fragment `templates/CLAUDE.md.fragment` in the project’s `CLAUDE.md`.
+7. Initialize the ledger directory: `mkdir history && cp .claude/workflow-core/templates/history/FORMAT.md history/FORMAT.md`
 
 ### 8.2 Updating the Workflow
 From the project root:

@@ -41,9 +41,14 @@ workflow-core/
    `git submodule add <this-repo-url> .claude/workflow-core`
 2. Copy `templates/workflow_config.json` → `.claude/workflow_config.json`, adjust
    paths and feature flags.
-3. Merge `templates/settings.json.hooks` into `.claude/settings.json`.
-4. Include `templates/CLAUDE.md.fragment` in your project's `CLAUDE.md`.
-5. Initialize the ledger:
+3. Merge `templates/settings.json.hooks` into `.claude/settings.json` — hooks **and**
+   `permissions.defaultMode`. Merge, don't copy. Then verify: a `git push --force` to
+   your main branch must be **denied**.
+4. Copy the skills: `cp -r .claude/workflow-core/templates/skills/* .claude/skills/`.
+   Only `.claude/skills/` is discovered; the submodule's copy is not.
+5. Add `.claude/settings.local.json` to your `.gitignore`.
+6. Include `templates/CLAUDE.md.fragment` in your project's `CLAUDE.md`.
+7. Initialize the ledger:
    `mkdir history && cp .claude/workflow-core/templates/history/FORMAT.md history/`
 
 The `workflow_config.json` maps generic concepts (source dirs, ledger dir,

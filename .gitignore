@@ -8,6 +8,12 @@ __pycache__/
 # but ignore any stray copies just in case.
 workflow_hook_state_*.json
 
+# Personal permission grants and per-machine overrides. Claude Code's own docs
+# mark this file gitignored. It was untracked here only because of a machine-global
+# ignore rule, which no clone inherits -- on any other checkout `git add -A` would
+# have swept it in, the way it once swept in a stray breadcrumb (commit 3feacb3).
+.claude/settings.local.json
+
 # Editors / OS
 .DS_Store
 Thumbs.db
