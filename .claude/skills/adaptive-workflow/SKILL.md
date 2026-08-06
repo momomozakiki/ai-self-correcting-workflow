@@ -114,8 +114,17 @@ For each checklist item: **implement → run linter/formatter/tests → fix
 failures before moving on.** If blocked, log the obstacle, propose an updated
 plan, await approval, continue.
 
-**Three execution guards:**
+**Four execution guards:**
 
+- **Settle disputes by direct test.** When a claim about how the system behaves is
+  disputed or uncertain, *run it* — don't argue it. Use the docs to design the test,
+  never in place of one, and test **every** competing claim, including your own.
+  Report the raw output, not a paraphrase. If it genuinely can't be executed, label it
+  unproven and say what would settle it; the best-argued position is not a result.
+  When the user has to run it, write the instructions in plain language — what to do,
+  what a pass looks like, what a failure looks like, and why you can't do it yourself.
+  Assume no expertise: no jargon, no "simply run", no assuming they know what a hook is.
+  Nothing enforces this — see `.ai/01-phases/rule-direct-test-disputes.json`.
 - **Reversibility.** Git is the rollback mechanism — make sure a clean commit
   checkpoint exists before anything hard to undo. If an operation can't be
   reversed, say so *before* running it.
