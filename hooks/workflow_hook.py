@@ -114,6 +114,7 @@ def default_state() -> Dict[str, Any]:
         "ledger_touched": False,
         "stop_block_count": 0,
         "doc_nudged": False,
+        "skill_nudged": False,
         "main_branch_detected": None,  # memoised by resolve_main_branch() on first Stop
         "recent_tool_calls": [],       # rolling window of tool-call signatures
         "loop_hits": [],               # signatures already reported this session
@@ -338,6 +339,19 @@ def has_outstanding_plan(project_root: Path) -> bool:
         return BREADCRUMB_MARKER not in target.read_text(encoding="utf-8")
     except Exception:
         return True  # unreadable -- surface it rather than swallow it
+
+
+def skills_dir_exists(project_root: Path) -> bool:
+    """True if this project has a ``.claude/skills/`` directory.
+
+    Gates the ``SessionStart`` ``reloadSkills`` flag. Asking for a reload in a
+    project with no skills would be a scan that can only ever find nothing, and
+    the flag should mean something when it appears.
+    """
+    try:
+        return (project_root / ".claude" / "skills").is_dir()
+    except Exception:
+        return False
 
 
 def dirty_excluding_breadcrumb(project_root: Path) -> bool:
@@ -567,7 +581,17 @@ def emit(obj: Dict[str, Any]) -> None:
 
 
 def session_context(event_name: str, additional_context: str,
-                    session_title: Optional[str] = None) -> Dict[str, Any]:
+                    session_title: Optional[str] = None,
+                    reload_skills: bool = False) -> Dict[str, Any]:
+    """Build a ``hookSpecificOutput`` envelope.
+
+    ``reload_skills`` is a ``SessionStart``-only field: it asks Claude Code to
+    re-scan the skill directories before the session begins. Live change
+    detection does not watch a top-level skills directory that did not exist when
+    the session started, which is how this repository once ran for months with
+    skills that were never loaded. Setting it costs one directory scan and
+    removes that failure mode.
+    """
     hook_out: Dict[str, Any] = {
         "hookEventName": event_name,
         "additionalContext": additional_context,
@@ -575,6 +599,8 @@ def session_context(event_name: str, additional_context: str,
     out: Dict[str, Any] = {"hookSpecificOutput": hook_out}
     if session_title:
         out["hookSpecificOutput"]["sessionTitle"] = session_title
+    if reload_skills:
+        out["hookSpecificOutput"]["reloadSkills"] = True
     return out
 
 
@@ -1036,7 +1062,8 @@ def handle_session_start(event: Dict[str, Any], config: Dict[str, Any],
                  "(history/YYYY-Www.md); add doc frontmatter (provenance + version) to new docs.")
 
     emit(session_context("SessionStart", "\n\n".join(parts),
-                         session_title="Adaptive Workflow session"))
+                         session_title="Adaptive Workflow session",
+                         reload_skills=skills_dir_exists(project_root)))
 
 
 def handle_pre_tool_use(event: Dict[str, Any], config: Dict[str, Any],
@@ -1086,6 +1113,22 @@ def handle_post_tool_use(event: Dict[str, Any], config: Dict[str, Any],
         state["doc_nudged"] = True
         notes.append("Consider updating docs and the weekly ledger "
                      "(history/YYYY-Www.md) if this change is worth tracing.")
+
+    # Skills fail silently in every direction: a misplaced directory loads
+    # nothing, an unknown frontmatter key is ignored, and a body past the
+    # compaction budget is truncated without a diagnostic. Nothing reports any of
+    # it, so the one moment worth spending a nudge on is just after a skill file
+    # is written. Advisory only -- PostToolUse fires after the write.
+    if (any(path_under_any(p, [".claude/skills"], project_root) for p in paths)
+            and not state.get("skill_nudged")):
+        state["skill_nudged"] = True
+        notes.append(
+            "Skill file edited. The `skill-authoring` skill has the rules "
+            "(500-line / ~5,000-token caps, documented frontmatter keys only); "
+            "`claude-code-layout` has the placement rules. Run "
+            "`python -m unittest tests.test_skills tests.test_claude_layout`, and "
+            "mirror `.claude/skills/` into `templates/skills/` in the same commit."
+        )
 
     loop = detect_loop(event, config, state)
     if loop:

@@ -120,6 +120,24 @@ class TestSessionStart(BaseCase):
         self.assertEqual(out["hookSpecificOutput"]["hookEventName"], "SessionStart")
         self.assertIn("session start", out["hookSpecificOutput"]["additionalContext"].lower())
 
+    def test_reload_skills_when_a_skills_directory_exists(self):
+        """Live change detection does not watch a skills directory created after
+        the session started -- which is how this repository once ran for months
+        with skills that were never loaded. Asking for a re-scan removes it."""
+        (self.project / ".claude" / "skills" / "demo").mkdir(parents=True)
+        rc, out = run_hook(
+            {"hookEventName": "SessionStart", "session_id": self.session_id},
+            project_dir=self.project)
+        self.assertIs(True, out["hookSpecificOutput"].get("reloadSkills"))
+
+    def test_no_reload_skills_without_a_skills_directory(self):
+        """The flag should mean something when it appears; a project with no
+        skills would be asking for a scan that can only find nothing."""
+        rc, out = run_hook(
+            {"hookEventName": "SessionStart", "session_id": self.session_id},
+            project_dir=self.project)
+        self.assertNotIn("reloadSkills", out["hookSpecificOutput"])
+
     def test_env_check_null_version_flag_existence(self):
         # A tool with version_flag=null: only existence is checked.
         tool = self.project / "mytool.bin"
@@ -206,6 +224,36 @@ class TestPostToolUse(BaseCase):
         run_hook(self.edit_event("README.md"), project_dir=self.project)
         state = workflow_hook.load_state(self.session_id)
         self.assertFalse(state["source_changed"])
+
+    def test_skill_edit_nudges_once(self):
+        """Skills fail silently in every direction, so the moment just after one
+        is written is the only cheap place to say so."""
+        rc, out = run_hook(self.edit_event(".claude/skills/demo/SKILL.md"),
+                           project_dir=self.project)
+        self.assertIsNotNone(out, "editing a skill emitted no advisory")
+        ctx = out["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("skill-authoring", ctx)
+        self.assertIn("templates/skills", ctx)
+        self.assertTrue(workflow_hook.load_state(self.session_id)["skill_nudged"])
+
+        # Advisory, not a gate: it must not repeat, and must never block.
+        self.assertNotIn("decision", out)
+        rc, again = run_hook(self.edit_event(".claude/skills/other/SKILL.md"),
+                             project_dir=self.project)
+        self.assertIsNone(again, "the skill advisory repeated")
+
+    def test_editing_a_reference_under_a_skill_also_nudges(self):
+        rc, out = run_hook(
+            self.edit_event(".claude/skills/demo/references/notes.md"),
+            project_dir=self.project)
+        self.assertIsNotNone(out)
+        self.assertIn("skill-authoring",
+                      out["hookSpecificOutput"]["additionalContext"])
+
+    def test_a_non_skill_edit_does_not_nudge_about_skills(self):
+        rc, out = run_hook(self.edit_event("README.md"), project_dir=self.project)
+        self.assertIsNone(out)
+        self.assertFalse(workflow_hook.load_state(self.session_id)["skill_nudged"])
 
 
 class TestStop(BaseCase):

@@ -29,6 +29,7 @@ single source of truth for the state keys** — no other document restates it.
 | `source_changed` | bool | A file under `source_directories` was edited this session. |
 | `ledger_touched` | bool | A file under `ledger.directory` was edited this session. |
 | `doc_nudged` | bool | The one-time `PostToolUse` documentation advisory has fired. |
+| `skill_nudged` | bool | The one-time `PostToolUse` skill-authoring advisory has fired (a file under `.claude/skills/` was edited). |
 | `stop_block_count` | int | Number of `Stop` blocks emitted this session (capped by `stop_hook.max_blocks`). |
 | `main_branch_detected` | str \| null | Auto-detected default branch, memoised on the first `Stop` so a session probes git at most once. |
 | `recent_tool_calls` | list[str] | Rolling window (last 20) of tool-call signatures, for loop detection. |
@@ -58,13 +59,22 @@ compared against `{remote}/{branch}`. If the submodule is behind, a
 context. **Detection & notification only — never auto-applies the update.**
 Fail-soft: any git/network error leaves the check silent.
 
+**`reloadSkills`:** emitted as `true` when `.claude/skills/` exists in the project,
+omitted otherwise. Claude Code's live change detection does **not** watch a
+top-level skills directory that did not exist when the session started, so a
+skill added between sessions — or by the previous session — can sit on disk
+unloaded, with no diagnostic. Asking for a re-scan at session start costs one
+directory scan and removes that failure mode. It is gated on the directory
+existing so the flag means something when it appears.
+
 **Output:**
 ```json
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
     "additionalContext": "…markdown context injected into the session…",
-    "sessionTitle": "Adaptive Workflow session"
+    "sessionTitle": "Adaptive Workflow session",
+    "reloadSkills": true
   }
 }
 ```
@@ -151,7 +161,16 @@ Both the top-level `file_path` and every `edits[].file_path` are collected.
 
 **Behaviour:** set `source_changed` / `ledger_touched` flags by directory; emit
 a one-time advisory nudge if source changed without a doc file being touched;
-run loop detection (below). **Advisory only — never blocks.**
+emit a one-time **skill advisory** when an edited path is under `.claude/skills/`
+(`skill_nudged`); run loop detection (below). **Advisory only — never blocks.**
+
+The skill advisory exists because skills fail silently in every direction: a
+misplaced directory loads nothing, an unrecognised frontmatter key is ignored,
+and a body past the compaction budget is truncated without a diagnostic. Nothing
+reports any of it, so the moment just after a skill file is written is the only
+cheap place to point at `skill-authoring`, `claude-code-layout`, the tests, and
+the `templates/skills/` mirror. It cannot block — `PostToolUse` fires after the
+write, so the file already exists by the time it runs.
 
 **Loop detection** (`loop_detection.enabled`, default true). A signature is
 `sha256(tool_name + "\0" + json.dumps(tool_input, sort_keys=True))`, truncated to

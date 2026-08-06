@@ -470,6 +470,7 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 - `source_changed` (bool) – any edit to a configured source directory this session.
 - `ledger_touched` (bool) – the current week’s ledger file was created or modified during the session.
 - `stop_block_count` (int) – how many times the Stop hook has blocked.
+- `doc_nudged` / `skill_nudged` (bool) – the one-time `PostToolUse` advisories have fired.
 - `main_branch_detected` (str | null) – the auto-detected default branch, memoised on the first `Stop` so one session probes git at most once (see §7.4).
 - Timestamp of session start (for stale cleanup).
 
@@ -482,7 +483,8 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 - Runs environment checks using paths and version flags from config (respecting `null` version_flag to only verify existence).
 - Parses the `**Next action:**` line from the configured roadmap file.
 - **F5 update check (opt-in):** when `workflow_update_check.enabled` is true and the configured `submodule_path` is a linked git repo, fetches it at most once per day (gated by `.ai/.workflow_check_date`) and, if it is behind `{remote}/{branch}`, appends a `🔄 Workflow updates available` notice. Detection only — never auto-applies. Off by default; see §9.
-- Outputs: `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "..."}}` and optionally a `sessionTitle`.
+- **Asks Claude Code to re-scan the skill directories** (`reloadSkills: true`) when `.claude/skills/` exists. Live change detection does not watch a top-level skills directory that did not exist when the session started, so a skill added between sessions can sit on disk unloaded with no diagnostic — the mechanical form of the defect that had this repository's own skills invisible for months. Gated on the directory existing, so the flag means something when it appears.
+- Outputs: `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "...", "reloadSkills": true}}` and optionally a `sessionTitle`.
 
 #### PreToolUse
 - Matcher: `Bash|PowerShell` — both, because `Bash(...)` and `PowerShell(...)` are separate permission namespaces and a Bash‑only guard is bypassed by the other tool.
@@ -499,6 +501,7 @@ State is persisted across invocations using a temporary JSON file: `Path(tempfil
 - If any path falls under a source directory, sets `source_changed` flag in state.
 - If any path falls under the ledger directory, sets `ledger_touched` flag.
 - Once per session, if source changed but no documentation file from the configured doc directories has been touched, emits an advisory nudge: *“Consider updating docs and the weekly ledger if this change is worth tracing.”*
+- Once per session, if an edited path is under `.claude/skills/`, emits a **skill advisory** (`skill_nudged`) pointing at the `skill-authoring` and `claude-code-layout` skills, `tests/test_skills.py` + `tests/test_claude_layout.py`, and the `templates/skills/` mirror. Skills fail silently in every direction — a misplaced directory loads nothing, an unrecognised frontmatter key is ignored, an over-budget body is truncated — so the moment just after a skill file is written is the only cheap place to say so. It cannot block: `PostToolUse` fires after the write.
 - Outputs: same `hookSpecificOutput` structure; advisory only.
 
 #### Stop
