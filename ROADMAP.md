@@ -33,7 +33,20 @@ Explicitly rejected, with reasons in the assessment: `UserPromptSubmit` (a block
 fail-open dispatcher), `FileChanged` (literal matcher vs a weekly-rolling ledger filename), and
 the remaining 19 (no Phase 0–3 obligation attaches).
 
-- [ ] **Determine why a guard `ask` did not surface.** On 2026-08-06 a heredoc ran with no
+- [x] **Determine why a guard `ask` did not surface.** **Resolved 2026-08-06.** An `ask`
+      requires a human present; a `deny` does not. Re-run interactively, `git rebase` produced
+      the prompt and it was declined — from the same dispatcher and the same registration that
+      had allowed it silently minutes earlier in an unattended session. That refutes the
+      standing claim that `ask` fails as a class: one `ask` surfacing is sufficient, and the
+      cause is the session, not this repository and not Claude Code's handling of
+      `permissionDecision: "ask"`. Consequence recorded rather than filed away: the two
+      artifacts carrying `enforcement_mode: ask` (`rule-no-heredoc-stdin`,
+      `prohibition-rewrite-published-history`) are `live` over an **attended** session only,
+      and their `enforcement_note`s plus GUIDE §7.5 now say so. The two prohibitions that must
+      hold unattended — delete-ledger and force-push-shared — are both `deny`, and the `deny`
+      path was observed blocking in the unattended session. Original record below.
+
+      On 2026-08-06 a heredoc ran with no
       prompt while the dispatcher, replayed with the identical command, returned
       `permissionDecision: "ask"`. GUIDE §7.5 documents `dontAsk` turning an `ask` into a silent
       *block*; what was observed was a silent *allow*, which is undocumented. Until this is
