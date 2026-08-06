@@ -157,10 +157,20 @@ rules in [references/doc-frontmatter.md](references/doc-frontmatter.md).
 - **Retrospective:** log any mistake worth remembering; mark it `(recurring)` if
   it has happened before, and codify it (rule file + a line in this skill).
   `python hooks/workflow_hook.py --self-test` reports uncodified recurrences.
-- **Commit & push:** `git add -A && git commit -m "Plan: <slug> – <summary>" && git push`.
+- **Commit & push:** clear the breadcrumb *first*, then
+  `git add -A && git commit -m "Plan: <slug> – <summary>" && git push`.
   Multi‑paragraph message → repeated `-m` flags or `git commit -F <file>`. Avoid
   heredocs / `-F -` (the Bash safety layer can reject stdin‑fed commands) and a
   bare `git commit` (it can open an editor and hang).
+  **`git add -A` sweeps in `plans/UNFINISHED.md` (recurring).** The Stop hook rewrites
+  that breadcrumb on every dirty-tree turn, so it is almost always present when you
+  commit mid-task. It is transient session state, not an artifact, and it has been
+  committed by accident twice (`ceb17c2` → fixed by `3feacb3`; recurred 2026-08-06).
+  The path is deliberately **not** gitignored, because a human-authored plan lives at
+  the same path and ignoring it would make that plan uncommittable. So the check is
+  manual: before every `git add -A`, confirm the file is either absent or a real plan —
+  `head -1 plans/UNFINISHED.md` showing `<!-- workflow-hook: auto-breadcrumb -->` means
+  do not commit it. Recover with `git rm --cached plans/UNFINISHED.md`.
 - **Self-check:** not done until `UNFINISHED.md` is cleared, the ledger entry is
   written, and the commit is pushed.
 
