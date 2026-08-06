@@ -13,8 +13,9 @@ lives in `.claude/workflow-core/GUIDE.md`; the agent operating manual is the
 `.claude/skills/` (and `~/.claude/skills/`), so copy them out of the submodule:
 `cp -r .claude/workflow-core/templates/skills/* .claude/skills/`. Re-copy after a
 `git submodule update --remote`, or whenever the upstream changelog reports a skill
-change — a copy nobody resyncs silently goes stale. If `.claude/skills/` did not
-exist before, restart Claude Code once so the new directory is watched.
+change — a copy nobody resyncs silently goes stale. If the skills do not show up,
+run `/reload-skills` (v2.1.152+): a skills directory that did not exist at session
+start is not watched. Restart only if that command is unavailable.
 
 Hooks provide ambient reminders — treat them as helpful nudges, not blockers.
 

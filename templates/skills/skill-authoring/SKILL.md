@@ -115,8 +115,9 @@ class have one reason to change?" survives contact with a codebase it wasn't wri
 3. Skills carry **no** doc-standard frontmatter (no `version`/`last_validated`) — their
    frontmatter belongs to Claude Code's schema. The ledger traces their history instead.
 4. Log the change in `history/YYYY-Www.md`.
-5. If the skills directory is newly created at the top level, **restart Claude Code** — a
-   skills directory that did not exist at session start is not watched.
+5. If the new skill does not appear, run **`/reload-skills`** (v2.1.152+) — a skills directory
+   that did not exist at session start is not watched by live change detection. Restart only
+   if the reload is unavailable; a restart discards the conversation, the reload does not.
 
 ## Reference files
 

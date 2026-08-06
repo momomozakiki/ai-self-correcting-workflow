@@ -80,8 +80,8 @@ treat them as helpful nudges, not blockers.
   field in it is silently inert. Don't "tidy" them back out. Authoring rules are in the
   `skill-authoring` skill; `tests/test_skills.py` enforces structure, size and the old
   path staying gone, and mirrors `.claude/skills/` into `templates/skills/` for adopters.
-  **A newly created top-level skills directory needs a Claude Code restart** before it is
-  watched.
+  A newly created top-level skills directory is not watched by live change detection — run
+  **`/reload-skills`** (v2.1.152+) rather than restarting.
 - **Review checklists** live in `.ai/05-domains/`, phrased as questions rather than
   prescriptions so they carry to any project and leave judgement intact. All `convention`.
   `.ai/06-components/` stays empty until a pattern has shipped and survived review —

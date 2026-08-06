@@ -1,9 +1,23 @@
 # Verified facts about Claude Code skills
 
-Every claim below was checked against <https://code.claude.com/docs/en/skills> on
-**2026-08-06**, against Claude Code **v2.1.221**. Re-verify before trusting any of it in a
-later version; several of these carry explicit version floors, which is evidence the surface
-moves.
+Every claim below was checked on **2026-08-06** against Claude Code **v2.1.221**. Re-verify
+before trusting any of it in a later version; several carry explicit version floors, which is
+evidence the surface moves.
+
+**Name the source, not just the fact.** There are three, and they do not say the same things:
+
+| Source | Carries |
+|---|---|
+| <https://code.claude.com/docs/en/skills> | Behaviour and the frontmatter field list |
+| <https://code.claude.com/docs/en/hooks> | Hook output shapes, including `reloadSkills` |
+| <https://github.com/anthropics/claude-code/releases> | **Version floors and new commands** |
+
+This matters because it has already caused one wrong entry here. The `disallowed-tools` floor
+below was recorded as "no documented minimum" on the reasoning that the docs page annotates
+twelve version floors and gives none for that field. The reasoning was sound and the conclusion
+was wrong: the floor is in the release notes. **A reference page is not the whole record** —
+"not documented on the page I read" is not "not documented". Check the release notes before
+recording an absence.
 
 ## Discovery and precedence
 
@@ -39,11 +53,19 @@ Skills beat commands: a skill and a `.claude/commands/` file with the same name 
 skill. Custom commands have been merged into skills; `.claude/commands/` files keep working
 and support the same frontmatter.
 
-## Live change detection
+## Live change detection, and how to force a reload
 
 Claude Code watches skill directories and picks up added, edited or removed skills within the
 session, with no restart. **Exception:** a top-level skills directory that did not exist when
-the session started is not watched — creating one requires a restart.
+the session started is not watched.
+
+**`/reload-skills` re-scans the skill directories without restarting the session** — added in
+v2.1.152 alongside `disallowed-tools`. Reach for it first; a restart discards the whole
+conversation, and the reload does not. A `SessionStart` hook can trigger the same thing by
+returning `hookSpecificOutput.reloadSkills: true` (hooks reference).
+
+The skills docs page still says to restart and mentions neither. That is the gap this file's
+source table exists to close.
 
 ## Content lifecycle and budgets
 
@@ -85,21 +107,36 @@ reference chains. That is a legibility rule, not an enforced mechanism.
 | Field table | Omits `when_to_use`, `arguments`, `disallowed-tools`, `effort`, `background`, `paths`, `shell`. |
 | Substitution table | Omits `${CLAUDE_SKILL_DIR}`, `${CLAUDE_PROJECT_DIR}`, `${CLAUDE_EFFORT}`. |
 | Skill beats a same-named command is "observed behavior" | It is documented, not merely observed. |
+| `background` is "background information for the skill" (v4.0) | Wrong. It applies **only** with `context: fork`; `false` waits for the subagent's result in the invoking turn instead of backgrounding it; default `true`; requires v2.1.218+. |
+| `version` is a frontmatter field (v4.0) | Not in the documented field list. `tests/test_skills.py` rejects it, which is correct — an unrecognised key is ignored silently at runtime. |
+| `shell` dropped from the field table (v4.0) | It is real: `bash` (default) or `powershell`, selecting the shell for `` !`cmd` `` injection. |
 
-Confirmed correct in that guide: the precedence order, `user-invocable` as the correct
-spelling, `name` optional and defaulting to the directory name, `description` recommended with
-a first-paragraph fallback, the 500-line figure, three-level progressive disclosure,
-nested/monorepo discovery, live change detection, the `--add-dir` exception, and the string
-substitutions it does list.
+Confirmed correct: the precedence order, `user-invocable` as the correct spelling, `name`
+optional and defaulting to the directory name, `description` recommended with a
+first-paragraph fallback, the 500-line figure, three-level progressive disclosure,
+nested/monorepo discovery, live change detection, the `--add-dir` exception, the string
+substitutions listed, and — from v4.0 — the `disallowed-tools` version floor below.
+
+## Version floors
+
+From the [release notes](https://github.com/anthropics/claude-code/releases), which is where
+floors live; the docs page carries only some of them.
+
+| Feature | Floor |
+|---|---|
+| `disallowed-tools` in skill/command frontmatter | **v2.1.152** (27 May 2026) — *"Skills and slash commands can now set `disallowed-tools` in frontmatter to remove tools from the model while the skill is active"* |
+| `/reload-skills` | **v2.1.152** — *"re-scan skill directories without restarting the session"* |
+| `${CLAUDE_SKILL_DIR}` in `allowed-tools` | v2.1.129 |
+| `${CLAUDE_PROJECT_DIR}` substitution | v2.1.196 |
+| Skill stacking (`/a /b`) | v2.1.199 |
+| Re-invocation dedupe | v2.1.202 |
+| Directory-qualified nested skills | v2.1.203 |
+| `background`, boolean aliases (`yes`/`no`/`on`/`off`/`1`/`0`) | v2.1.218 |
 
 ## Known unknowns
 
 Recorded rather than guessed. If you need one of these, test it and update this file.
 
-- **Minimum version for `disallowed-tools`.** The docs annotate version floors elsewhere
-  meticulously (`background` v2.1.218, `${CLAUDE_PROJECT_DIR}` v2.1.196, boolean aliases
-  v2.1.218) and give none for `disallowed-tools`. No floor is documented; it is verified
-  working on v2.1.221 and nothing more can honestly be said.
 - **Stacked skills with conflicting tool fields.** Several skills can be stacked in one
   message (`/write-tests /fix-issue 123`, v2.1.199+). What happens when one sets
   `disallowed-tools` and another does not is not documented.

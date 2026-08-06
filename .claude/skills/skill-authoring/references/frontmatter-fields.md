@@ -21,7 +21,7 @@ and `false` (aliases require v2.1.218+; before that, only `true`/`false`).
 | `disable-model-invocation` | `true` stops Claude loading the skill automatically — only `/name` invokes it. Also removes it from subagent preloading, and (v2.1.196+) stops a scheduled task firing it. Default `false`. |
 | `user-invocable` | `false` hides it from the `/` menu; Claude can still invoke it. Default `true`. Note: this controls menu visibility only, not programmatic access — use `disable-model-invocation` to block that. |
 | `allowed-tools` | Tools usable without a permission prompt **during the invoking turn only**; the grant clears on your next message. Space- or comma-separated, or a YAML list. In a project skill it takes effect only after the workspace trust dialog is accepted. |
-| `disallowed-tools` | Tools removed from the pool while the skill is active; clears on your next message. Cannot remove `EndConversation` while any other tool remains. |
+| `disallowed-tools` | Tools removed from the pool while the skill is active; clears on your next message. Cannot remove `EndConversation` while any other tool remains. **Requires v2.1.152+** (release notes, 27 May 2026 — the docs page states no floor). |
 | `model` | Model for the rest of the current turn; not saved to settings. Accepts `/model` values or `inherit`. |
 | `effort` | `low` / `medium` / `high` / `xhigh` / `max`, depending on the model. Overrides the session level. |
 | `context` | `fork` runs the skill in a forked subagent. The skill body becomes the subagent's prompt, with no access to conversation history. |
@@ -63,3 +63,11 @@ Run `${CLAUDE_SKILL_DIR}/scripts/render.sh` to produce the chart.
 
 `license`, `compatibility` and `metadata` appear in the agentskills.io specification but not
 in the Claude Code frontmatter reference. They are safe to omit; do not rely on them here.
+
+## Fields that do not exist
+
+`version` is **not** a Claude Code frontmatter field, despite appearing in third-party guides.
+It is not in the reference above, so it is ignored silently — no error, no warning, no effect.
+`tests/test_skills.py` rejects it for exactly that reason: the failure mode of an unrecognised
+key is invisible, so the test has to be the thing that makes it visible. A skill's history
+belongs in the ledger, not in a key nothing reads.
