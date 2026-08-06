@@ -11,6 +11,7 @@
     "loop_detection": true,
     "docs_have_frontmatter": true,
     "sources_current": true,
+    "skill_stamps_current": true,
     "prohibitions_present": true,
     "retrospective_active": true,
     "recurrences_codified": true

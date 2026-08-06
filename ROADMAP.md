@@ -3,7 +3,41 @@
 Planned improvements to the workflow itself. The `SessionStart` hook parses the
 first `**Next action:**` line below and surfaces it at session start.
 
-**Next action:** Structured logging to a rotating debug file when `WORKFLOW_HOOK_DEBUG=1`.
+**Next action:** Observe whether `PreCompact` fires before context is discarded; if so, wire it
+to `write_unfinished_breadcrumb` so an in-flight plan survives compaction.
+
+---
+
+## Active Epic: Use more of the hook surface
+
+From `docs/hook-event-assessment.md` (2026-08-06). The dispatcher handles 4 of 31 events; these
+are the ones worth adding. Each carries a condition that must be **observed, not inferred**, per
+`.ai/01-phases/rule-direct-test-disputes.json`.
+
+- [ ] **`PreCompact` → breadcrumb.** `Stop` writes `plans/UNFINISHED.md` on a dirty tree, but a
+      long session compacts before it stops, and compaction is what most often loses in-flight
+      plan state. Reuses existing idempotent code. *Condition: confirm it fires before context
+      is discarded.*
+- [ ] **`SessionEnd` → closure check.** Nothing currently verifies the Phase 3 self-check at the
+      point it stops being fixable; `Stop` is per-turn and capped at `max_blocks: 2`, so on a
+      long session the reminder is spent early and end-of-session silence means nothing.
+      *Condition: confirm it fires on an abrupt exit, not only a graceful quit.*
+- [ ] **`SubagentStop` / `TaskCompleted` → ledger prompt for delegated work.** A subagent that
+      edits source never sets `source_changed`, so the change can land unlogged. *Condition:
+      determine whether a subagent shares the parent `session_id` or carries its own — that
+      decides whether this is a flag update or state merging.*
+- [ ] **`PermissionDenied` → guard-hit metrics.** Tier-0 denials are invisible after the fact.
+      Reuse the `loop_detection.jsonl` channel.
+
+Explicitly rejected, with reasons in the assessment: `UserPromptSubmit` (a blocking path in a
+fail-open dispatcher), `FileChanged` (literal matcher vs a weekly-rolling ledger filename), and
+the remaining 19 (no Phase 0–3 obligation attaches).
+
+- [ ] **Determine why a guard `ask` did not surface.** On 2026-08-06 a heredoc ran with no
+      prompt while the dispatcher, replayed with the identical command, returned
+      `permissionDecision: "ask"`. GUIDE §7.5 documents `dontAsk` turning an `ask` into a silent
+      *block*; what was observed was a silent *allow*, which is undocumented. Until this is
+      understood, an `ask` cannot be treated as a control.
 
 ---
 
