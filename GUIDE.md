@@ -461,7 +461,7 @@ Its `estimated_tokens` therefore stay **outside** the active token budget; only
 ## 7. Hook System Architecture
 
 ### 7.1 Dispatcher
-A single Python script (`hooks/workflow_hook.py`) is invoked for `SessionStart`, `PreToolUse`, `PostToolUse`, and `Stop`. It reads the event from stdin JSON, loads the project’s `workflow_config.json`, and branches to the appropriate handler. Every handler is wrapped in a try‑except that ensures the process exits with code 0 (fail‑soft).
+A single Python script (`.claude/hooks/workflow_hook.py`) is invoked for `SessionStart`, `PreToolUse`, `PostToolUse`, and `Stop`. It reads the event from stdin JSON, loads the project’s `workflow_config.json`, and branches to the appropriate handler. Every handler is wrapped in a try‑except that ensures the process exits with code 0 (fail‑soft).
 
 Fail‑soft cuts both ways once one of those handlers is a guard: a crash in `PreToolUse` means the tool call proceeds. The dispatcher **fails open** and is not a security boundary. §7.5 states the limits; the `enforcement_note` on every artifact that depends on it repeats them, so `live` is never read as “unbypassable”.
 
@@ -835,7 +835,7 @@ tech stack — a plan's problem statement is no better for being written in Go.
 
 **Sixteen categories, 119 items, every one sourced.** Each item cites a document with an
 authority tier, and its `confidence_level` is *derived* by
-`hooks/workflow_hook.py::derive_confidence` and recomputed by test — never typed by hand.
+`.claude/hooks/workflow_hook.py::derive_confidence` and recomputed by test — never typed by hand.
 An item that cannot be sourced does not ship. `--self-test` warns when an item's
 `last_validated` passes `revalidation_interval_days`. The full framework, both folders, and
 the citation defects found along the way — including **IEEE 1012-2016, superseded by
@@ -860,7 +860,7 @@ files don't — they embed a `provenance` block in the JSON, which is what the s
 convention exists to substitute for. One provenance record per artifact, in the
 artifact wherever the format allows it.
 
-**Health.** `python hooks/workflow_hook.py --self-test` validates the config and
+**Health.** `python .claude/hooks/workflow_hook.py --self-test` validates the config and
 reports a governance maturity level (1–5) derived from real checks, writing
 `00-system/maturity-tracker.json`. The level is reported, never enforced — a young
 repository is not a broken one.

@@ -49,7 +49,7 @@ source, recorded on the item itself: `source`, `source_version`, `source_authori
 1-10 scale in `docs/checklist-system.md` section 3), `source_consensus` (independent
 sources at authority >= 7) and `source_established`. An item you cannot source does not
 ship - the shortfall is the rule working, not an omission. `confidence_level` is then
-**derived** by `hooks/workflow_hook.py::derive_confidence`; never type one by hand.
+**derived** by `.claude/hooks/workflow_hook.py::derive_confidence`; never type one by hand.
 
 Cite the exact edition. `docs/checklist-system.md` section 4 records five version defects
 found in this library's own source documents, including a citation ("ASVS 5.10") that was

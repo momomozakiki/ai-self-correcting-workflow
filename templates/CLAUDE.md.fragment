@@ -48,12 +48,23 @@ Hooks provide ambient reminders — treat them as helpful nudges, not blockers.
   ledger entry is written, and the commit is pushed.
 
 ### Guards
+- **Settle disputes by direct test:** when a claim about how the system behaves is
+  disputed or uncertain, run it rather than argue it — and test every competing
+  claim, not just the one you expect to win. If the user has to run it, write the
+  steps for someone with no expertise: what to do, what a pass looks like, what a
+  failure looks like.
 - **Reversibility:** git is the rollback mechanism — have a clean checkpoint
   before anything hard to undo, and say so if an operation can't be reversed.
 - **Loops:** if a call repeats with identical arguments and no progress, change
   the approach instead of retrying.
 - **No heredoc stdin:** write scripts to a file and run the file. Escapes get
   mangled silently. For git use `git commit -m` or `-F <file>`, never `-F -`.
-- **Health check:** `python .claude/workflow-core/hooks/workflow_hook.py --self-test`.
+- **Health check:** `python .claude/workflow-core/.claude/hooks/workflow_hook.py --self-test`.
+  It must print `RESULT: PASS` **and** `[ ok ] config valid against
+  schemas/config_schema.json`. A `validation skipped` line means the schema is
+  unreachable and the check is not actually running — exit 0 alone does not prove it ran.
+  **If you adopted before the dispatcher moved to `.claude/hooks/`,** your four hook
+  entries still name `.claude/workflow-core/hooks/workflow_hook.py` and none of them
+  fire. See the BREAKING note in `CHANGELOG.md` for the exact replacement.
 
 <!-- END adaptive-workflow fragment -->

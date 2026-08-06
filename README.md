@@ -22,7 +22,9 @@ workflow-core/
 ├── GUIDE.md                     # Full workflow reference (v4.4)
 ├── CHANGELOG.md · ROADMAP.md · CONTRIBUTING.md
 ├── history/FORMAT.md            # This repo's own change-history ledger
-├── hooks/workflow_hook.py       # Fail-soft hook dispatcher (stdlib only)
+├── .claude/hooks/workflow_hook.py  # Fail-soft dispatcher (stdlib only). NOT discovered by
+│                                #   location — it runs only because settings.json names it
+├── .claude/settings.json        # Registers the hook. Delete an entry and the guard is dead code
 ├── .claude/skills/              # The skills themselves — the only path Claude Code discovers
 │   ├── adaptive-workflow/       #   Agent process manual (SKILL.md + references/)
 │   ├── autonomous-task/ · handover/
@@ -97,7 +99,7 @@ python -m unittest discover -s .claude/workflow-core/tests   # sanity-check
 
 ## The hook
 
-`hooks/workflow_hook.py` is a single fail-soft dispatcher for three events:
+`.claude/hooks/workflow_hook.py` is a single fail-soft dispatcher for three events:
 
 | Event | Does |
 |-------|------|

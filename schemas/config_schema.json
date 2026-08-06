@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/ai-self-correcting-workflow/schemas/config_schema.json",
   "title": "workflow_config.json",
-  "description": "Project-specific configuration for the Adaptive Self-Correcting Workflow. Maps generic workflow concepts onto concrete project paths and toggles features. Consumed by hooks/workflow_hook.py.",
+  "description": "Project-specific configuration for the Adaptive Self-Correcting Workflow. Maps generic workflow concepts onto concrete project paths and toggles features. Consumed by .claude/hooks/workflow_hook.py.",
   "type": "object",
   "additionalProperties": true,
   "properties": {

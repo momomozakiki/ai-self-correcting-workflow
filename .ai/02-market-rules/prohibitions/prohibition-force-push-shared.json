@@ -10,8 +10,8 @@
   "enforcement_mode": "deny",
   "enforcement_note": "DENY. guard_force_push parses the push, resolves the destination refspec and blocks only when it names a protected branch, so force-pushing a topic branch you own still works - which a `permissions.deny` pattern could not express. Three limits, stated so `live` is not read as unbypassable: the dispatcher is fail-soft, so an exception in the handler allows the call; the guard only sees Bash and PowerShell tool calls, not a terminal opened outside Claude Code; and it splits on shell separators without honouring quotes, so a separator inside a quoted string can produce a false positive.",
   "enforced_by": [
-    "hooks/workflow_hook.py::guard_force_push",
-    "hooks/workflow_hook.py::handle_pre_tool_use",
+    ".claude/hooks/workflow_hook.py::guard_force_push",
+    ".claude/hooks/workflow_hook.py::handle_pre_tool_use",
     "tests/test_hook.py::TestTier0Guard",
     ".claude/settings.json",
     "tests/test_governance_library.py::SettingsWiring"

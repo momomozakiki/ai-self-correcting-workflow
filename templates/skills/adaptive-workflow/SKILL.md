@@ -31,7 +31,7 @@ Not overrideable by config, by instruction, or by you:
 Full set with rationale: `.ai/02-market-rules/prohibitions/`.
 
 **Three of these are enforced, not just written down.** A `PreToolUse` guard in
-`hooks/workflow_hook.py` inspects every Bash and PowerShell command: it *denies* a
+`.claude/hooks/workflow_hook.py` inspects every Bash and PowerShell command: it *denies* a
 force-push whose destination resolves to a protected branch and any deletion aimed at
 the ledger or plan archive, and *asks* before a history rewrite or a heredoc — cases
 where the command alone cannot settle the question. Two things follow. Don't treat a
@@ -156,7 +156,7 @@ rules in [references/doc-frontmatter.md](references/doc-frontmatter.md).
 - **Update roadmap** if triggered.
 - **Retrospective:** log any mistake worth remembering; mark it `(recurring)` if
   it has happened before, and codify it (rule file + a line in this skill).
-  `python hooks/workflow_hook.py --self-test` reports uncodified recurrences.
+  `python .claude/hooks/workflow_hook.py --self-test` reports uncodified recurrences.
 - **Commit & push:** clear the breadcrumb *first*, then
   `git add -A && git commit -m "Plan: <slug> – <summary>" && git push`.
   Multi‑paragraph message → repeated `-m` flags or `git commit -F <file>`. Avoid

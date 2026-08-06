@@ -8,8 +8,8 @@
   "enforcement": "MANDATORY",
   "enforcement_status": "live",
   "enforced_by": [
-    "hooks/workflow_hook.py::run_env_checks",
-    "hooks/workflow_hook.py::handle_session_start",
+    ".claude/hooks/workflow_hook.py::run_env_checks",
+    ".claude/hooks/workflow_hook.py::handle_session_start",
     "tests/test_hook.py::TestSessionStart::test_env_check_missing_tool_reports_not_found"
   ],
   "overrideable": false,

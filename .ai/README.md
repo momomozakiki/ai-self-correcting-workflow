@@ -97,7 +97,7 @@ is `00-system/maturity-tracker.json`.
 ## Regenerating the maturity tracker
 
 ```bash
-python hooks/workflow_hook.py --self-test
+python .claude/hooks/workflow_hook.py --self-test
 ```
 
 Reports the health checks and the derived maturity level (1-5), and rewrites

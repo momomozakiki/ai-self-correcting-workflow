@@ -3,7 +3,7 @@ title: Claude Code Hook Integration
 version: 1.13
 last_validated: 2026-08-04
 official: false
-source: agent-generated, describing this repo's own hooks/workflow_hook.py; hook-contract facts cross-checked against https://code.claude.com/docs/en/hooks
+source: agent-generated, describing this repo's own .claude/hooks/workflow_hook.py; hook-contract facts cross-checked against https://code.claude.com/docs/en/hooks
 tags: [hooks, claude-code, integration, workflow, dispatcher]
 applies_when: "Wiring up, understanding, or adapting the workflow hook dispatcher for a Claude Code project."
 estimated_tokens: 5000
@@ -24,7 +24,7 @@ estimated_tokens: 5000
 *Full history: [`CHANGELOG.md`](CHANGELOG.md).*
 
 > This guide describes the **real** implementation in this repository — a single
-> stdlib‑Python dispatcher, [`hooks/workflow_hook.py`](../../hooks/workflow_hook.py),
+> stdlib‑Python dispatcher, [`.claude/hooks/workflow_hook.py`](../../.claude/hooks/workflow_hook.py),
 > driven by [`.claude/workflow_config.json`](../../.claude/workflow_config.json) and
 > wired up in [`.claude/settings.json`](../../.claude/settings.json). Every config
 > snippet and behavioural claim below is taken from those live artifacts, so the
@@ -61,7 +61,7 @@ in control. A bug in the tooling can never break a session: the dispatcher is
 
 ## Implementation Architecture
 
-A **single Python dispatcher** ([`hooks/workflow_hook.py`](../../hooks/workflow_hook.py))
+A **single Python dispatcher** ([`.claude/hooks/workflow_hook.py`](../../.claude/hooks/workflow_hook.py))
 serves all three events. It reads the event JSON from `stdin`, branches on
 `hookEventName` (`hook_event_name` is also accepted), and writes a JSON response
 to `stdout`. It:
@@ -353,7 +353,7 @@ each entry containing a `hooks` array of `{ type, command }` handlers. A flat
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/hooks/workflow_hook.py\"" }
+          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_hook.py\"" }
         ]
       }
     ],
@@ -361,14 +361,14 @@ each entry containing a `hooks` array of `{ type, command }` handlers. A flat
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/hooks/workflow_hook.py\"" }
+          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_hook.py\"" }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/hooks/workflow_hook.py\"" }
+          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_hook.py\"" }
         ]
       }
     ]
@@ -482,7 +482,7 @@ the dispatcher and contract stay the same:
 > **`$CLAUDE_PROJECT_DIR`** in the `command` is provided by Claude Code and
 > expands to the project root, so the path resolves regardless of the session's
 > working directory. Vendoring the hook as a submodule? Point the command at the
-> vendored path (e.g. `.claude/workflow-core/hooks/workflow_hook.py`) — config
+> vendored path (e.g. `.claude/workflow-core/.claude/hooks/workflow_hook.py`) — config
 > discovery still finds `workflow_config.json` via `$CLAUDE_PROJECT_DIR`.
 
 ---
@@ -492,7 +492,7 @@ the dispatcher and contract stay the same:
 1. **Python availability**: ensure `python` (3.8+) is on the `PATH` where Claude
    Code runs. If a version manager hides it, use an absolute path in `command`.
    The dispatcher is stdlib‑only — no `pip install`.
-2. **File permissions**: `hooks/workflow_hook.py` must be readable; it need not be
+2. **File permissions**: `.claude/hooks/workflow_hook.py` must be readable; it need not be
    executable (invoked via `python`).
 3. **Git**: the hook runs `git`; ensure it's installed and the `cwd` is a repo.
    Missing git degrades to notes rather than errors.
@@ -529,7 +529,7 @@ the dispatcher and contract stay the same:
 Not a hook event. Run it by hand or in CI:
 
 ```bash
-python hooks/workflow_hook.py --self-test
+python .claude/hooks/workflow_hook.py --self-test
 ```
 
 It is the **only** path in the dispatcher allowed to exit non‑zero, because a

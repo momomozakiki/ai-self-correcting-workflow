@@ -8,8 +8,8 @@
   "enforcement": "MANDATORY",
   "enforcement_status": "live",
   "enforced_by": [
-    "hooks/workflow_hook.py::run_self_test",
-    "hooks/workflow_hook.py::_has_frontmatter",
+    ".claude/hooks/workflow_hook.py::run_self_test",
+    ".claude/hooks/workflow_hook.py::_has_frontmatter",
     "tests/test_hook.py::TestSelfTest::test_reports_missing_frontmatter"
   ],
   "overrideable": false,

@@ -1,6 +1,6 @@
 # Hook I/O Contract
 
-The dispatcher (`hooks/workflow_hook.py`) is invoked by Claude Code for four
+The dispatcher (`.claude/hooks/workflow_hook.py`) is invoked by Claude Code for four
 hook events. For each, Claude writes a JSON event object to the hook's **stdin**
 and reads a JSON object from its **stdout**. The hook **always exits 0**
 (fail-soft): an error in the workflow tooling must never break a session.
@@ -286,7 +286,7 @@ The one path that reads no stdin and is **allowed to exit non-zero**, because a
 human or CI invokes it, never a hook event.
 
 ```bash
-python hooks/workflow_hook.py --self-test
+python .claude/hooks/workflow_hook.py --self-test
 ```
 
 **Behaviour**, in order:

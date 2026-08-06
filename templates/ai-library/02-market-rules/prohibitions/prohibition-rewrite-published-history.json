@@ -10,8 +10,8 @@
   "enforcement_mode": "ask",
   "enforcement_note": "ASK, not deny. guard_history_rewrite catches `git commit --amend`, `git rebase`, `git reset --hard` and `git filter-branch`, but whether those commits are already published is a runtime fact the command string does not carry - denying every rewrite would block legitimate local work, and guessing would be worse. An `ask` still enforces: the call cannot proceed without a human. Limits: in `dontAsk` mode an `ask` becomes a silent block rather than a prompt; the dispatcher is fail-soft, so an exception in the handler allows the call; and the guard only sees Bash and PowerShell tool calls.",
   "enforced_by": [
-    "hooks/workflow_hook.py::guard_history_rewrite",
-    "hooks/workflow_hook.py::handle_pre_tool_use",
+    ".claude/hooks/workflow_hook.py::guard_history_rewrite",
+    ".claude/hooks/workflow_hook.py::handle_pre_tool_use",
     "tests/test_hook.py::TestTier0Guard",
     ".claude/settings.json",
     "tests/test_governance_library.py::SettingsWiring"

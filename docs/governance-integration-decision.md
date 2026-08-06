@@ -37,7 +37,7 @@ artifact itself so no future reader has to guess.
 
 | Tier | Meaning | How you can tell |
 |------|---------|------------------|
-| **live** | A hook, test, or schema enforces it. Breaking it produces a visible signal. | Named in `hooks/workflow_hook.py` or `tests/test_hook.py` |
+| **live** | A hook, test, or schema enforces it. Breaking it produces a visible signal. | Named in `.claude/hooks/workflow_hook.py` or `tests/test_hook.py` |
 | **convention** | The agent is expected to follow it; nothing blocks. | Named in `SKILL.md` or a ledger/rule field |
 | **declarative** | Recorded for portability only. Not enforceable in this runtime. | Carries `enforcement_status: declarative` and a reason |
 
@@ -337,5 +337,5 @@ objection already raised against `--no-write` (§7) and `--verify-sources` (§9)
 
 Re-verify §2 whenever the Claude Code CLI or the plan's model lineup changes — the `opus` alias
 resolution and Fable's billing status have both already moved once. Re-run
-`python hooks/workflow_hook.py --self-test` after any change to the library or config; it reports
+`python .claude/hooks/workflow_hook.py --self-test` after any change to the library or config; it reports
 the current maturity level and the checks behind it.

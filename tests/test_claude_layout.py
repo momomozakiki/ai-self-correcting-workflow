@@ -58,13 +58,24 @@ EXEMPT_TREES = ("templates", ".git", ".github", "__pycache__", "history", "plans
 
 # Files directly under `.claude/` that Claude Code does not read. Allowed, but a
 # deliberate choice: `workflow_config.json` is this repo's own config, loaded by
-# `hooks/workflow_hook.py` through an explicit path. Adding to this list should
+# `.claude/hooks/workflow_hook.py` through an explicit path. Adding to this list should
 # be a visible decision in a diff.
 NON_STANDARD_ALLOWED = frozenset({"workflow_config.json"})
 
 STANDARD_CLAUDE_FILES = frozenset({
     "settings.json", "settings.local.json", "CLAUDE.md", "CLAUDE.local.md",
     "plugins.json", ".mcp.json",
+})
+
+# Directories that may sit directly under `.claude/`. The first six are
+# discovered by location (DISCOVERED_DIRS); `agent-memory` is written by Claude
+# Code itself; `hooks` is *not* discovered -- it holds scripts that only run
+# because `settings.json` names them, and it is listed here so that the
+# directory being present is a declared choice rather than an assumption.
+# `workflow-core` is where an adopting project vendors this repository.
+STANDARD_CLAUDE_DIRS = frozenset({
+    "skills", "agents", "commands", "output-styles", "rules", "workflows",
+    "agent-memory", "hooks", "plugins", "workflow-core",
 })
 
 # Every hook event Claude Code supports, as of v2.1.221. Listed so a typo in a
@@ -264,6 +275,25 @@ class NonStandardFiles(unittest.TestCase):
             "NON_STANDARD_ALLOWED with a reason -- but an unlisted file is more "
             "often one someone expected to be read")
 
+    def test_unknown_directories_are_on_the_allowlist(self):
+        """The file check above missed `.claude/hooks/` entirely.
+
+        ``iterdir`` was filtered on ``is_file()``, so any directory placed under
+        ``.claude/`` was unexamined. A directory is the more consequential
+        mistake of the two: a stray *file* is inert, but a directory named
+        ``skill/`` or ``agent/`` looks discovered and is not.
+        """
+        if not DOT_CLAUDE.is_dir():
+            self.skipTest(".claude/ missing")
+        unknown = sorted(
+            p.name for p in DOT_CLAUDE.iterdir()
+            if p.is_dir() and p.name not in STANDARD_CLAUDE_DIRS)
+        self.assertEqual(
+            [], unknown,
+            "Directories under `.claude/` that Claude Code does not read. Add to "
+            "STANDARD_CLAUDE_DIRS with a reason if deliberate -- a near-miss name "
+            "like `skill/` or `rule/` is discovered by nothing and reports nothing")
+
 
 class LocalSettingsAreIgnored(unittest.TestCase):
     """A machine-global ignore rule protects one checkout, not the repository."""
@@ -314,6 +344,24 @@ class NegativeControls(unittest.TestCase):
         root = self.tmp()
         (root / "skills" / "my-skill").mkdir(parents=True)
         self.assertIn("skills", misplaced_discovered_dirs(root))
+
+    def test_a_near_miss_directory_under_dot_claude_is_caught(self):
+        """`.claude/skill/` (singular) is discovered by nothing and reports nothing."""
+        for name in ("skill", "rule", "agent", "hook"):
+            with self.subTest(directory=name):
+                self.assertNotIn(
+                    name, STANDARD_CLAUDE_DIRS,
+                    f"'{name}' is a near-miss of a real directory and must not be "
+                    "allowlisted -- allowlisting it hides exactly the typo the "
+                    "check exists to catch")
+
+    def test_the_real_hooks_directory_is_allowlisted(self):
+        """`.claude/hooks/` is legitimate but *not* discovered -- a declared choice."""
+        self.assertIn("hooks", STANDARD_CLAUDE_DIRS)
+        self.assertNotIn(
+            "hooks", DISCOVERED_DIRS,
+            "hooks/ is registered in settings.json, never discovered by location; "
+            "listing it as discovered would teach the opposite of the failure mode")
 
     def test_every_discovered_kind_is_caught(self):
         root = self.tmp()

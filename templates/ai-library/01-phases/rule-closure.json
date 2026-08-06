@@ -8,8 +8,8 @@
   "enforcement": "MANDATORY",
   "enforcement_status": "live",
   "enforced_by": [
-    "hooks/workflow_hook.py::handle_stop",
-    "hooks/workflow_hook.py::write_unfinished_breadcrumb",
+    ".claude/hooks/workflow_hook.py::handle_stop",
+    ".claude/hooks/workflow_hook.py::write_unfinished_breadcrumb",
     "tests/test_hook.py::TestStop::test_ledger_reminder_when_source_changed_unlogged",
     "tests/test_hook.py::TestStopBreadcrumb"
   ],

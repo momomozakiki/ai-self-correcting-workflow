@@ -4,7 +4,7 @@
   "reversibility": {
     "enforcement_status": "live",
     "enforced_by": [
-      "hooks/workflow_hook.py::write_unfinished_breadcrumb",
+      ".claude/hooks/workflow_hook.py::write_unfinished_breadcrumb",
       "tests/test_hook.py::TestStopBreadcrumb"
     ],
     "required": true,
@@ -14,7 +14,7 @@
   "loop_detection": {
     "enforcement_status": "live",
     "enforced_by": [
-      "hooks/workflow_hook.py::detect_loop",
+      ".claude/hooks/workflow_hook.py::detect_loop",
       "tests/test_hook.py::TestLoopDetection"
     ],
     "see": "workflow_config.json -> loop_detection"

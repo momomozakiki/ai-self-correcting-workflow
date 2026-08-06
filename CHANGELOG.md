@@ -7,7 +7,62 @@ and are called out so adopting projects can adjust their `workflow_config.json`.
 
 ## [Unreleased]
 
+### Changed — BREAKING
+
+- **The dispatcher moved to `.claude/hooks/workflow_hook.py`. Action required for
+  every existing adopter.** It previously lived at `hooks/workflow_hook.py`, one
+  level below the repository root. The script is unchanged in behaviour, but the
+  path in your `.claude/settings.json` now points at a file that does not exist.
+
+  **Why this breaks silently-ish.** Your settings file is yours — pulling the
+  `workflow-core` submodule moves the script but cannot edit your config. When the
+  command is missing, Claude Code reports a hook error in the transcript and
+  **the tool call proceeds anyway** (per the hooks reference, any exit code other
+  than 2 is a non-blocking error). So there *is* a visible notice, but it is easy
+  to dismiss, and the important part is invisible: the four Tier-0 prohibitions
+  keep declaring themselves `live` in `.ai/02-market-rules/prohibitions/` while
+  nothing enforces them.
+
+  **To fix — edit, do not copy.** In `.claude/settings.json`, replace every
+  occurrence of
+
+  ```
+  $CLAUDE_PROJECT_DIR/.claude/workflow-core/hooks/workflow_hook.py
+  ```
+
+  with
+
+  ```
+  $CLAUDE_PROJECT_DIR/.claude/workflow-core/.claude/hooks/workflow_hook.py
+  ```
+
+  There are four (`SessionStart`, `PreToolUse`, `PostToolUse`, `Stop`). Note the
+  doubled `.claude/` — the submodule now carries its own `.claude/` directory.
+  If you also set `source_directories` in `workflow_config.json` to include
+  `hooks`, change it to `.claude/hooks`.
+
+  **Then verify, don't assume.** Ask Claude to run `rm -rf history/`. The guard
+  must refuse it with a `Tier-0 prohibition-delete-ledger` message. If the command
+  is merely queued for your approval with no such message, the hook is not wired —
+  recheck the path. You can also run
+  `python .claude/workflow-core/.claude/hooks/workflow_hook.py --self-test`, which
+  must print `RESULT: PASS` **and** a line reading
+  `[ ok ] config valid against schemas/config_schema.json`. A `validation skipped`
+  warning there means the schema is unreachable and the check is not running.
+
 ### Fixed
+
+- **`--self-test` reported `RESULT: PASS` while validating nothing.** The config
+  schema was located as `__file__.parent.parent / "schemas"`, which assumed the
+  dispatcher sat exactly one directory below the repository root. The move above
+  broke that assumption, and because an unreachable schema only *warns*, the
+  self-test kept exiting 0 with two knowingly-invalid configs passing. Replaced
+  with `find_schema_path()`, an upward walk matching `find_config_path()`, so it
+  resolves under both this repo's layout and an adopter's nested submodule.
+  Regression covered by `tests/test_hook.py::TestSchemaLocation`, which asserts on
+  the positive "config valid against" line rather than the exit code — the exit
+  code cannot distinguish "validated and passed" from "skipped and defaulted to
+  passing", which is exactly how this hid.
 - **Adopters had no Tier-0 guard. Action required if you installed before this
   release.** `templates/settings.json.hooks` — the fragment adopters merge into
   `.claude/settings.json` — registered `SessionStart`, `PostToolUse` and `Stop`
@@ -22,7 +77,7 @@ and are called out so adopting projects can adjust their `workflow_config.json`.
   **To fix an existing install — merge, do not copy:** open your
   `.claude/settings.json`, add the `PreToolUse` entry from
   `templates/settings.json.hooks` (matcher `Bash|PowerShell`, pointing at
-  `$CLAUDE_PROJECT_DIR/.claude/workflow-core/hooks/workflow_hook.py`), and add
+  `$CLAUDE_PROJECT_DIR/.claude/workflow-core/.claude/hooks/workflow_hook.py`), and add
   `"defaultMode": "plan"` under `permissions`. Do **not** copy the file over your
   settings — it is a fragment, and overwriting discards your own permissions, env
   and any other hooks.
@@ -181,7 +236,7 @@ and are called out so adopting projects can adjust their `workflow_config.json`.
 Initial implementation of the v4.1 design as a working `workflow-core` repository.
 
 ### Added
-- `hooks/workflow_hook.py` — fail-soft, stdlib-only dispatcher for
+- `.claude/hooks/workflow_hook.py` — fail-soft, stdlib-only dispatcher for
   `SessionStart`, `PostToolUse`, and `Stop`, with per-session state, environment
   checks (honoring `null` version flags), roadmap next-action parsing, doc
   nudges, and bounded Stop reminders. Config discovery prefers

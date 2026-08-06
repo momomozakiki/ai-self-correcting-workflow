@@ -8,9 +8,9 @@
   "enforcement": "MANDATORY",
   "enforcement_status": "live",
   "enforced_by": [
-    "hooks/workflow_hook.py::detect_loop",
-    "hooks/workflow_hook.py::log_loop",
-    "hooks/workflow_hook.py::tool_signature",
+    ".claude/hooks/workflow_hook.py::detect_loop",
+    ".claude/hooks/workflow_hook.py::log_loop",
+    ".claude/hooks/workflow_hook.py::tool_signature",
     "tests/test_hook.py::TestLoopDetection::test_fires_once_at_threshold_and_logs"
   ],
   "overrideable": false,

@@ -27,4 +27,4 @@ jobs:
       # Nor does it gate on the maturity level -- that is reported, never
       # enforced (GUIDE section 13).
       - name: Validate workflow config (--self-test)
-        run: python hooks/workflow_hook.py --self-test
+        run: python .claude/hooks/workflow_hook.py --self-test

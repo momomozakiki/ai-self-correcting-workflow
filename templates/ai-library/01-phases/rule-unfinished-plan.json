@@ -8,8 +8,8 @@
   "enforcement": "MANDATORY",
   "enforcement_status": "live",
   "enforced_by": [
-    "hooks/workflow_hook.py::handle_session_start",
-    "hooks/workflow_hook.py::write_unfinished_breadcrumb",
+    ".claude/hooks/workflow_hook.py::handle_session_start",
+    ".claude/hooks/workflow_hook.py::write_unfinished_breadcrumb",
     "tests/test_hook.py::TestStopBreadcrumb::test_dirty_tree_writes_breadcrumb_on_feature_branch"
   ],
   "overrideable": false,

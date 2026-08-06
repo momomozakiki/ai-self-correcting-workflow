@@ -104,7 +104,7 @@ def parse_frontmatter(text):
     """Return ``(fields, body)`` for a ``SKILL.md``.
 
     Deliberately a flat ``key: value`` reader rather than a YAML parse: skill
-    frontmatter is flat, and ``hooks/workflow_hook.py`` is stdlib-only so that
+    frontmatter is flat, and ``.claude/hooks/workflow_hook.py`` is stdlib-only so that
     adopters can vendor this repository without acquiring a dependency tree.
     A block value (``key:`` followed by an indented block) records the key with
     an empty value -- enough for the key-name checks, which is all this needs.

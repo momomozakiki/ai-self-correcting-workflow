@@ -42,7 +42,7 @@ There is **no** `.claude/hooks/` discovery. Scripts run only because `settings.j
 ```json
 {"hooks": {"PreToolUse": [{"matcher": "Bash|PowerShell",
   "hooks": [{"type": "command",
-             "command": "python \"$CLAUDE_PROJECT_DIR/hooks/workflow_hook.py\""}]}]}}
+             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_hook.py\""}]}]}}
 ```
 
 - `${CLAUDE_PROJECT_DIR}` and `${CLAUDE_PLUGIN_ROOT}` make the path independent of the working

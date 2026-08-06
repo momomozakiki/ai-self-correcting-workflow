@@ -2,7 +2,7 @@
 
 > **This repository _is_ `workflow-core`.** It defines the Adaptive
 > Self-Correcting Workflow and dogfoods it: the hooks in `.claude/settings.json`
-> point at this repo's own `hooks/workflow_hook.py` (there is no
+> point at this repo's own `.claude/hooks/workflow_hook.py` (there is no
 > `.claude/workflow-core` submodule here — this is the source). We practice what
 > we preach, keeping our own ledger under `history/`.
 
@@ -22,7 +22,7 @@ treat them as helpful nudges, not blockers.
 - Never force-push a shared branch. Never commit secrets. Never rewrite published
   history. Never delete the ledger or the plan archive.
 - Full set: `.ai/02-market-rules/prohibitions/`.
-- **Three of these are enforced.** A `PreToolUse` guard (`hooks/workflow_hook.py`,
+- **Three of these are enforced.** A `PreToolUse` guard (`.claude/hooks/workflow_hook.py`,
   matcher `Bash|PowerShell`) *denies* a force-push resolving to a protected branch and
   any deletion aimed at `history/` or `plans/archive/`, and *asks* before a history
   rewrite or a heredoc. A block is the prohibition working, not an obstacle to route
@@ -59,7 +59,7 @@ treat them as helpful nudges, not blockers.
 - When changing hook behaviour, update `schemas/hook_contract.md`, `GUIDE.md`
   §7, and `.claude/skills/adaptive-workflow/SKILL.md` together to prevent drift.
   `schemas/hook_contract.md` is the **only** place the state-key list lives.
-- **Health check:** `python hooks/workflow_hook.py --self-test` validates the
+- **Health check:** `python .claude/hooks/workflow_hook.py --self-test` validates the
   config and reports a governance maturity level. Exit code reflects validation
   only — the level is reported, never enforced.
 - **Governance library** in `.ai/` (GUIDE §13). Every artifact declares

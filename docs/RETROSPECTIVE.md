@@ -31,7 +31,7 @@ heading per mistake.
 - **Second occurrence**: append `(recurring)` to the heading. It now owes a rule.
 - **Codified**: once the rule exists, add a `**Codified:**` line naming it.
 
-`python hooks/workflow_hook.py --self-test` reports any `(recurring)` entry that still has
+`python .claude/hooks/workflow_hook.py --self-test` reports any `(recurring)` entry that still has
 no `**Codified:**` line, and withholds maturity level 5 until none are outstanding. The
 threshold is deliberately two: one mistake is noise, two is a pattern worth paying for.
 
@@ -39,7 +39,7 @@ threshold is deliberately two: one mistake is noise, two is a pattern worth payi
 
 ### 2026-08-04 — Heredoc-fed stdin mangles escape sequences (recurring)
 
-- **What:** Patching `hooks/workflow_hook.py` via `python - <<'PY' ... PY` corrupted the
+- **What:** Patching `.claude/hooks/workflow_hook.py` via `python - <<'PY' ... PY` corrupted the
   script: `\\n` inside the Python source arrived as a real newline, so every replacement
   pattern containing an escape failed to match.
 - **Why it matters:** The failure is silent until a pattern misses. Worse, a partial match

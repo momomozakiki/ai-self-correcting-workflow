@@ -63,7 +63,7 @@ first `**Next action:**` line below and surfaces it at session start.
       a `Stop`-hook flag akin to `ledger_touched`, but a plan is not a file the hook
       can see, so this may be honestly unenforceable — in which case say so in the
       `enforcement_note` rather than leaving the gap unnamed.
-- [ ] Act on the SOLID/clean-code trial findings in `hooks/workflow_hook.py`:
+- [ ] Act on the SOLID/clean-code trial findings in `.claude/hooks/workflow_hook.py`:
       `run_self_test` (~166 lines) and `handle_stop` (~89) each fail the "describe it
       without saying *and*" question, and 16 `except Exception: pass/return/continue`
       sites make the fail-soft design hard to debug. The checklist found these; acting

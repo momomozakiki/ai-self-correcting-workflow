@@ -30,7 +30,7 @@ import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / ".claude" / "hooks"))
 import workflow_hook  # noqa: E402  -- confidence_level is recomputed through it
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -172,7 +172,7 @@ def resolve_enforcer(reference):
 
     Accepted forms::
 
-        hooks/workflow_hook.py::handle_stop        function must exist
+        .claude/hooks/workflow_hook.py::handle_stop        function must exist
         tests/test_hook.py::StopTests              class must exist
         tests/test_hook.py::StopTests::test_foo    class and method must exist
         .github/workflows/tests.yml                file must exist
@@ -886,9 +886,9 @@ class SettingsWiring(unittest.TestCase):
     # differ because an adopter reaches the dispatcher through the submodule.
     CONFIGS = (
         ("repo", REPO_ROOT / ".claude" / "settings.json",
-         "hooks/workflow_hook.py"),
+         ".claude/hooks/workflow_hook.py"),
         ("adopter template", REPO_ROOT / "templates" / "settings.json.hooks",
-         ".claude/workflow-core/hooks/workflow_hook.py"),
+         ".claude/workflow-core/.claude/hooks/workflow_hook.py"),
     )
 
     def configs(self):

@@ -10,8 +10,8 @@
   "enforcement_mode": "deny",
   "enforcement_note": "DENY. guard_protected_paths blocks rm, Remove-Item and `git rm` aimed at tier0_guard.protected_paths, which defaults to the configured ledger directory plus plans/archive - exactly the two this rule names, no wider. Reading the ledger is untouched; the prohibition is against deletion. Limits, so `live` is not read as unbypassable: the dispatcher is fail-soft, so an exception in the handler allows the call; the guard only sees Bash and PowerShell tool calls, so a script that unlinks the files itself is invisible to it; and an OS-level guarantee needs the sandbox, not a hook.",
   "enforced_by": [
-    "hooks/workflow_hook.py::guard_protected_paths",
-    "hooks/workflow_hook.py::handle_pre_tool_use",
+    ".claude/hooks/workflow_hook.py::guard_protected_paths",
+    ".claude/hooks/workflow_hook.py::handle_pre_tool_use",
     "tests/test_hook.py::TestTier0Guard",
     ".claude/settings.json",
     "tests/test_governance_library.py::SettingsWiring"

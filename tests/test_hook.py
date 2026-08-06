@@ -24,9 +24,10 @@ import uuid
 from contextlib import redirect_stdout
 from pathlib import Path
 
-# Make the sibling hooks/ package importable regardless of CWD.
+# Make the dispatcher importable regardless of CWD. It lives under `.claude/`
+# alongside the settings file that registers it, not at the repo root.
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "hooks"))
+sys.path.insert(0, str(REPO_ROOT / ".claude" / "hooks"))
 
 import workflow_hook  # noqa: E402
 
@@ -694,6 +695,37 @@ class TestLoopDetection(BaseCase):
         rc, out = run_hook(self.bash_event("pytest -q"), project_dir=self.project)
         self.assertIsNotNone(out)
         self.assertIn("3x in a row", out["hookSpecificOutput"]["additionalContext"])
+
+
+class TestSchemaLocation(unittest.TestCase):
+    """The schema must be findable from wherever the dispatcher is vendored.
+
+    Regression: the path was ``__file__.parent.parent / "schemas"``, which
+    assumed the dispatcher sat one level below the repository root. Moving it to
+    ``.claude/hooks/`` resolved it to ``.claude/schemas/``. Because a missing
+    schema only warns, ``--self-test`` still exited 0 and printed ``RESULT:
+    PASS`` while validating nothing -- two invalid configs passed. A check that
+    silently stops checking is the failure mode this repository keeps hitting.
+    """
+
+    def test_schema_resolves_from_the_real_location(self):
+        found = workflow_hook.find_schema_path()
+        self.assertIsNotNone(found, "config_schema.json not found from the dispatcher")
+        self.assertTrue(found.is_file())
+        self.assertEqual("config_schema.json", found.name)
+
+    def test_self_test_actually_validates_rather_than_skipping(self):
+        """Assert on the *positive* line, not just the exit code.
+
+        The exit code alone cannot tell 'validated and passed' from 'skipped and
+        defaulted to passing' -- which is precisely how the regression hid.
+        """
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            workflow_hook.main(["--self-test"])
+        out = buf.getvalue()
+        self.assertIn("config valid against schemas/config_schema.json", out)
+        self.assertNotIn("validation skipped", out)
 
 
 class TestSchemaValidator(unittest.TestCase):
