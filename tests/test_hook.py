@@ -1388,58 +1388,22 @@ class TestDocExclusion(BaseCase):
         self.assertTrue(workflow_hook.is_excluded_doc(doc, self._cfg(), self.project))
 
 
-class TestConfidenceDerivation(unittest.TestCase):
-    """`confidence_level` is computed, never asserted.
+class TestConfidenceDerivation_REMOVED:
+    """Removed 2026-08-29 with `workflow_hook.derive_confidence`.
 
-    The protocol's determination table is a set of *thresholds* -- "authority
-    >= 10 and consensus >= 3 and age > 5y" -- not exact keys, so (10, 4, 6)
-    must also yield 5. A threshold ladder is exactly where an off-by-one hides,
-    hence the boundary cases below.
+    `confidence_level` was a per-item field the hook recomputed from
+    `source_authority`, `source_consensus` and source age. It was distribution
+    machinery: eleven metadata fields per checklist item, of which this was the
+    derived one. Stage 1 of plans/golden-rules-migration.md removes it.
+
+    Removing a test is how coverage vanishes silently, so the reason is recorded.
+    The function had **zero callers in the hook** -- only tests consumed it, which
+    is the shape of code kept alive by its own test. The golden-rules format that
+    replaces the JSON library carries no confidence score at all: an item is
+    sourced to a version-pinned authority or a dated incident, or it says it is
+    reasoned from first principles. That is a claim a reader can check, rather
+    than a number derived from three other numbers.
     """
-
-    def d(self, authority, consensus, age_days):
-        return workflow_hook.derive_confidence(authority, consensus, age_days)
-
-    def test_industry_standard(self):
-        self.assertEqual(self.d(10, 3, 5 * 365 + 1), 5)
-
-    def test_above_every_threshold_still_tops_out_at_five(self):
-        self.assertEqual(self.d(10, 9, 20 * 365), 5)
-
-    def test_enterprise_proven(self):
-        self.assertEqual(self.d(9, 2, 3 * 365 + 1), 4)
-
-    def test_community_validated(self):
-        self.assertEqual(self.d(7, 1, 366), 3)
-
-    def test_emerging(self):
-        self.assertEqual(self.d(5, 1, 30), 2)
-
-    def test_uncertain_when_nothing_supports_it(self):
-        self.assertEqual(self.d(1, 0, 0), 1)
-
-    def test_brand_new_item_cannot_reach_the_top(self):
-        """Age is a required factor -- a day-old citation is not yet proven."""
-        self.assertLess(self.d(10, 3, 0), 5)
-
-    def test_no_consensus_caps_the_level(self):
-        self.assertLess(self.d(10, 0, 10 * 365), 5)
-
-    def test_boundaries_are_inclusive_on_the_documented_side(self):
-        for authority, consensus, age, expected in (
-            (10, 3, 5 * 365 + 1, 5),
-            (9, 3, 5 * 365 + 1, 4),
-            (10, 2, 5 * 365 + 1, 4),
-            (8, 2, 3 * 365 + 1, 4),
-            (7, 2, 3 * 365 + 1, 3),
-        ):
-            with self.subTest(a=authority, c=consensus, age=age):
-                self.assertEqual(self.d(authority, consensus, age), expected)
-
-    def test_matrix_is_ordered_strongest_first(self):
-        levels = [row[-1] for row in workflow_hook.CONFIDENCE_MATRIX]
-        self.assertEqual(levels, sorted(levels, reverse=True),
-                         "an unordered ladder would return the wrong level")
 
 
 class TestEnforcementModeMatchesGuard(unittest.TestCase):

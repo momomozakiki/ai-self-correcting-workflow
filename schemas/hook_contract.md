@@ -303,18 +303,27 @@ python .claude/hooks/workflow_hook.py --self-test
    mechanism), tier-0 prohibitions present, retrospective has entries, and every
    `(recurring)` retrospective entry carries a `**Codified:**` line.
 4. Warn if `ANTHROPIC_API_KEY` is set, and print the `env_check` tool versions.
-5. Derive a cumulative maturity level and rewrite `governance.maturity_tracker`.
+**Step 5 removed 2026-08-29.** It read: "Derive a cumulative maturity level and
+rewrite `governance.maturity_tracker`", followed by a 1–5 ladder table. Both the
+ladder and the `governance.maturity_tracker` config key are gone —
+the key was removed from `schemas/config_schema.json` in the same commit.
 
-| Level | Name | Requires (cumulatively) |
-|-------|------|--------------------------|
-| 1 | Ad-hoc | config parses |
-| 2 | Repeatable | config schema-valid; current ISO-week ledger exists |
-| 3 | Defined | no `UNFINISHED.md`; loop detection on; all docs carry frontmatter |
-| 4 | Managed | tier-0 prohibitions present; retrospective has entries |
-| 5 | Optimized | no uncodified recurring mistakes |
+Two reasons. The tracker write meant `--self-test` mutated a **tracked** file on
+every run, so running the suite dirtied the working tree; it was reverted by hand
+three times in one session before anyone named it. An instrument that changes what
+it measures is not one. And the level was "reported, never enforced" — a number
+nothing consumed, which reads as a score, and a score invites optimising the score.
 
-**Exit code reflects validation only.** A young repository sits at level 1–2 and
-still exits 0; the level is reported, never enforced.
+**`--self-test` now writes nothing.** That is a contract, not an accident:
+`test_hook.TestSelfTest.test_self_test_does_not_write_to_the_repository` compares
+the file tree before and after a run and fails on any created, removed or modified
+file.
+
+**Exit code reflects validation only.** The individual checks in step 3 are
+reported, never enforced — a young repository fails several and still exits 0.
+Note the corollary the gate auditor flagged on 2026-08-29: a repository that has
+*lost* its governance library also warns and still exits 0, and the exit code
+cannot tell the two apart.
 
 **Output:** a plain-text report on stdout. If the console encoding cannot
 represent it (Windows `cp1252` and the warning emoji), the report degrades to

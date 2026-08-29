@@ -30,9 +30,16 @@ When hook behaviour changes, update these **together**:
 python .claude/hooks/workflow_hook.py --self-test
 ```
 
-Validates the config and reports a governance maturity level. **Exit 0 is not proof it ran** —
-check for `[ ok ] config valid against schemas/config_schema.json`. A `validation skipped`
-warning also exits 0, and once did so for two knowingly-invalid configs.
+Validates the config and reports health checks. **Exit 0 is not proof it ran** — check for
+`[ ok ] config valid against schemas/config_schema.json`. A `validation skipped` warning also
+exits 0, and once did so for two knowingly-invalid configs.
+
+Two changes on 2026-08-29. The **governance maturity level is gone**: it rewrote a tracked file
+on every run, so running the suite dirtied the tree. `--self-test` now writes nothing at all,
+and `test_hook.TestSelfTest.test_self_test_does_not_write_to_the_repository` holds it to that
+by diffing the file tree either side of a run. And the checklist-source line now reports **how
+many items it examined** — it used to print `[ ok ] checklist sources validated` over an empty
+directory, a pass earned by checking nothing.
 
 ## Autonomous runs
 

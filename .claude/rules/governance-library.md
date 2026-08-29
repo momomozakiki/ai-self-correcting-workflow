@@ -24,15 +24,24 @@ Naming a function is not evidence it runs. `resolve_enforcer` proves `guard_forc
 only a settings entry proves Claude Code ever calls it. That gap is why `SettingsWiring` checks
 both settings files.
 
-## The mirror is part of the edit
+## The mirror requirement is gone — `.ai/` is being retired
 
-Any change under `.ai/` must be mirrored into `templates/ai-library/` **in the same commit**.
-`TemplateParity` fails otherwise. Adopters read the template copy; a repo that tests only the
-copy it uses cannot see what it ships — which is exactly how the adopter template once carried
-no `PreToolUse` block at all while four prohibitions declared themselves `live`.
+**Changed 2026-08-29.** `templates/ai-library/` was deleted and `TemplateParity` with it
+(stage 1 of `plans/golden-rules-migration.md`). **Do not mirror `.ai/` anywhere.** There is no
+longer a second copy to keep in step, and the instruction that used to sit here would now send
+you to a directory that does not exist.
 
-Adding a rule means: the rule file, its folder's `manifest.json` (including `total_items`), and
-the mirror. A rule with `maps_to_v14_step: null` needs no `GUIDE.md` §12 row — `StepMapping`
+`.ai/` itself is still live and still the authority until stage 3 ports it to `golden-rules/`.
+Its rules are unchanged; what went away is the obligation to maintain a duplicate of them for
+adopters.
+
+The mirror *principle* still applies where it has a subject: `.claude/rules/`,
+`.claude/agents/` and `.claude/skills/` each mirror into `templates/`, in the same commit,
+enforced by `test_claude_layout.TemplateMirrors` and `test_skills.SkillTemplateParity`. Both
+gained non-empty-corpus guards, because two empty trees compare equal and pass.
+
+Adding a rule means: the rule file and its folder's `manifest.json` (including `total_items`).
+A rule with `maps_to_v14_step: null` needs no `GUIDE.md` §12 row — `StepMapping`
 skips null steps — but any non-null step must exist in that table with a matching tier.
 
 ## Where things live
@@ -47,5 +56,10 @@ skips null steps — but any non-null step must exist in that table with a match
 - `.ai/06-components/` — stays empty until a pattern has shipped and survived review.
   `BLUEPRINT_SCHEMA.md` sets the bar.
 
-Health: `python .claude/hooks/workflow_hook.py --self-test` reports a maturity level 1–5. The
-exit code reflects **validation only** — the level is reported, never enforced.
+Health: `python .claude/hooks/workflow_hook.py --self-test`. The exit code reflects
+**validation only**; the individual checks are reported, never enforced.
+
+The **maturity level 1–5 no longer exists** (removed 2026-08-29). It rewrote a tracked file on
+every run, so merely running the suite dirtied the working tree — an instrument that mutates
+what it measures. It was also "reported, never enforced": a number nothing consumed, which
+reads as a score, and a score invites optimising the score.

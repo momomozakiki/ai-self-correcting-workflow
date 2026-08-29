@@ -1400,34 +1400,19 @@ def is_excluded_doc(path: Path, config: Dict[str, Any], project_root: Path) -> b
 # procedure distinguishes 94% from 96%, so the level survives and the false
 # precision does not.
 
-#                     authority, consensus, age_days,     level
-CONFIDENCE_MATRIX = [
-    (10, 3, 5 * 365, 5),   # Industry Standard  -- IETF/W3C/ISO/IEEE
-    (8,  2, 3 * 365, 4),   # Enterprise-Proven  -- NIST/OWASP/vendor docs
-    (6,  1, 365,     3),   # Community-Validated
-    (4,  1, 0,       2),   # Emerging
-]
-CONFIDENCE_FLOOR = 1       # Uncertain -- no authoritative source found
-
-
-def derive_confidence(source_authority: Any, source_consensus: Any,
-                      age_days: Any) -> int:
-    """Return the confidence level 1-5 implied by an item's own source fields.
-
-    Strictly a function of its arguments so the test and the runtime cannot
-    disagree. Non-numeric input yields the floor rather than raising: a
-    malformed item is uncertain, not fatal.
-    """
-    try:
-        authority = int(source_authority)
-        consensus = int(source_consensus)
-        age = float(age_days)
-    except (TypeError, ValueError):
-        return CONFIDENCE_FLOOR
-    for min_authority, min_consensus, min_age, level in CONFIDENCE_MATRIX:
-        if authority >= min_authority and consensus >= min_consensus and age > min_age:
-            return level
-    return CONFIDENCE_FLOOR
+# CONFIDENCE_MATRIX and derive_confidence were removed on 2026-08-29 (stage 1 of
+# plans/golden-rules-migration.md). They computed a 1-5 `confidence_level` for a
+# checklist item from its `source_authority`, `source_consensus` and source age.
+#
+# Two reasons. First, the function had **no callers in this file** -- its only
+# consumers were tests, which is the shape of code kept alive by its own test
+# suite. Second, and the real point: a number derived from two other
+# hand-assigned numbers is not evidence. It reads as precision and carries none.
+#
+# The golden-rules format that replaces the JSON library drops the score
+# entirely. An item cites a version-pinned authority, or a dated incident that
+# actually happened, or it states plainly that it was reasoned from first
+# principles. All three are claims a reader can check. A derived 4/5 is not.
 
 
 def _outstanding_recurrences(retro: Path) -> List[str]:

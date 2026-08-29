@@ -32,14 +32,18 @@ fixed slugs:
 | `structural` | Composition and interaction between agents or components; cascading failure |
 | `accountability` | Ownership, auditability, traceability — who is answerable, and can you tell later |
 
-**This list is the ledger's own, and is deliberately not the CISA five.** The
-`risk_source` field on rule files under `.ai/` uses the CISA taxonomy proper —
-`component`, `design`, `capability`, `structural`, `accountability` — per §11.3 of
-the imported spec. These slugs describe risk from the *changing the repo* angle
-(`privilege`, `behavioral`) rather than the *acting autonomously* angle
-(`component`, `capability`), and they are frozen: entries already written use them,
-and rewriting the vocabulary would invalidate history for no gain. Earlier revisions
-of this file described these as the CISA categories, which was wrong.
+**This list is the ledger's own, and is deliberately not the CISA five.** These slugs describe
+risk from the *changing the repo* angle (`privilege`, `behavioral`) rather than the *acting
+autonomously* angle, and they are frozen: entries already written use them, and rewriting the
+vocabulary would invalidate history for no gain. Earlier revisions of this file described these
+as the CISA categories, which was wrong.
+
+The CISA taxonomy this used to contrast against — a `risk_source` field on rule files under
+`.ai/`, validated against per-source weight bands — **was removed on 2026-08-29**. It was an
+enterprise risk-register vocabulary, and deciding whether a checklist question was
+`structural` or `accountability` was a judgement nobody could make the same way twice. A
+taxonomy applied inconsistently is noise wearing the costume of rigour. The ledger's own list,
+below, was always the one that carried its weight, and is unaffected.
 
 Omit the line when a change carries no notable risk — an always-present field stops
 carrying signal.

@@ -597,9 +597,19 @@ class CorpusNotEmpty(unittest.TestCase):
                         "check in this module is passing vacuously")
 
     def test_template_skills_are_present(self):
+        """Directories *and* content.
+
+        `skill_dirs` counts folders, so deleting every SKILL.md while leaving the
+        folders would pass a directory-only check -- the same vacuous shape this
+        class exists to close, one level down. Caught by the gate auditor on
+        2026-08-29 reviewing the first version of this test.
+        """
         self.assertTrue(skill_dirs(TEMPLATE_SKILLS),
                         f"{TEMPLATE_SKILLS} is empty -- the parity tests compare "
                         "nothing to nothing and adopters get no skills")
+        self.assertTrue(list(TEMPLATE_SKILLS.rglob("SKILL.md")),
+                        f"{TEMPLATE_SKILLS} has skill folders but no SKILL.md in "
+                        "any of them -- adopters get empty directories")
 
     def test_markdown_corpus_is_present(self):
         """`stamped_files` and the link checks read this; empty means no coverage."""

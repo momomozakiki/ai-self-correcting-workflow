@@ -880,9 +880,14 @@ convention exists to substitute for. One provenance record per artifact, in the
 artifact wherever the format allows it.
 
 **Health.** `python .claude/hooks/workflow_hook.py --self-test` validates the config and
-reports a governance maturity level (1–5) derived from real checks, writing
-`00-system/maturity-tracker.json`. The level is reported, never enforced — a young
-repository is not a broken one.
+reports a set of health checks. They are reported, never enforced — a young repository fails
+several and is not a broken one.
+
+The **maturity level (1–5) and `00-system/maturity-tracker.json` were removed on 2026-08-29.**
+The tracker write made `--self-test` mutate a tracked file on every run, so merely running the
+suite dirtied the working tree; an instrument that changes what it measures is not one. The
+level was also consumed by nothing, and a score with no consumer invites optimising the score.
+`--self-test` now writes nothing at all, and a test holds it to that.
 
 ---
 

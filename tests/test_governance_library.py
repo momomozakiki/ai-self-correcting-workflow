@@ -39,24 +39,14 @@ TEMPLATE = REPO_ROOT / "templates" / "ai-library"
 
 TIERS = ("live", "convention", "declarative")
 
-# The CISA five-risk framework the library claims to instantiate, with the
-# weight band each source is defined over. Source of truth:
-# docs/self-growing-checklist-ecosystem/03-risk-gates-and-metrics.md section 11.3.
-# Declared once here and cross-checked against .ai/GROWTH.md by
-# ``RiskTaxonomy.test_growth_doc_documents_the_same_taxonomy`` so the table and
-# the doc cannot drift apart.
-RISK_BANDS = {
-    "component": (1, 3),
-    "design": (4, 6),
-    "capability": (7, 10),
-    "structural": (6, 9),
-    "accountability": (8, 10),
-}
+# RISK_BANDS (the CISA five-risk framework and its weight bands) was removed on
+# 2026-08-29 with the `RiskTaxonomy` class below. See the note at that site.
 
-# Keys GROWTH.md requires on every rule and prohibition file.
+# Keys GROWTH.md requires on every rule and prohibition file. `risk_source` and
+# `risk_weight` left this list on 2026-08-29: nothing validates them any more, so
+# requiring them would be demanding a field for the sake of the demand.
 REQUIRED_ARTIFACT_KEYS = (
-    "id", "enforcement", "enforcement_status", "risk_source", "risk_weight",
-    "provenance",
+    "id", "enforcement", "enforcement_status", "provenance",
 )
 
 # `.ai/` and `templates/ai-library/` are the same library; the template carries
@@ -320,64 +310,23 @@ class RuleSchema(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------- #
-# Risk taxonomy
+# Risk taxonomy -- REMOVED 2026-08-29
 # --------------------------------------------------------------------------- #
-class RiskTaxonomy(unittest.TestCase):
-    def test_risk_source_is_in_the_taxonomy(self):
-        for name, artifact in artifacts():
-            with self.subTest(artifact=name):
-                self.assertIn(
-                    artifact["risk_source"], RISK_BANDS,
-                    f"{name}: risk_source {artifact['risk_source']!r} is not one of the "
-                    f"CISA five {sorted(RISK_BANDS)}")
-
-    def test_risk_weight_is_in_band_or_carries_a_note(self):
-        """An out-of-band weight must be argued for, not silently retuned.
-
-        Nudging an honestly-assessed number until it clears an imported
-        threshold is the same failure as claiming enforcement that does not
-        exist, so the escape hatch is a written reason rather than a new number.
-        """
-        for name, artifact in artifacts():
-            source = artifact["risk_source"]
-            if source not in RISK_BANDS:
-                continue  # reported by the test above
-            low, high = RISK_BANDS[source]
-            weight = artifact["risk_weight"]
-            with self.subTest(artifact=name):
-                self.assertIsInstance(weight, int, f"{name}: risk_weight must be an integer")
-                if low <= weight <= high:
-                    continue
-                self.assertTrue(
-                    (artifact.get("risk_weight_note") or "").strip(),
-                    f"{name}: risk_weight {weight} is outside the {source} band "
-                    f"{low}-{high} and carries no risk_weight_note explaining why")
-
-    def test_note_is_absent_when_the_weight_is_in_band(self):
-        """No unearned notes -- a note means a real, argued deviation."""
-        for name, artifact in artifacts():
-            source = artifact["risk_source"]
-            if source not in RISK_BANDS:
-                continue
-            low, high = RISK_BANDS[source]
-            if low <= artifact["risk_weight"] <= high:
-                with self.subTest(artifact=name):
-                    self.assertIsNone(
-                        artifact.get("risk_weight_note"),
-                        f"{name}: weight is inside the {source} band; drop the note")
-
-    def test_growth_doc_documents_the_same_taxonomy(self):
-        """.ai/GROWTH.md tells authors which sources are legal -- it must be right."""
-        text = (LIBRARY / "GROWTH.md").read_text(encoding="utf-8")
-        for source in RISK_BANDS:
-            with self.subTest(source=source):
-                self.assertIn(f"`{source}`", text,
-                              f"GROWTH.md does not document the {source!r} risk source")
-        for invented in ("`privilege`", "`behavioral`"):
-            with self.subTest(source=invented):
-                self.assertNotIn(
-                    invented, text,
-                    f"GROWTH.md documents {invented}, which is not in the CISA taxonomy")
+# `RiskTaxonomy` validated each artifact's `risk_source` against the CISA
+# five-risk framework and its `risk_weight` against that source's band, plus a
+# cross-check that .ai/GROWTH.md documented the same taxonomy.
+#
+# Removed with the rest of the per-item metadata machinery in stage 1 of
+# plans/golden-rules-migration.md. docs/RETROSPECTIVE.md already recorded that
+# the CISA bands do not transfer to a single-operator repository: they are an
+# enterprise risk-register vocabulary, and mapping a checklist question onto
+# "structural" vs "accountability" was a judgement nobody could make twice the
+# same way. A taxonomy applied inconsistently is noise wearing the costume of
+# rigour.
+#
+# The fields remain in the rule files as inert data until stage 3 retires those
+# files. Same treatment as `confidence_level`, and for the same reason: editing
+# 58 JSON files that are about to be deleted buys nothing.
 
 
 # --------------------------------------------------------------------------- #
@@ -493,23 +442,12 @@ class ChecklistItems(unittest.TestCase):
                 self.assertIsInstance(consensus, int)
                 self.assertGreaterEqual(consensus, 0)
 
-    def test_confidence_level_recomputes_from_the_items_own_fields(self):
-        """Derived, never asserted -- the `enforcement_mode` discipline again.
-
-        Age is measured from ``source_established`` to ``last_validated``, both
-        stored on the item, so this needs nothing outside the file.
-        """
-        for name, entry in checklist_items():
-            with self.subTest(rule=name, item=entry.get("id")):
-                validated = datetime.date.fromisoformat(entry["last_validated"])
-                established = datetime.date(int(entry["source_established"]), 1, 1)
-                expected = workflow_hook.derive_confidence(
-                    entry["source_authority"], entry["source_consensus"],
-                    (validated - established).days)
-                self.assertEqual(
-                    entry.get("confidence_level"), expected,
-                    f"{entry.get('id')}: stored confidence disagrees with what "
-                    "its own source fields imply")
+    # test_confidence_level_recomputes_from_the_items_own_fields was removed on
+    # 2026-08-29 with `workflow_hook.derive_confidence`. It checked that each
+    # item's stored `confidence_level` matched what its own `source_authority`,
+    # `source_consensus` and source age implied. The check was sound; what it
+    # guarded was not worth keeping. The `confidence_level` values remain in the
+    # rule files as inert data until stage 3 retires those files wholesale.
 
     def test_every_item_offers_a_remediation_hint(self):
         for name, entry in checklist_items():
