@@ -12,10 +12,11 @@ This is the live plan. `stage-gate-auditor` reads its gate sections. Archive it 
 
 ## Context
 
-The `.ai/` governance library drifted past its original concept. One checklist item costs a
-JSON rule with eleven metadata fields, a `manifest.json` bump with matching `total_items`, a
-`templates/ai-library/` mirror in the same commit, a `GUIDE.md` §12 row, and assertions in a
-959-line test file.
+The `.ai/` governance library drifted past its original concept. Before stage 1, one checklist
+item cost a JSON rule with eleven metadata fields, a `manifest.json` bump with matching
+`total_items`, a `templates/ai-library/` mirror in the same commit, a `GUIDE.md` §12 row, and
+assertions in a 959-line test file. (The mirror and several of those fields were removed in
+stage 1; this paragraph describes the state that motivated the plan.)
 
 The target design is three tiers — **golden rules** (proven markdown checklists per domain),
 **one agent per domain** that plans from its checklist, and an **orchestrator** that finds or

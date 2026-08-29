@@ -100,7 +100,7 @@ v14 cites heavily. Spot-checking the load-bearing claims:
 | 9 | Selection engine | convention | Project-type detection is agent judgment. |
 | 9.3 | Unified evaluation metrics (ARS/RGC/ACR/PAAS) | **dropped** | Requires an LLM judge and a vector store. Not implementable without an API key. Recorded here rather than in the library, so nothing dangles. |
 | 10 | Path-dependent policy evaluation | convention | The weekly ledger already records decisions and rationale; a second path log would duplicate it. |
-| 11 | Five-risk taxonomy | **live** | `risk_source` on every rule file, enforced by `RiskTaxonomy` in `tests/test_governance_library.py`. *(v1.0 called this live while nothing checked it; seven artifacts had drifted — see §6.)* The ledger's `**Risk:**` field in `history/FORMAT.md` is a **separate, frozen** five-slug list, not this taxonomy; v1.0 conflated the two. |
+| 11 | Five-risk taxonomy | ~~live~~ **removed** | Deleted 2026-08-29 with `RiskTaxonomy` and the `risk_source`/`risk_weight` fields. The bands were written for an agent fleet; deciding whether a checklist question was `structural` or `accountability` was a judgement nobody could make the same way twice. *(v1.0 had called this live while nothing checked it; seven artifacts had drifted — see §6. It was made live, then removed outright.)* The ledger's `**Risk:**` field in `history/FORMAT.md` is a **separate, frozen** five-slug list and is unaffected. |
 | 11 | Structural risk specifically | declarative | Requires a second agent. No multi-agent composition here. |
 | 12.1 | Dual-validation gate | convention | Technical gate = lint/tests (Phase 2); human gate = the user. |
 | 12.2 | Sandboxed execution | declarative | The real local mechanism is Claude Code permission modes plus `PreToolUse` hooks, not a staging environment. Recorded so an adopter with infrastructure can wire it up. |
@@ -167,10 +167,14 @@ for an agent fleet, and some of them do not transfer to a single-operator reposi
 a missing audit trail means something different when there is one operator and git already
 records who changed what.
 
-So the escape hatch is a written argument, not a new number. `risk_weight_note` records why
-the imported band does not fit, and `RiskTaxonomy.test_risk_weight_is_in_band_or_carries_a_note`
-accepts an out-of-band weight only when one is present. It also rejects a note on an
-in-band weight, so the field cannot become boilerplate.
+So the escape hatch was a written argument, not a new number. `risk_weight_note` recorded why
+the imported band did not fit, and `RiskTaxonomy.test_risk_weight_is_in_band_or_carries_a_note`
+accepted an out-of-band weight only when one was present. It also rejected a note on an
+in-band weight, so the field could not become boilerplate.
+
+**All of this was removed on 2026-08-29** — the taxonomy, the bands, the note field and the
+tests. The section is kept as the record of a mechanism that worked and was still not worth
+its cost.
 
 ## 8. Enforcing the Tier-0 prohibitions (2026-08-05)
 
@@ -337,5 +341,7 @@ objection already raised against `--no-write` (§7) and `--verify-sources` (§9)
 
 Re-verify §2 whenever the Claude Code CLI or the plan's model lineup changes — the `opus` alias
 resolution and Fable's billing status have both already moved once. Re-run
-`python .claude/hooks/workflow_hook.py --self-test` after any change to the library or config; it reports
-the current maturity level and the checks behind it.
+`python .claude/hooks/workflow_hook.py --self-test` after any change to the library or config. It
+reports the health checks. (It used to end with a cumulative maturity level 1–5; that ladder and
+its tracker file were deleted on 2026-08-29 — it rewrote a tracked file on every run, so running
+the suite dirtied the working tree.)

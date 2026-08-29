@@ -469,8 +469,9 @@ class SkillTemplateParity(unittest.TestCase):
     Adopters vendor this repository at ``.claude/workflow-core/``, where its own
     ``.claude/skills/`` would sit at a nested path that loads only incidentally.
     So the distribution copy lives in ``templates/`` and they copy it into their
-    own ``.claude/skills/``. Same reasoning, and same enforcement, as
-    ``.ai/`` -> ``templates/ai-library/``.
+    own ``.claude/skills/``. The same reasoning once covered
+    ``.ai/`` -> ``templates/ai-library/``; that mirror and its ``TemplateParity``
+    tests were deleted on 2026-08-29, leaving this the live case.
     """
 
     def test_file_trees_match(self):

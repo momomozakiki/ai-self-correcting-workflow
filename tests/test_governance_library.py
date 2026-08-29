@@ -880,106 +880,146 @@ class SettingsWiring(unittest.TestCase):
 # Retired machinery
 # --------------------------------------------------------------------------- #
 class RetiredMachinery(unittest.TestCase):
-    """Deleted code must not still be described as if it runs.
+    """Deleted machinery must not still be described as if it runs.
 
     This exists because the failure it guards happened **three times in one
-    session**, each time in the commit that was closing a report of the previous
-    one:
+    session**, each time in the commit closing a report of the previous one:
 
     1. `templates/ai-library/` and `TemplateParity` were deleted, and
        `.claude/rules/governance-library.md` -- unconditional, loaded every
-       session and after every `/compact` -- went on instructing the next session
-       to mirror into that directory.
-    2. That was fixed, and `GUIDE.md` was left asserting that
-       `test_governance_library.py` holds `risk_source`/`risk_weight` to the CISA
-       taxonomy and `.ai/` to its mirror. Both classes were gone.
-    3. That was fixed, and `.ai/GROWTH.md` was left telling rule authors their
-       `confidence_level` would be derived by `derive_confidence` -- while the
-       same commit rewrote the operating-manual skill to point at that file.
+       session -- went on instructing the next session to mirror into that
+       directory.
+    2. Fixed, and `GUIDE.md` was left asserting that this module holds
+       `risk_source`/`risk_weight` to the CISA taxonomy and `.ai/` to its mirror.
+       Both classes were gone.
+    3. Fixed, and `.ai/GROWTH.md` was left telling rule authors their
+       `confidence_level` would be derived by `derive_confidence`.
 
-    Every one was found by a human-facing audit, not by the suite, because a
-    stale sentence is not a syntax error. `resolve_enforcer` above catches the
-    inverse case -- a rule *claiming* an enforcer that does not exist -- but
-    nothing caught prose describing a symbol that no longer exists.
+    **The first version of this class caught none of them**, and the gate auditor
+    proved it by reintroducing all three into a green suite. That version
+    allowlisted whole *files*, so it detected only a retired name surfacing
+    somewhere new -- while every incident was a false claim inside a file that
+    legitimately discusses the removal. Allowlisting the file that gets it wrong
+    is exactly the wrong granularity.
 
-    The check is deliberately crude: a retired name may appear only in files that
-    have opted in, one path per line. A new mention anywhere else fails, and the
-    fix is either to delete the mention or to justify it by adding the path here
-    -- a visible decision in a diff rather than a silent one.
+    So the unit here is the **paragraph**, and the question is not "may this file
+    mention the name" but "does this passage admit the thing is gone". A
+    paragraph naming retired machinery must also carry a removal marker
+    (`removed`, `deleted`, `no longer`, `was`, `used to`, ...). That is crude and
+    deliberately so: it cannot judge whether prose is *correct*, only whether it
+    is written as history. A sentence claiming deleted code enforces something,
+    with no acknowledgement that it is gone, fails.
 
-    Historical records are exempt wholesale (`ALWAYS_SKIPPED`): a changelog, a
-    ledger, an archive and a handover are *supposed* to say what used to be true.
+    Records of what used to be true are exempt wholesale -- a changelog, a
+    ledger, an archive. They are supposed to say what was.
+
+    **What this does not catch, stated plainly.** The marker is paragraph-scoped
+    and blind to what the marker is *about*. A paragraph that says "v1.0 called
+    this live while nothing checked it" and then asserts a deleted class enforces
+    something today contains both a past-tense phrase and a false claim, and
+    passes. That exact case existed in
+    ``docs/governance-integration-decision.md`` and had to be found by hand.
+    So this is a floor, not a proof: it catches the careless restatement, not
+    the well-written falsehood. Do not read a green run as "no stale claims".
     """
 
-    #: name -> paths permitted to mention it. Every entry is a file that
-    #: describes the removal, not one that describes the thing as live.
-    RETIRED = {
-        "derive_confidence": {
-            ".ai/03-planning/manifest.json", ".ai/05-domains/manifest.json",
-            ".ai/GROWTH.md", ".claude/hooks/workflow_hook.py", "GUIDE.md",
-            "ROADMAP.md", "docs/checklist-system.md",
-            "tests/test_governance_library.py", "tests/test_hook.py",
-        },
-        "CONFIDENCE_MATRIX": {
-            ".claude/hooks/workflow_hook.py", "docs/checklist-system.md",
-            "tests/test_governance_library.py",
-        },
-        "RiskTaxonomy": {
-            ".ai/GROWTH.md", "GUIDE.md", "docs/governance-integration-decision.md",
-            "tests/test_governance_library.py",
-        },
-        "RISK_BANDS": {".ai/GROWTH.md", "tests/test_governance_library.py"},
-        "TemplateParity": {
-            ".claude/rules/governance-library.md", "GUIDE.md",
-            ".claude/skills/adaptive-workflow/references/conditional-triggers.md",
-            "templates/rules/governance-library.md",
-            "templates/skills/adaptive-workflow/references/conditional-triggers.md",
-            "docs/RETROSPECTIVE.md", "docs/checklist-system.md",
-            "docs/governance-integration-decision.md",
-            "tests/test_governance_library.py", "tests/test_skills.py",
-        },
-        # This module lists every retired name in RETIRED above, so it mentions
-        # all of them by construction and appears in each set.
-        "maturity-tracker": {
-            ".ai/README.md", ".claude/hooks/workflow_hook.py", "GUIDE.md",
-            ".github/workflows/tests.yml", "tests/test_hook.py",
-            "tests/test_governance_library.py",
-        },
-        "maturity_tracker": {
-            "schemas/hook_contract.md", "tests/test_hook.py",
-            "tests/test_governance_library.py",
-        },
-        "templates/ai-library": {
-            ".claude/rules/governance-library.md", "CLAUDE.md", "GUIDE.md",
-            ".claude/skills/adaptive-workflow/references/conditional-triggers.md",
-            "templates/rules/governance-library.md",
-            "templates/skills/adaptive-workflow/references/conditional-triggers.md",
-            "ROADMAP.md", "docs/governance-integration-decision.md",
-            "golden-rules/git/existing-project.md",
-            "tests/test_claude_layout.py", "tests/test_governance_library.py",
-            "tests/test_skills.py",
-        },
-    }
+    #: Symbols and paths deleted in the golden-rules migration. Add a name here
+    #: the moment you delete the thing, not afterwards.
+    #:
+    #: Matched on word boundaries, so `TemplateParity` does not fire inside
+    #: `SkillTemplateParity` -- a live class whose name happens to contain a
+    #: retired one. Substring matching produced exactly that false positive and
+    #: would have trained the next reader to widen the allowlist.
+    RETIRED = (
+        "derive_confidence", "CONFIDENCE_MATRIX", "RiskTaxonomy", "RISK_BANDS",
+        "TemplateParity", "maturity-tracker", "maturity_tracker",
+        "maturity level", "templates/ai-library", "risk_weight", "risk_source",
+    )
 
-    #: Records of what used to be true. Exempt by nature, not by exception.
+    #: Retired *fields* rather than retired *code*. In a `.json`/`.yaml` file
+    #: these are data keys sitting inertly in rule files that stage 3 deletes
+    #: wholesale -- not a claim that anything enforces them. In prose they are a
+    #: claim, and still checked. Without this split the test demands the removal
+    #: of 58 files' data, which is the churn stage 1 deliberately deferred.
+    DATA_KEYS = frozenset({"risk_source", "risk_weight"})
+    DATA_SUFFIXES = (".json", ".yaml", ".yml")
+
+    @classmethod
+    def names_in(cls, block, suffix=""):
+        """Retired names appearing in ``block`` as whole words."""
+        candidates = [n for n in cls.RETIRED
+                      if not (suffix in cls.DATA_SUFFIXES and n in cls.DATA_KEYS)]
+        return [n for n in candidates
+                if re.search(rf"(?<![\w-]){re.escape(n)}(?![\w-])", block)]
+
+    #: A paragraph naming retired machinery must contain one of these. They are
+    #: past-tense or negating: prose carrying one is discussing a removal, prose
+    #: carrying none is describing live behaviour.
+    MARKERS = re.compile(
+        r"\bremov|\bdelet|\bno longer|\bwas\b|\bwere\b|\buntil\b|\bformerly\b|"
+        r"\bused to\b|\bretir|\bgone\b|\bdropp|\bobsolet|\bdeprecat|"
+        r"\bnot required|\binert\b|\bsuperseded\b|~~",
+        re.IGNORECASE)
+
+    #: Records of a prior state. Exempt by nature, not by exception.
     ALWAYS_SKIPPED = (
         "plans/archive/", "history/", "docs/self-growing-checklist-ecosystem/",
         "CHANGELOG.md", "GUIDE_CHANGELOG.md", "plans/HANDOVER.md",
-        "plans/golden-rules-migration.md",
     )
-    SCANNED_SUFFIXES = (".md", ".py", ".json", ".yaml", ".yml")
+    #: This module names every retired symbol in RETIRED above, so it matches by
+    #: construction and cannot check itself.
+    SELF = "tests/test_governance_library.py"
+
     SKIPPED_DIRS = {".git", "__pycache__", "node_modules"}
+    #: By extension *and* by exact name -- the adopter fragment and the settings
+    #: fragment carry suffixes no ordinary glob would catch, and
+    #: `templates/CLAUDE.md.fragment` is named in the migration plan as a
+    #: stage-3 silent-breakage site.
+    SCANNED_SUFFIXES = (".md", ".py", ".json", ".yaml", ".yml", ".fragment",
+                        ".hooks", ".txt", ".cfg", ".toml")
+    SCANNED_NAMES = (".gitignore",)
 
     def scanned_files(self):
-        for path in REPO_ROOT.rglob("*"):
-            if not path.is_file() or path.suffix not in self.SCANNED_SUFFIXES:
+        for path in sorted(REPO_ROOT.rglob("*")):
+            if not path.is_file():
                 continue
             rel = path.relative_to(REPO_ROOT).as_posix()
             if set(path.relative_to(REPO_ROOT).parts) & self.SKIPPED_DIRS:
                 continue
             if rel.startswith(self.ALWAYS_SKIPPED) or rel in self.ALWAYS_SKIPPED:
                 continue
+            if rel == self.SELF:
+                continue
+            if not (path.suffix in self.SCANNED_SUFFIXES
+                    or path.name in self.SCANNED_NAMES):
+                continue
             yield rel, path
+
+    @staticmethod
+    def paragraphs(text):
+        """Blank-line separated blocks, with their 1-based starting line."""
+        block, start = [], 1
+        for number, line in enumerate(text.splitlines(), start=1):
+            if line.strip():
+                if not block:
+                    start = number
+                block.append(line)
+            elif block:
+                yield start, "\n".join(block)
+                block = []
+        if block:
+            yield start, "\n".join(block)
+
+    def offenders(self):
+        for rel, path in self.scanned_files():
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            for start, block in self.paragraphs(text):
+                named = self.names_in(block, path.suffix)
+                if named and not self.MARKERS.search(block):
+                    yield rel, start, named, block
 
     def test_the_corpus_is_not_empty(self):
         files = list(self.scanned_files())
@@ -987,47 +1027,40 @@ class RetiredMachinery(unittest.TestCase):
                            f"only {len(files)} files scanned -- this check is "
                            "passing vacuously")
 
-    def test_retired_names_appear_only_where_permitted(self):
-        found = {name: set() for name in self.RETIRED}
-        for rel, path in self.scanned_files():
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
-                continue
-            for name in self.RETIRED:
-                if name in text:
-                    found[name].add(rel)
+    def test_no_paragraph_describes_retired_machinery_as_live(self):
+        found = list(self.offenders())
+        report = "\n\n".join(
+            f"{rel}:{start} names {named} with no acknowledgement it is gone:\n"
+            "    " + block.strip().replace("\n", "\n    ")[:400]
+            for rel, start, named, block in found)
+        self.assertEqual(
+            [], [f"{rel}:{start}" for rel, start, _, _ in found],
+            "These passages describe deleted machinery as though it still runs. "
+            "Rewrite them as history, or say plainly that it was removed:\n\n"
+            + report)
 
-        for name, permitted in self.RETIRED.items():
-            with self.subTest(retired=name):
-                unexpected = sorted(found[name] - permitted)
-                self.assertEqual(
-                    [], unexpected,
-                    f"`{name}` was removed, but these files still mention it: "
-                    f"{unexpected}. Either delete the mention, or -- if the file "
-                    f"is deliberately describing the removal -- add its path to "
-                    f"RETIRED[{name!r}] so the decision is visible in a diff.")
+    def test_the_marker_check_actually_fires(self):
+        """A guard that has never failed is not a guard.
 
-    def test_permitted_lists_have_no_dead_entries(self):
-        """A path that no longer mentions the name is stale permission."""
-        found = {name: set() for name in self.RETIRED}
-        for rel, path in self.scanned_files():
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
-                continue
-            for name in self.RETIRED:
-                if name in text:
-                    found[name].add(rel)
+        The first version of this class passed against all three incidents it
+        was written for. This runs one of them through the real detector rather
+        than trusting that the logic reads correctly.
+        """
+        incident = ("`confidence_level` is then **derived** by "
+                    "`.claude/hooks/workflow_hook.py::derive_confidence`; "
+                    "never type one by hand.")
+        blocks = list(self.paragraphs(incident))
+        self.assertEqual(1, len(blocks))
+        _, block = blocks[0]
+        self.assertTrue(self.names_in(block),
+                        "the detector no longer recognises a retired name")
+        self.assertIsNone(self.MARKERS.search(block),
+                          "this incident text must read as a live claim")
 
-        for name, permitted in self.RETIRED.items():
-            with self.subTest(retired=name):
-                dead = sorted(permitted - found[name])
-                self.assertEqual(
-                    [], dead,
-                    f"RETIRED[{name!r}] permits {dead}, which no longer mention "
-                    "it -- drop them, or the allowlist grows into a place where "
-                    "a real regression could hide.")
+        excused = incident + " This was deleted on 2026-08-29."
+        self.assertIsNotNone(self.MARKERS.search(excused),
+                             "an explicit removal note must clear the check")
+
 
 
 if __name__ == "__main__":

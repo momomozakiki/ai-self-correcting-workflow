@@ -379,7 +379,8 @@ class RulePathsFrontmatter(unittest.TestCase):
 class TemplateMirrors(unittest.TestCase):
     """`.claude/rules/` and `.claude/agents/` ship to adopters too.
 
-    Same reasoning as ``templates/skills/`` and ``templates/ai-library/``: adopters
+    Same reasoning as ``templates/skills/`` (and as ``templates/ai-library/``,
+    until that mirror was deleted on 2026-08-29): adopters
     vendor this repo at ``.claude/workflow-core/``, where these directories sit at
     a nested path Claude Code does not read as theirs. They copy from
     ``templates/``. A directory added here and not there is a directory adopters
