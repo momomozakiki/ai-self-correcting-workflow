@@ -199,11 +199,6 @@
           "type": "string",
           "description": "Root of the chunked governance library.",
           "default": ".ai"
-        },
-        "maturity_tracker": {
-          "type": "string",
-          "description": "Path that `--self-test` rewrites with the derived maturity level. Generated file -- do not hand-edit.",
-          "default": ".ai/00-system/maturity-tracker.json"
         }
       }
     },

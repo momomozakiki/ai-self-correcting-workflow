@@ -571,5 +571,41 @@ class VerificationStamps(unittest.TestCase):
             "Re-verify the stragglers rather than editing the number")
 
 
+# --------------------------------------------------------------------------- #
+# Corpus guards
+# --------------------------------------------------------------------------- #
+class CorpusNotEmpty(unittest.TestCase):
+    """Every check in this module loops over a directory. An empty one passes them all.
+
+    A test that iterates a corpus and finds nothing does not fail -- it reports
+    success, having verified nothing at all. That is the single most expensive
+    failure mode in this repository's history, because the suite stays green
+    while the thing it was guarding is gone.
+
+    These assertions are the floor under every loop above. They are deliberately
+    crude: they do not check content, only that there is content to check. If a
+    directory is legitimately emptied one day, the fix is to delete the tests
+    that read it in the same commit -- not to loosen this class.
+
+    Added 2026-08-29, before the `.ai/` retirement, precisely because that
+    migration empties directories other tests iterate.
+    """
+
+    def test_skills_are_present(self):
+        self.assertTrue(skill_dirs(SKILLS),
+                        f"{SKILLS} has no skill directories -- every per-skill "
+                        "check in this module is passing vacuously")
+
+    def test_template_skills_are_present(self):
+        self.assertTrue(skill_dirs(TEMPLATE_SKILLS),
+                        f"{TEMPLATE_SKILLS} is empty -- the parity tests compare "
+                        "nothing to nothing and adopters get no skills")
+
+    def test_markdown_corpus_is_present(self):
+        """`stamped_files` and the link checks read this; empty means no coverage."""
+        self.assertTrue(list(SKILLS.rglob("*.md")),
+                        f"no .md files under {SKILLS}")
+
+
 if __name__ == "__main__":
     unittest.main()

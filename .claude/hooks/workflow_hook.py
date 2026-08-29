@@ -39,7 +39,7 @@ LOOP_WINDOW = 20                     # how many recent call signatures we keep
 
 # --- governance library ----------------------------------------------------- #
 DEFAULT_LIBRARY_ROOT = ".ai"
-DEFAULT_MATURITY_TRACKER = ".ai/00-system/maturity-tracker.json"
+# DEFAULT_MATURITY_TRACKER removed 2026-08-29 with the maturity ladder it fed.
 
 
 # --------------------------------------------------------------------------- #
@@ -1465,10 +1465,16 @@ def _print_report(lines: List[str]) -> None:
 
 
 def run_self_test() -> int:
-    """Validate the config, report workflow health, and derive a maturity level.
+    """Validate the config and report workflow health.
 
-    Exit code reflects *validation* only. The maturity level is reported, never
+    Exit code reflects *validation* only; the health checks are reported, never
     enforced -- a young repository is not a broken one.
+
+    This function **must not write anything**. It reports on the repository; an
+    instrument that mutates what it measures is not one. The maturity ladder and
+    its tracker file were removed on 2026-08-29 for exactly that reason, and
+    `test_hook.TestSelfTest.test_self_test_does_not_write_to_the_repository`
+    holds this property by comparing the file tree before and after.
     """
     out: List[str] = ["Adaptive Workflow -- self-test", "=" * 60]
     failures: List[str] = []
@@ -1556,6 +1562,14 @@ def run_self_test() -> int:
     # carries `source_version`, so clearing a warning is one lookup.
     interval = config.get("revalidation_interval_days", 180)
     stale: List[str] = []
+    # Count what was actually examined. Without this, an empty or missing
+    # `05-domains/` leaves `stale` empty and the branch below reports
+    # "[ ok ] checklist sources validated" -- a pass earned by checking nothing.
+    # Observed on 2026-08-29: with `.ai/` deleted entirely, --self-test still
+    # printed the ok line and still exited 0. A check that cannot distinguish
+    # "all clear" from "no corpus" is worse than no check, because it actively
+    # asserts the thing it failed to look at.
+    examined = 0
     if interval:
         cutoff = datetime.date.today() - datetime.timedelta(days=int(interval))
         for rule_path in sorted((library_root / "05-domains").glob("rule-*.json")):
@@ -1568,18 +1582,23 @@ def run_self_test() -> int:
                     validated = datetime.date.fromisoformat(entry["last_validated"])
                 except Exception:
                     continue
+                examined += 1
                 if validated < cutoff:
                     stale.append(f"{entry.get('id')} ({entry.get('source_version')}, "
                                  f"last validated {validated})")
-    checks["sources_current"] = not stale
+    checks["sources_current"] = bool(examined) and not stale
     if stale:
         out.append(f"[warn] {len(stale)} checklist item(s) due revalidation "
                    f"(>{interval}d):")
         out += [f"         {s}" for s in stale[:10]]
         if len(stale) > 10:
             out.append(f"         ... and {len(stale) - 10} more")
+    elif interval and examined:
+        out.append(f"[ ok ] checklist sources validated within {interval}d "
+                   f"({examined} items)")
     elif interval:
-        out.append(f"[ ok ] checklist sources validated within {interval}d")
+        out.append(f"[warn] no checklist items found under "
+                   f"{(library_root / '05-domains').name}/ -- nothing was revalidated")
 
     # --- skill verification stamps -------------------------------------------
     # Same argument as above, applied to claims about Claude Code itself, which
@@ -1658,54 +1677,19 @@ def run_self_test() -> int:
         out.append("  note: no `claude` on PATH? the VS Code extension directory name "
                    "carries the version (~/.vscode/extensions/anthropic.claude-code-*)")
 
-    # --- maturity -------------------------------------------------------------
-    levels = [
-        (1, "Ad-hoc", ["config_parses"]),
-        (2, "Repeatable", ["config_valid", "ledger_current"]),
-        (3, "Defined", ["no_unfinished", "loop_detection", "docs_have_frontmatter"]),
-        (4, "Managed", ["prohibitions_present", "retrospective_active"]),
-        (5, "Optimized", ["recurrences_codified"]),
-    ]
-    level, name = 0, "Uninitialised"
-    blocked_at, blocked_by = None, []
-    for value, label, required in levels:
-        failed = [k for k in required if not checks.get(k)]
-        if not failed:
-            level, name = value, label
-        else:
-            blocked_at, blocked_by = value, failed
-            break
-
-    out += ["", "-" * 60, f"Governance maturity: level {level}/5 ({name})"]
-
-    # The ladder stops at the first gate it fails, so a single warn low down can
-    # hide every check that passes above it -- a reader sees "Repeatable" and
-    # concludes the governance is immature when only one box is unticked. Report
-    # what blocked the climb, and what is already passing beyond it.
-    if blocked_at is not None:
-        out.append(f"  blocked at level {blocked_at} by: {', '.join(blocked_by)}")
-        above = [k for _, _, required in levels[blocked_at:]
-                 for k in required if checks.get(k)]
-        if above:
-            out.append(f"  already passing above it: {', '.join(above)}")
-    out.append("  Reported, never enforced - see docs/governance-integration-decision.md")
-
-    tracker_rel = gov.get("maturity_tracker") or DEFAULT_MATURITY_TRACKER
-    tracker = project_root / tracker_rel
-    try:
-        tracker.parent.mkdir(parents=True, exist_ok=True)
-        tracker.write_text(json.dumps({
-            "maturity_level": level,
-            "maturity_name": name,
-            "note": "Regenerated by `python .claude/hooks/workflow_hook.py --self-test`. "
-                    "Reported, never enforced.",
-            "last_assessment": datetime.date.today().isoformat(),
-            "checks": checks,
-            "outstanding_recurrences": outstanding,
-        }, indent=2) + "\n", encoding="utf-8")
-        out.append(f"  written to {tracker_rel}")
-    except Exception as exc:                           # noqa: BLE001 - non-fatal
-        out.append(f"  (could not write {tracker_rel}: {exc})")
+    # The governance maturity ladder (levels 1-5) and its `maturity-tracker.json`
+    # were removed 2026-08-29. Two reasons, both observed rather than argued:
+    #
+    # 1. The tracker rewrote a *tracked* file on every `--self-test`, so merely
+    #    running the suite dirtied the working tree. It was reverted by hand
+    #    three times in one session before anyone named it as the problem. A
+    #    health check that mutates the repo it is reporting on is an instrument
+    #    that manufactures the state it measures.
+    # 2. The level was "reported, never enforced" by design -- a number nothing
+    #    consumed. It read as a score, and a score invites optimising the score.
+    #
+    # The individual `checks` above still print. What is gone is the ladder that
+    # summed them into a grade and the file that stored it.
 
     if failures:
         out += ["", f"RESULT: FAIL - {len(failures)} validation error(s)."]

@@ -1,0 +1,50 @@
+# ============================================================================
+# governance.yaml - DECLARATIVE MANIFEST
+#
+# !! NOT MACHINE-PARSED !!  No hook in this repository reads this file. The
+# dispatcher is stdlib-only (no PyYAML), so every machine-read artifact is JSON.
+# This file exists so the governance posture is legible in one place, and so an
+# adopter with different tooling can lift it.
+#
+# Authoritative behaviour lives in:
+#   GUIDE.md ............................ the workflow itself
+#   .claude/workflow_config.json ........ what the hook actually reads
+#   docs/governance-integration-decision.md .. which controls are enforced
+# ============================================================================
+version: "1.0"
+last_updated: "2026-08-04"
+
+agent:
+  id: local-claude-code                  # matches agent-registry.json
+  owner: sim.scaletech@gmail.com
+  autonomy: supervised                   # full | supervised | reversible
+  surface: claude-code-cli
+  auth: subscription                     # subscription | api-key
+                                         # a set ANTHROPIC_API_KEY overrides the subscription
+
+model_policy:
+  default: sonnet                        # routine work
+  escalation: opus                       # hard passes; separate weekly cap on Pro
+  paid_escalation: fable                 # PAY-AS-YOU-GO on Pro - never a shipped default
+  alias_note: "`opus` resolves to Opus 5 only on Claude Code v2.1.219+"
+
+constitution:
+  absolute_prohibitions: 02-market-rules/prohibitions/   # tier 0, never overrideable
+  phase_rules: 01-phases/
+
+runtime:
+  reversibility:
+    required: true                       # ENFORCED (live) - git is the rollback mechanism
+  loop_detection:
+    enabled: true                        # ENFORCED (live) - see workflow_config.json
+  sandboxed_execution:
+    enabled: false                       # DECLARATIVE - permission modes are the real mechanism
+
+metrics:
+  maturity_level: see-maturity-tracker   # computed by --self-test
+  rag_grounding_confidence: dropped      # requires embeddings + a judge model (no API key)
+  attribution_completeness: dropped      # same
+  policy_aligned_action_score: dropped   # same
+
+shadow_ai:
+  enabled: false                         # DECLARATIVE - no fleet to scan

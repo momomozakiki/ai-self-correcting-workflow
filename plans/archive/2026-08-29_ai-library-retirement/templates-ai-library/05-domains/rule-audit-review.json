@@ -1,0 +1,110 @@
+{
+  "id": "rule-audit-review",
+  "version": "1.0",
+  "last_updated": "2026-08-05",
+  "category": "audit",
+  "type": "domain-rule",
+  "tier": 2,
+  "enforcement": "CONDITIONAL",
+  "enforcement_status": "convention",
+  "enforcement_note": "The hook writes behavioural metrics but verifies nothing about application-level audit logging.",
+  "overrideable": true,
+  "priority": "MEDIUM",
+  "workflow_phase": "2",
+  "task_size_required": [
+    "new_module",
+    "major_refactor"
+  ],
+  "tech_stack_required": [],
+  "condition": "When actions need to be reconstructable after the fact.",
+  "rule": "Audit what is logged, retained and attributable, as questions.",
+  "ai_action": "Work through the checklist against the code in question. Report the answers, including the ones that pass -- a checklist that only ever surfaces problems reads as noise. Where an answer is 'I cannot tell from here', say so rather than assuming the safe answer.",
+  "checklist": [
+    {
+      "id": "AUD-TRC-01",
+      "question": "Are authentication attempts logged, successful and failed alike?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 2,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Log both outcomes with the metadata needed to investigate.",
+      "group": "Audit-Traceability",
+      "group_condition": "When a security-relevant action occurs"
+    },
+    {
+      "id": "AUD-TRC-02",
+      "question": "Can an action be attributed to an actor without guessing?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 2,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Record the subject identifier alongside the action.",
+      "group": "Audit-Traceability",
+      "group_condition": "When a security-relevant action occurs"
+    },
+    {
+      "id": "AUD-TRC-03",
+      "question": "Would the log survive the incident it records, or can the same actor erase it?",
+      "source": "NIST SP 800-190",
+      "source_version": "NIST SP 800-190",
+      "source_authority": 9,
+      "source_consensus": 2,
+      "source_established": 2017,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Ship logs off-host; restrict deletion.",
+      "group": "Audit-Traceability",
+      "group_condition": "When a security-relevant action occurs"
+    },
+    {
+      "id": "AUD-RET-01",
+      "question": "Is anything logged that would be a breach if the log leaked?",
+      "source": "OWASP Top 10:2021",
+      "source_version": "OWASP Top 10:2021",
+      "source_authority": 9,
+      "source_consensus": 2,
+      "source_established": 2003,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Redact at the boundary; log identifiers, not payloads.",
+      "revalidation_note": "OWASP Top 10:2025 is in release candidate. Re-check this item against the final release; a release candidate is not yet citable as authoritative.",
+      "group": "Audit-Retention",
+      "group_condition": "When logs carry personal or sensitive data"
+    },
+    {
+      "id": "AUD-RET-02",
+      "question": "Is there a stated retention period, or do logs accumulate indefinitely?",
+      "source": "OWASP ASVS 5.0.0",
+      "source_version": "OWASP ASVS 5.0.0",
+      "source_authority": 9,
+      "source_consensus": 2,
+      "source_established": 2009,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Set and enforce a retention window.",
+      "group": "Audit-Retention",
+      "group_condition": "When logs carry personal or sensitive data"
+    }
+  ],
+  "anti_pattern": "Do not convert these questions into prescriptions. A question makes you look at the code and survives a codebase it was not written for; a prescription tells you what to type and stops being right the moment the context differs.",
+  "risk_source": "accountability",
+  "risk_weight": 6,
+  "provenance": {
+    "source": "agent-generated; every item cites a source resolved on 2026-08-05",
+    "authored": "2026-08-05",
+    "basis": "Adopted from docs/checklist-system.md (Professional Hierarchical Checklist System + Golden Rule Research Protocol). Items phrased as review questions per the checklist-not-prescription rule."
+  },
+  "tags": [
+    "code-review",
+    "audit",
+    "checklist",
+    "sourced"
+  ],
+  "risk_weight_note": "The accountability band (8-10) assumes a fleet with diffused ownership. On a single-operator repository a gap in the audit trail is recoverable from git history, so the honest weight sits below the imported band."
+}

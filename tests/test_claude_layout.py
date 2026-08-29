@@ -153,7 +153,7 @@ def hook_problems(settings_path, root, check_paths=True):
     an adopting project, where this repository sits at
     ``.claude/workflow-core/``. That path does not exist *here*, because here is
     workflow-core itself. The template's command string is asserted separately by
-    ``test_governance_library.SettingsWiring``, which knows the expected prefix.
+    :class:`SettingsWiring` below, which knows the expected prefix.
     """
     problems = []
     if not settings_path.is_file():
@@ -574,6 +574,145 @@ class NegativeControls(unittest.TestCase):
             root, "code-reviewer.md",
             "---\nname: code-reviewer\ndescription: Reviews code.\n---\nBody.\n")
         self.assertEqual([], agent_problems(agents))
+
+
+# --------------------------------------------------------------------------- #
+# Settings wiring
+# --------------------------------------------------------------------------- #
+class SettingsWiring(unittest.TestCase):
+    """A guard that exists in source is not a guard that runs.
+
+    ``resolve_enforcer`` can prove ``guard_force_push`` is written. It cannot
+    prove Claude Code ever calls it -- that depends on a hook entry in a settings
+    file. Delete the entry and the guard becomes unreachable code while every
+    claim about it still resolves. This class closes that gap.
+
+    It checks **both** configs, because for most of this repository's life it
+    checked only ``.claude/settings.json`` -- and ``templates/settings.json.hooks``,
+    the fragment adopters actually merge, had no ``PreToolUse`` block at all.
+    Every adopter ran with four Tier-0 prohibitions documented ``live`` and
+    nothing enforcing them, suite green throughout. A test that reads only the
+    copy its own repository uses cannot see what it ships.
+
+    Ported here from ``test_governance_library.SettingsWiring`` on 2026-08-29,
+    ahead of that module's retirement. It moved because it is not *about* the
+    ``.ai/`` library: it is about whether ``.claude/settings.json`` wires a hook,
+    which is this module's subject and outlives the library entirely. The
+    original's fifth test -- asserting that artifacts citing settings.json also
+    cite this class -- did not come with it; that one is genuinely about library
+    artifacts and retires with them.
+    """
+
+    # (label, path, substring the dispatcher command must contain). The paths
+    # differ because an adopter reaches the dispatcher through the submodule.
+    CONFIGS = (
+        ("repo", DOT_CLAUDE / "settings.json",
+         ".claude/hooks/workflow_hook.py"),
+        ("adopter template", REPO_ROOT / "templates" / "settings.json.hooks",
+         ".claude/workflow-core/.claude/hooks/workflow_hook.py"),
+    )
+
+    def configs(self):
+        for label, path, command in self.CONFIGS:
+            self.assertTrue(path.is_file(), f"{path} missing")
+            yield label, load_json(path), command
+
+    @staticmethod
+    def _pre_tool_use_entries(settings):
+        return (settings.get("hooks") or {}).get("PreToolUse") or []
+
+    def test_the_corpus_is_not_empty(self):
+        """Guards every loop below: an empty CONFIGS passes them all vacuously."""
+        self.assertTrue(self.CONFIGS, "no settings files to check")
+        self.assertEqual(2, len(list(self.configs())),
+                         "both the repo config and the adopter template must be "
+                         "checked; one of them is missing")
+
+    def test_a_pre_tool_use_hook_is_registered(self):
+        for label, settings, _ in self.configs():
+            with self.subTest(config=label):
+                self.assertTrue(
+                    self._pre_tool_use_entries(settings),
+                    f"{label} registers no PreToolUse hook, so the Tier-0 guard "
+                    "never runs -- the prohibitions rest on unreachable code")
+
+    def test_the_guard_covers_both_shells(self):
+        """A Bash-only matcher is bypassed by the PowerShell tool on Windows."""
+        for label, settings, _ in self.configs():
+            matchers = [e.get("matcher") or ""
+                        for e in self._pre_tool_use_entries(settings)]
+            for tool in ("Bash", "PowerShell"):
+                with self.subTest(config=label, tool=tool):
+                    self.assertTrue(
+                        any(tool in m for m in matchers),
+                        f"{label}: no PreToolUse matcher covers {tool}: {matchers}")
+
+    def test_the_registered_command_is_the_dispatcher(self):
+        """The path differs per config, so matching on the filename is not enough."""
+        for label, settings, expected in self.configs():
+            commands = [
+                h.get("command") or ""
+                for entry in self._pre_tool_use_entries(settings)
+                for h in (entry.get("hooks") or [])
+            ]
+            with self.subTest(config=label):
+                self.assertTrue(
+                    any(expected in c for c in commands),
+                    f"{label}: PreToolUse is registered but not to {expected!r}: "
+                    f"{commands}")
+
+    def test_default_mode_is_plan(self):
+        for label, settings, _ in self.configs():
+            with self.subTest(config=label):
+                self.assertEqual(
+                    "plan", (settings.get("permissions") or {}).get("defaultMode"),
+                    f"{label}: permissions.defaultMode is what makes planning the "
+                    "session default")
+
+
+# --------------------------------------------------------------------------- #
+# Corpus guards
+# --------------------------------------------------------------------------- #
+class CorpusNotEmpty(unittest.TestCase):
+    """Several checks here loop over a directory. An empty one passes them all.
+
+    A test that iterates a corpus and finds nothing reports success having
+    verified nothing. :class:`NegativeControls` already guards the *detectors*
+    by running them against a broken tree; this class guards the *inputs*, which
+    is the other half and the half that goes wrong during a migration.
+
+    ``TemplateMirrors`` is the sharpest case: it compares two sets of relative
+    paths, so two empty directories are equal and the test passes while adopters
+    receive nothing.
+
+    Added 2026-08-29, before the `.ai/` retirement, because that migration
+    empties directories other tests iterate.
+    """
+
+    def test_rules_are_present(self):
+        rules = DOT_CLAUDE / "rules"
+        self.assertTrue(rules.is_dir() and list(rules.rglob("*.md")),
+                        f"{rules} has no rule files -- ConditionalRules is "
+                        "passing vacuously")
+
+    def test_agents_are_present(self):
+        agents = DOT_CLAUDE / "agents"
+        self.assertTrue(agents.is_dir() and list(agents.rglob("*.md")),
+                        f"{agents} has no subagents -- the agent checks verify "
+                        "nothing")
+
+    def test_mirror_pairs_have_content_on_both_sides(self):
+        """Two empty trees compare equal. That is a pass that proves nothing."""
+        for label, source, template in TemplateMirrors.PAIRS:
+            with self.subTest(tree=label):
+                self.assertTrue(
+                    list(source.rglob("*.md")),
+                    f".claude/{label}/ is empty -- the mirror test compares "
+                    "nothing to nothing")
+                self.assertTrue(
+                    list(template.rglob("*.md")),
+                    f"templates/{label}/ is empty -- adopters get nothing, and "
+                    "the mirror test still passes")
 
 
 if __name__ == "__main__":

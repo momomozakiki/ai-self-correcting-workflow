@@ -29,8 +29,7 @@
     "escalate_heredoc": true
   },
   "governance": {
-    "library_root": ".ai",
-    "maturity_tracker": ".ai/00-system/maturity-tracker.json"
+    "library_root": ".ai"
   },
   "stop_hook": {
     "max_blocks": 2,

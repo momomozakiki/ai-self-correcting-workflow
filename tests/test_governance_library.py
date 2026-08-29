@@ -830,36 +830,25 @@ class StepMapping(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------- #
-# Adopter template parity
+# Adopter template parity -- REMOVED 2026-08-29
 # --------------------------------------------------------------------------- #
-class TemplateParity(unittest.TestCase):
-    """``templates/ai-library/`` is what adopters copy; it must not fall behind."""
-
-    def test_file_trees_match(self):
-        self.assertTrue(TEMPLATE.is_dir(), f"{TEMPLATE} missing")
-        library, template = relative_files(LIBRARY), relative_files(TEMPLATE)
-        self.assertEqual(set(), library - template,
-                         "in .ai/ but missing from templates/ai-library/")
-        self.assertEqual(set(), template - library,
-                         "in templates/ai-library/ but missing from .ai/")
-
-    def test_non_exempt_files_are_identical(self):
-        for rel in sorted(relative_files(LIBRARY) & relative_files(TEMPLATE)):
-            if rel in PARITY_EXEMPT:
-                continue
-            with self.subTest(file=rel):
-                self.assertEqual(
-                    (LIBRARY / rel).read_bytes(), (TEMPLATE / rel).read_bytes(),
-                    f"{rel}: .ai/ and templates/ai-library/ have diverged")
-
-    def test_exemptions_are_still_needed(self):
-        """An exemption that no longer differs is dead weight -- drop it."""
-        for rel in sorted(PARITY_EXEMPT):
-            with self.subTest(file=rel):
-                self.assertTrue((LIBRARY / rel).is_file(), f"{rel}: exempted but absent")
-                self.assertNotEqual(
-                    (LIBRARY / rel).read_bytes(), (TEMPLATE / rel).read_bytes(),
-                    f"{rel}: identical in both trees -- remove it from PARITY_EXEMPT")
+# `TemplateParity` guarded `templates/ai-library/`, the adopter copy of the
+# governance library. That directory was deleted in stage 1 of the golden-rules
+# migration (`plans/golden-rules-migration.md`), so these three tests guarded
+# nothing and errored on a missing path.
+#
+# Deleting a test is normally how coverage disappears silently, so the reason is
+# recorded rather than assumed: the mirror was *distribution* machinery -- a
+# second copy of 58 files kept byte-identical so adopters could vendor them. The
+# rules themselves are untouched and still tested by every other class here.
+# What went away is the obligation to maintain a duplicate, not any check on
+# content.
+#
+# The parity *principle* survives where it still has a subject:
+# `test_claude_layout.TemplateMirrors` covers `.claude/rules/` and
+# `.claude/agents/`, and `test_skills.SkillTemplateParity` covers
+# `templates/skills/`. Both gained non-empty-corpus guards in the same commit,
+# because two empty trees compare equal and pass.
 
 
 # --------------------------------------------------------------------------- #

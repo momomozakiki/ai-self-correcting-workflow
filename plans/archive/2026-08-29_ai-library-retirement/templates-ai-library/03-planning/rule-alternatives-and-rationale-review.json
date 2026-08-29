@@ -1,0 +1,109 @@
+{
+  "id": "rule-alternatives-and-rationale-review",
+  "version": "1.0",
+  "last_updated": "2026-08-05",
+  "category": "alternatives-and-rationale",
+  "type": "planning-rule",
+  "tier": 2,
+  "enforcement": "CONDITIONAL",
+  "enforcement_status": "convention",
+  "enforcement_note": "No hook can read a plan and decide whether its problem statement is separable from its solution. The real mechanism is the agent working the questions at Phase 1 and the user reading the answers before approving the plan.",
+  "overrideable": true,
+  "priority": "MEDIUM",
+  "workflow_phase": "1",
+  "task_size_required": [
+    "new_module",
+    "major_refactor"
+  ],
+  "tech_stack_required": [],
+  "condition": "Choosing between approaches, or committing to a design.",
+  "rule": "Ask whether the choice was made against stated criteria and recorded, as questions.",
+  "ai_action": "Work through the checklist against the plan, before the work begins. Report the answers, including the ones that pass. Where the plan simply does not address an item, say so -- an absent answer is the finding, not a reason to skip the item.",
+  "checklist": [
+    {
+      "id": "ALT-RAT-01",
+      "question": "Is at least one rejected alternative recorded, with the reason it was rejected?",
+      "source": "ISO/IEC/IEEE 42010:2022",
+      "source_version": "ISO/IEC/IEEE 42010:2022",
+      "source_authority": 10,
+      "source_consensus": 3,
+      "source_established": 2011,
+      "confidence_level": 5,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Write the alternative and the property that ruled it out.",
+      "group": "Rationale-Record",
+      "group_condition": "When more than one approach was available"
+    },
+    {
+      "id": "ALT-RAT-02",
+      "question": "Is the decision recorded somewhere durable, with its date and context?",
+      "source": "Documenting Architecture Decisions, M. Nygard",
+      "source_version": "Documenting Architecture Decisions, M. Nygard",
+      "source_authority": 5,
+      "source_consensus": 2,
+      "source_established": 2011,
+      "confidence_level": 2,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Write an ADR: context, decision, consequences.",
+      "group": "Rationale-Record",
+      "group_condition": "When more than one approach was available"
+    },
+    {
+      "id": "ALT-RAT-03",
+      "question": "Was 'do nothing' considered as an option?",
+      "source": "NASA Systems Engineering Handbook",
+      "source_version": "NASA/SP-2016-6105 Rev 2",
+      "source_authority": 8,
+      "source_consensus": 2,
+      "source_established": 2016,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "State why the status quo was rejected, not only why the change is good.",
+      "group": "Rationale-Options",
+      "group_condition": "When the work is discretionary"
+    },
+    {
+      "id": "ALT-RAT-04",
+      "question": "Were the criteria for choosing stated before the choice, or only after it?",
+      "source": "INCOSE Systems Engineering Handbook, 5th ed.",
+      "source_version": "INCOSE SE Handbook 5th ed. (2023)",
+      "source_authority": 8,
+      "source_consensus": 2,
+      "source_established": 2023,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Write the criteria first, then score the options against them.",
+      "group": "Rationale-Options",
+      "group_condition": "When the work is discretionary"
+    },
+    {
+      "id": "ALT-RAT-05",
+      "question": "Does the plan name the assumption that, if wrong, would invalidate it?",
+      "source": "ISO 31000:2018",
+      "source_version": "ISO 31000:2018",
+      "source_authority": 10,
+      "source_consensus": 2,
+      "source_established": 2018,
+      "confidence_level": 4,
+      "last_validated": "2026-08-05",
+      "remediation_hint": "Name it, and say how you would find out early that it was wrong.",
+      "group": "Rationale-Assumptions",
+      "group_condition": "Always"
+    }
+  ],
+  "anti_pattern": "Do not convert these questions into prescriptions, and do not answer them from the plan's own summary. A plan review reads the plan looking for what is absent; a summary is written by the same author and repeats what is present.",
+  "risk_source": "accountability",
+  "risk_weight": 8,
+  "provenance": {
+    "source": "agent-generated; every item cites a source resolved on 2026-08-05",
+    "authored": "2026-08-05",
+    "basis": "Plan-review gap: .ai/05-domains/ reviews code that already exists, so a plan was reviewed by nothing. Items phrased as review questions per the checklist-not-prescription rule."
+  },
+  "tags": [
+    "plan-review",
+    "alternatives-and-rationale",
+    "checklist",
+    "sourced"
+  ],
+  "note": "A decision without a recorded rejected alternative is indistinguishable from a decision never made."
+}

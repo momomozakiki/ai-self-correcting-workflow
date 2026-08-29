@@ -813,12 +813,18 @@ class TestSelfTest(BaseCase):
         self.assertEqual(rc, 0)
         self.assertIn("RESULT: PASS", out)
 
-    def test_low_maturity_still_passes(self):
+    def test_a_bare_project_still_passes(self):
         # A bare project has no prohibitions and no retrospective; that is a young
-        # repository, not a broken one.
+        # repository, not a broken one. Formerly `test_low_maturity_still_passes`,
+        # which asserted on the "Governance maturity: level" line. The maturity
+        # ladder was removed 2026-08-29 (it rewrote a tracked file on every run,
+        # and the level was reported but never consumed). The property worth
+        # keeping is the one this always really tested: an immature repo is not a
+        # failing one.
         rc, out = self.run_self_test()
         self.assertEqual(rc, 0)
-        self.assertIn("Governance maturity: level", out)
+        self.assertIn("RESULT: PASS", out)
+        self.assertNotIn("Governance maturity", out)
 
     def test_unknown_root_key_is_allowed(self):
         # The root schema sets additionalProperties: true on purpose, so a project
@@ -869,17 +875,29 @@ class TestSelfTest(BaseCase):
         self.assertNotIn("due re-verification", out)
         self.assertIn("skill verification stamps within", out)
 
-    def test_writes_maturity_tracker(self):
-        self.write_config({
-            "project_root": ".",
-            "governance": {"library_root": ".ai", "maturity_tracker": "out/maturity.json"},
-        })
+    def test_self_test_does_not_write_to_the_repository(self):
+        """Replaces `test_writes_maturity_tracker`, which asserted the opposite.
+
+        The old test required `--self-test` to write `maturity-tracker.json`.
+        That write was the defect: running the suite dirtied a *tracked* file,
+        and it was reverted by hand three times in one session before anyone
+        named it. A health check that mutates the repository it reports on is an
+        instrument that manufactures the state it measures.
+
+        The inversion is deliberate. Reading a config and reporting is the whole
+        job; producing an artefact is not part of it.
+        """
+        self.write_config({"project_root": "."})
+        before = {p: p.stat().st_mtime_ns
+                  for p in self.project.rglob("*") if p.is_file()}
         rc, _ = self.run_self_test()
         self.assertEqual(rc, 0)
-        tracker = json.loads((self.project / "out" / "maturity.json").read_text(
-            encoding="utf-8"))
-        self.assertIn("maturity_level", tracker)
-        self.assertIn("checks", tracker)
+        after = {p: p.stat().st_mtime_ns
+                 for p in self.project.rglob("*") if p.is_file()}
+        self.assertEqual(set(before), set(after),
+                         "--self-test created or removed files")
+        self.assertEqual([], [p.name for p in before if before[p] != after[p]],
+                         "--self-test modified files in the project it inspected")
 
     def test_reports_missing_frontmatter(self):
         (self.project / "docs" / "naked.md").write_text("# no frontmatter\n", encoding="utf-8")
@@ -1449,6 +1467,14 @@ class TestEnforcementModeMatchesGuard(unittest.TestCase):
         for path in sorted(root.rglob("rule-*.json")) + sorted(
                 root.rglob("prohibition-*.json")):
             self.artifacts.append((path, json.loads(path.read_text(encoding="utf-8"))))
+        # An empty corpus makes `test_every_tripwire_actually_trips` pass while
+        # verifying nothing. Its sibling has a count assertion that catches this,
+        # but relying on a neighbouring test to notice your inputs vanished is
+        # not a guard. When `.ai/` retires, delete this class -- do not let it
+        # sit here reporting green over nothing.
+        self.assertTrue(self.artifacts,
+                        f"no rule-*.json or prohibition-*.json under {root}; "
+                        "this class is passing vacuously")
 
     def _guard_decision(self, guard_name):
         command = self.TRIPWIRES[guard_name]

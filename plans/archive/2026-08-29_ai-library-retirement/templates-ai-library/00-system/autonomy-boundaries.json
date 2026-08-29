@@ -1,0 +1,39 @@
+{
+  "autonomy_tier": "supervised",
+  "tier_note": "The user approves plans and reviews diffs; hooks nudge, they do not block.",
+  "reversibility": {
+    "enforcement_status": "live",
+    "enforced_by": [
+      ".claude/hooks/workflow_hook.py::write_unfinished_breadcrumb",
+      "tests/test_hook.py::TestStopBreadcrumb"
+    ],
+    "required": true,
+    "mechanism": "git",
+    "checkpoint": "clean commit before destructive work"
+  },
+  "loop_detection": {
+    "enforcement_status": "live",
+    "enforced_by": [
+      ".claude/hooks/workflow_hook.py::detect_loop",
+      "tests/test_hook.py::TestLoopDetection"
+    ],
+    "see": "workflow_config.json -> loop_detection"
+  },
+  "absolute_prohibitions": {
+    "enforcement_status": "convention",
+    "source": "02-market-rules/prohibitions/",
+    "overrideable": false
+  },
+  "cross_session_risk": {
+    "enforcement_status": "convention",
+    "note": "Recorded as a `risk:` field on ledger entries. Not a computed budget - scoring every action would require an API-backed judge."
+  },
+  "financial_impact_caps": {
+    "enforcement_status": "declarative",
+    "reason": "No agent-initiated spend in this runtime."
+  },
+  "sandboxed_execution": {
+    "enforcement_status": "declarative",
+    "reason": "The real local mechanism is Claude Code permission modes plus PreToolUse hooks, not a staging environment."
+  }
+}

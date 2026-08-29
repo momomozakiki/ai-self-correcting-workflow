@@ -1,0 +1,31 @@
+{
+  "id": "rule-direct-test-disputes",
+  "version": "1.0",
+  "last_updated": "2026-08-06",
+  "category": "execution",
+  "type": "phase-rule",
+  "tier": 1,
+  "enforcement": "MANDATORY",
+  "enforcement_status": "convention",
+  "enforcement_note": "Nothing can enforce this. No hook can tell a tested claim from a confident one - both arrive as ordinary assistant text, and the dispatcher sees tool calls, not assertions. A PostToolUse hook could count executions but not tell which claim they settled. What exists is indirect: the loop detector notices repeated identical calls, which is the shape of arguing rather than testing. Enforcement would require a judge of claim-to-evidence linkage, which this repository has no way to build stdlib-only.",
+  "overrideable": false,
+  "workflow_phase": "2",
+  "maps_to_v14_step": null,
+  "maps_to_v14_step_reason": "No v14 ancestor. Self-hardened locally on 2026-08-06 after a planning session in which a vendored guide and this repository's own skill disagreed about whether the Stop hook can block. Two rounds of citation settled nothing; executing the hook settled it in one command. Recorded in history/2026-W32.md.",
+  "rule": "When a factual claim about system behaviour is disputed or uncertain, test it directly. Test every competing claim, not only the one you expect to win.",
+  "condition": "A claim about how the system behaves is contradicted, unverified, or resting on documentation alone.",
+  "ai_action": "Design the test from the documentation, then run it - never cite documentation in place of executing. Test each competing claim, including your own, and report the raw output rather than a paraphrase. If a claim genuinely cannot be executed, label it unproven and say what evidence would settle it; do not promote the best-argued position to a conclusion. When settling it needs the user, write the instructions in plain language: exactly what to do, what a pass looks like, what a failure looks like, and why it cannot be done without them. Assume no expertise - no jargon, no 'simply run', no assuming familiarity with hooks, stdin, or the tool surface.",
+  "risk_source": "accountability",
+  "risk_weight": 8,
+  "provenance": {
+    "source": "self-hardened from a recorded planning failure",
+    "authored": "2026-08-06",
+    "basis": "history/2026-W32.md + docs/RETROSPECTIVE.md"
+  },
+  "tags": [
+    "verification",
+    "evidence",
+    "communication",
+    "self-hardened"
+  ]
+}

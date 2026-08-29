@@ -54,7 +54,12 @@ its replacement is proven.
   `run_self_test` prints `[ ok ] checklist sources validated` over an empty directory — a
   false pass.
 - **Two tests break silently, not loudly.** `test_hook.py:1427` builds its corpus by rglobbing
-  `.ai/`; empty corpus means green no-ops. `SettingsWiring`
+  `.ai/`. **Corrected by the gate auditor 2026-08-29:** the empty corpus is only half a green
+  no-op — `test_every_tripwire_actually_trips` does pass vacuously, but
+  `test_declared_mode_matches_what_the_guard_returns` carries a count assertion that fires
+  (`0 != 4 : every guard should back exactly one artifact`). So the class has partial
+  protection worth preserving in whatever replaces it, and that — not the original inaccurate
+  claim — is the recorded reason for stage 3's deletion. `SettingsWiring`
   (`test_governance_library.py:868`) is the **only** proof a `PreToolUse` hook is registered
   in both settings files, and it lives in the file being deleted.
 
