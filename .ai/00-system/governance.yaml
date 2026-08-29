@@ -41,7 +41,7 @@ runtime:
     enabled: false                       # DECLARATIVE - permission modes are the real mechanism
 
 metrics:
-  maturity_level: see-maturity-tracker   # computed by --self-test
+  maturity_level: null   # removed 2026-08-29 with the ladder and its tracker file
   rag_grounding_confidence: dropped      # requires embeddings + a judge model (no API key)
   attribution_completeness: dropped      # same
   policy_aligned_action_score: dropped   # same

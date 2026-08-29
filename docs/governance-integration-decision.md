@@ -112,7 +112,7 @@ v14 cites heavily. Spot-checking the load-bearing claims:
 | 15.3 | Cross-session risk composition | convention | A ledger field, not a computed budget — computing it would require scoring every action. |
 | 15.4 | Agent loop detection | **live** | Implemented in `handle_post_tool_use`; advisory, never blocking. |
 | 16.1–16.2 | Autonomy flywheel, adoption metrics | convention | Descriptive. |
-| 16.3 | Governance maturity levels 1–5 | **live** | Computed by `--self-test`, written to `maturity-tracker.json`. Reported, never enforced. |
+| 16.3 | Governance maturity levels 1–5 | ~~live~~ **removed** | Deleted 2026-08-29. The tracker rewrote a tracked file on every `--self-test`, so running the suite dirtied the tree; and the level was consumed by nothing. A score with no consumer invites optimising the score. |
 | 17 | Operational guardrails | mixed | Research budget, git-divergence halt, secret redaction: **live/convention**. Financial-impact caps and risk budgets: declarative. |
 | 17.3 | Reversibility requirement | **live** | Git is the rollback mechanism; the Stop hook's dirty-tree breadcrumb already enforces the checkpoint discipline. |
 | 18.1–18.2 | Declarative governance manifest | declarative | `governance.yaml` exists for adopters and is **not parsed by any hook here** (stdlib-only: no PyYAML). Machine-read files are JSON. |
@@ -122,7 +122,7 @@ v14 cites heavily. Spot-checking the load-bearing claims:
 | 19.6 | Delegation framework + APS constraint dimensions | declarative | No second agent to delegate to. The seven APS dimensions are recorded for adopters. |
 | 20 | Shadow AI detection | declarative | Meaningless for a single operator on their own machine. |
 | 21 | Success metrics & KPIs | mixed | The ones `--self-test` can compute are live; the RAG-derived ones are dropped (see §9.3). |
-| 22 | File templates | live | Instantiated under `.ai/` and `templates/ai-library/`. |
+| 22 | File templates | convention | Instantiated under `.ai/`. The `templates/ai-library/` mirror was deleted 2026-08-29 with `TemplateParity`; nothing now checks template instantiation, so this is no longer `live`. |
 | 23 | Source authority scoring | convention | Adopted **with a correction**: Internet-Drafts score 7–8, not 10 (see §3). |
 | 24 | Final mandate | convention | Reads as intent, not as an enforceable rule set. |
 

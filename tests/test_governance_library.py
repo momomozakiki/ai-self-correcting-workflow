@@ -26,16 +26,16 @@ mock, and a fixture would only test the fixture.
 import datetime
 import json
 import re
-import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / ".claude" / "hooks"))
-import workflow_hook  # noqa: E402  -- confidence_level is recomputed through it
+# The `workflow_hook` import and its `sys.path` insert were removed on 2026-08-29
+# with `derive_confidence`, the only symbol this module used from it. An import
+# kept "just in case" is how a module grows a dependency nothing needs.
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LIBRARY = REPO_ROOT / ".ai"
-TEMPLATE = REPO_ROOT / "templates" / "ai-library"
+# TEMPLATE (templates/ai-library) removed 2026-08-29 -- the directory is deleted.
 
 TIERS = ("live", "convention", "declarative")
 
@@ -43,25 +43,17 @@ TIERS = ("live", "convention", "declarative")
 # 2026-08-29 with the `RiskTaxonomy` class below. See the note at that site.
 
 # Keys `.ai/GROWTH.md` requires on every rule and prohibition file. `risk_source`
-# and `risk_weight` left both this list and GROWTH.md on 2026-08-29, in the same
-# commit -- the test that used to hold the two in step
-# (`RiskTaxonomy.test_growth_doc_documents_the_same_taxonomy`) was itself removed,
-# so nothing would have caught them drifting apart.
+# and `risk_weight` left this list on 2026-08-29 and GROWTH.md in the *next*
+# commit, twelve minutes later -- they drifted, and nothing caught it, because
+# the test that held the two in step
+# (`RiskTaxonomy.test_growth_doc_documents_the_same_taxonomy`) had been removed
+# alongside them. The gate auditor caught it. `RetiredMachinery` below now does.
 REQUIRED_ARTIFACT_KEYS = (
     "id", "enforcement", "enforcement_status", "provenance",
 )
 
-# `.ai/` and `templates/ai-library/` are the same library; the template carries
-# adopter placeholders in exactly these files and must match everywhere else.
-# Listed one path per line so widening the exemption is a visible decision in a
-# diff rather than a silent loosening of the parity check.
-PARITY_EXEMPT = frozenset({
-    "README.md",
-    "00-system/agent-registry.json",
-    "00-system/governance.yaml",
-    "00-system/maturity-tracker.json",
-    "00-system/team-members.json",
-})
+# PARITY_EXEMPT removed 2026-08-29 with `TemplateParity`. It listed the files
+# allowed to differ between `.ai/` and its adopter mirror; there is no mirror now.
 
 
 # --------------------------------------------------------------------------- #
@@ -87,9 +79,9 @@ def checklist_rules():
     """Every rule carrying a ``checklist`` -- both phases, one list.
 
     Planning rules review the plan and domain rules review the code, but they
-    make identical claims about their items: sourced, derived confidence,
-    phrased as a question. Keeping two lists would mean remembering to widen
-    both, and the folder added second is the one that gets forgotten.
+    make identical claims about their items: sourced and phrased as a question.
+    Keeping two lists would mean remembering to widen both, and the folder added
+    second is the one that gets forgotten.
     """
     return planning_rules() + domain_rules()
 
@@ -882,6 +874,160 @@ class SettingsWiring(unittest.TestCase):
                     "tests/test_governance_library.py::SettingsWiring", refs,
                     f"{rel} cites .claude/settings.json but not the test that "
                     "checks it, so the citation is unfalsifiable")
+
+
+# --------------------------------------------------------------------------- #
+# Retired machinery
+# --------------------------------------------------------------------------- #
+class RetiredMachinery(unittest.TestCase):
+    """Deleted code must not still be described as if it runs.
+
+    This exists because the failure it guards happened **three times in one
+    session**, each time in the commit that was closing a report of the previous
+    one:
+
+    1. `templates/ai-library/` and `TemplateParity` were deleted, and
+       `.claude/rules/governance-library.md` -- unconditional, loaded every
+       session and after every `/compact` -- went on instructing the next session
+       to mirror into that directory.
+    2. That was fixed, and `GUIDE.md` was left asserting that
+       `test_governance_library.py` holds `risk_source`/`risk_weight` to the CISA
+       taxonomy and `.ai/` to its mirror. Both classes were gone.
+    3. That was fixed, and `.ai/GROWTH.md` was left telling rule authors their
+       `confidence_level` would be derived by `derive_confidence` -- while the
+       same commit rewrote the operating-manual skill to point at that file.
+
+    Every one was found by a human-facing audit, not by the suite, because a
+    stale sentence is not a syntax error. `resolve_enforcer` above catches the
+    inverse case -- a rule *claiming* an enforcer that does not exist -- but
+    nothing caught prose describing a symbol that no longer exists.
+
+    The check is deliberately crude: a retired name may appear only in files that
+    have opted in, one path per line. A new mention anywhere else fails, and the
+    fix is either to delete the mention or to justify it by adding the path here
+    -- a visible decision in a diff rather than a silent one.
+
+    Historical records are exempt wholesale (`ALWAYS_SKIPPED`): a changelog, a
+    ledger, an archive and a handover are *supposed* to say what used to be true.
+    """
+
+    #: name -> paths permitted to mention it. Every entry is a file that
+    #: describes the removal, not one that describes the thing as live.
+    RETIRED = {
+        "derive_confidence": {
+            ".ai/03-planning/manifest.json", ".ai/05-domains/manifest.json",
+            ".ai/GROWTH.md", ".claude/hooks/workflow_hook.py", "GUIDE.md",
+            "ROADMAP.md", "docs/checklist-system.md",
+            "tests/test_governance_library.py", "tests/test_hook.py",
+        },
+        "CONFIDENCE_MATRIX": {
+            ".claude/hooks/workflow_hook.py", "docs/checklist-system.md",
+            "tests/test_governance_library.py",
+        },
+        "RiskTaxonomy": {
+            ".ai/GROWTH.md", "GUIDE.md", "docs/governance-integration-decision.md",
+            "tests/test_governance_library.py",
+        },
+        "RISK_BANDS": {".ai/GROWTH.md", "tests/test_governance_library.py"},
+        "TemplateParity": {
+            ".claude/rules/governance-library.md", "GUIDE.md",
+            ".claude/skills/adaptive-workflow/references/conditional-triggers.md",
+            "templates/rules/governance-library.md",
+            "templates/skills/adaptive-workflow/references/conditional-triggers.md",
+            "docs/RETROSPECTIVE.md", "docs/checklist-system.md",
+            "docs/governance-integration-decision.md",
+            "tests/test_governance_library.py", "tests/test_skills.py",
+        },
+        # This module lists every retired name in RETIRED above, so it mentions
+        # all of them by construction and appears in each set.
+        "maturity-tracker": {
+            ".ai/README.md", ".claude/hooks/workflow_hook.py", "GUIDE.md",
+            ".github/workflows/tests.yml", "tests/test_hook.py",
+            "tests/test_governance_library.py",
+        },
+        "maturity_tracker": {
+            "schemas/hook_contract.md", "tests/test_hook.py",
+            "tests/test_governance_library.py",
+        },
+        "templates/ai-library": {
+            ".claude/rules/governance-library.md", "CLAUDE.md", "GUIDE.md",
+            ".claude/skills/adaptive-workflow/references/conditional-triggers.md",
+            "templates/rules/governance-library.md",
+            "templates/skills/adaptive-workflow/references/conditional-triggers.md",
+            "ROADMAP.md", "docs/governance-integration-decision.md",
+            "golden-rules/git/existing-project.md",
+            "tests/test_claude_layout.py", "tests/test_governance_library.py",
+            "tests/test_skills.py",
+        },
+    }
+
+    #: Records of what used to be true. Exempt by nature, not by exception.
+    ALWAYS_SKIPPED = (
+        "plans/archive/", "history/", "docs/self-growing-checklist-ecosystem/",
+        "CHANGELOG.md", "GUIDE_CHANGELOG.md", "plans/HANDOVER.md",
+        "plans/golden-rules-migration.md",
+    )
+    SCANNED_SUFFIXES = (".md", ".py", ".json", ".yaml", ".yml")
+    SKIPPED_DIRS = {".git", "__pycache__", "node_modules"}
+
+    def scanned_files(self):
+        for path in REPO_ROOT.rglob("*"):
+            if not path.is_file() or path.suffix not in self.SCANNED_SUFFIXES:
+                continue
+            rel = path.relative_to(REPO_ROOT).as_posix()
+            if set(path.relative_to(REPO_ROOT).parts) & self.SKIPPED_DIRS:
+                continue
+            if rel.startswith(self.ALWAYS_SKIPPED) or rel in self.ALWAYS_SKIPPED:
+                continue
+            yield rel, path
+
+    def test_the_corpus_is_not_empty(self):
+        files = list(self.scanned_files())
+        self.assertGreater(len(files), 50,
+                           f"only {len(files)} files scanned -- this check is "
+                           "passing vacuously")
+
+    def test_retired_names_appear_only_where_permitted(self):
+        found = {name: set() for name in self.RETIRED}
+        for rel, path in self.scanned_files():
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            for name in self.RETIRED:
+                if name in text:
+                    found[name].add(rel)
+
+        for name, permitted in self.RETIRED.items():
+            with self.subTest(retired=name):
+                unexpected = sorted(found[name] - permitted)
+                self.assertEqual(
+                    [], unexpected,
+                    f"`{name}` was removed, but these files still mention it: "
+                    f"{unexpected}. Either delete the mention, or -- if the file "
+                    f"is deliberately describing the removal -- add its path to "
+                    f"RETIRED[{name!r}] so the decision is visible in a diff.")
+
+    def test_permitted_lists_have_no_dead_entries(self):
+        """A path that no longer mentions the name is stale permission."""
+        found = {name: set() for name in self.RETIRED}
+        for rel, path in self.scanned_files():
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            for name in self.RETIRED:
+                if name in text:
+                    found[name].add(rel)
+
+        for name, permitted in self.RETIRED.items():
+            with self.subTest(retired=name):
+                dead = sorted(permitted - found[name])
+                self.assertEqual(
+                    [], dead,
+                    f"RETIRED[{name!r}] permits {dead}, which no longer mention "
+                    "it -- drop them, or the allowlist grows into a place where "
+                    "a real regression could hide.")
 
 
 if __name__ == "__main__":

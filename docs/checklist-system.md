@@ -71,8 +71,13 @@ tested but is not is exactly what this system exists to prevent.
 
 ### Confidence is derived, never asserted
 
-`confidence_level` (1–5) is computed by `.claude/hooks/workflow_hook.py::derive_confidence` from
-authority, consensus and age. `CONFIDENCE_MATRIX` is an **ordered threshold ladder**, not a
+> **Removed 2026-08-29.** `derive_confidence` and `CONFIDENCE_MATRIX` were deleted from the
+> hook; stored `confidence_level` values are inert data and the field is not required on new
+> rules. The function had no callers in the hook — only its own tests. The section below is
+> kept as the record of what the scheme was.
+
+`confidence_level` (1–5) was computed by `.claude/hooks/workflow_hook.py::derive_confidence` from
+authority, consensus and age. `CONFIDENCE_MATRIX` was an **ordered threshold ladder**, not a
 lookup: the source table reads *"authority ≥ 10 **and** consensus ≥ 3 **and** age > 5
 years"*, so `(10, 4, 6)` is also level 5.
 

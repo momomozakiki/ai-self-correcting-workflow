@@ -32,7 +32,8 @@ heading per mistake.
 - **Codified**: once the rule exists, add a `**Codified:**` line naming it.
 
 `python .claude/hooks/workflow_hook.py --self-test` reports any `(recurring)` entry that still has
-no `**Codified:**` line, and withholds maturity level 5 until none are outstanding. The
+no `**Codified:**` line. (It used to withhold maturity level 5 until none were outstanding;
+the ladder was removed 2026-08-29.) The
 threshold is deliberately two: one mistake is noise, two is a pattern worth paying for.
 
 ---

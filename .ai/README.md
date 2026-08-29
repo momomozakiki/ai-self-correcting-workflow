@@ -46,7 +46,7 @@ approved, and the rule was broken anyway. An `ask` enforces the prompt, not the 
 ## Layout
 
 ```
-00-system/              config, registry, autonomy boundaries, maturity tracker,
+00-system/              config, registry, autonomy boundaries,
                         checklist-selection.json - the one table selecting checklists
 01-phases/              one rule file per workflow step (Phase 0-3 + v14 step mapping)
 02-market-rules/        immutable golden rules; prohibitions/ is tier 0
@@ -91,14 +91,19 @@ for. One provenance record per artifact, in the artifact where the format allows
 
 This tree was bootstrapped once by a throwaway generator; it is **not** regenerated.
 Rules are added by hand as retrospectives produce them (see `GROWTH.md`), and a
-regenerator would clobber exactly that accumulated knowledge. The one generated file
-is `00-system/maturity-tracker.json`.
+regenerator would clobber exactly that accumulated knowledge. **Nothing here is
+generated.**
 
-## Regenerating the maturity tracker
+## Health check
 
 ```bash
 python .claude/hooks/workflow_hook.py --self-test
 ```
 
-Reports the health checks and the derived maturity level (1-5), and rewrites
-`00-system/maturity-tracker.json`. The level is reported, never enforced.
+Reports the health checks. They are reported, never enforced.
+
+**It writes nothing.** The maturity level (1-5) and `00-system/maturity-tracker.json`
+were removed on 2026-08-29: the tracker rewrote a tracked file on every run, so merely
+running the suite dirtied the working tree. `test_hook.TestSelfTest.
+test_self_test_does_not_write_to_the_repository` now holds the self-test to writing
+nothing at all.

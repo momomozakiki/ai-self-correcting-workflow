@@ -50,7 +50,7 @@
       },
       "governance_maturity": {
         "level": null,
-        "note": "Computed by `--self-test`; see maturity-tracker.json."
+        "note": "Removed 2026-08-29 with the maturity ladder and its tracker file; --self-test no longer computes or writes a level."
       }
     }
   ],

@@ -48,8 +48,12 @@ neither breadth nor depth applies. Research the golden rule rather than inventin
 source, recorded on the item itself: `source`, `source_version`, `source_authority` (the
 1-10 scale in `docs/checklist-system.md` section 3), `source_consensus` (independent
 sources at authority >= 7) and `source_established`. An item you cannot source does not
-ship - the shortfall is the rule working, not an omission. `confidence_level` is then
-**derived** by `.claude/hooks/workflow_hook.py::derive_confidence`; never type one by hand.
+ship - the shortfall is the rule working, not an omission.
+
+**`confidence_level` is no longer derived (2026-08-29).** `derive_confidence` was deleted
+from the hook; stored values are inert data. Do not add the field to new rules. A level
+computed from two hand-assigned numbers reads as precision and carries none - cite the
+source and its version instead.
 
 Cite the exact edition. `docs/checklist-system.md` section 4 records five version defects
 found in this library's own source documents, including a citation ("ASVS 5.10") that was
@@ -85,8 +89,8 @@ and survived review, never in advance of that.
 ## The self-hardening rule
 A mistake recorded **twice** in `docs/RETROSPECTIVE.md` stops being a note and becomes
 structure: a checklist item in `.claude/skills/adaptive-workflow/SKILL.md` and a rule file under
-`01-phases/`. `--self-test` reports recurring entries that have not yet been codified;
-reaching maturity level 5 requires that none are outstanding.
+`01-phases/`. `--self-test` reports recurring entries that have not yet been codified. (It
+used to gate maturity level 5 on that; the ladder was removed 2026-08-29.)
 
 ## Every new rule file needs
 `id`, `enforcement`, `enforcement_status` (live | convention | declarative), and a
@@ -104,8 +108,9 @@ Existing files keep the fields as inert data until `.ai/` retires to `golden-rul
 add them to new ones.
 
 Note the ledger's `**Risk:**` line is a **different** vocabulary (`privilege | design |
-behavioral | structural | accountability`) and is unaffected — see `history/FORMAT.md`, which
-has always said so.
+behavioral | structural | accountability`) and is unaffected — see `history/FORMAT.md`.
+(That file records that *earlier revisions of it* wrongly called these the CISA categories,
+so it has not always said so; it says so now.)
 
 If you cannot name which hook or test makes it *live*, it is not live - say `convention`,
 give it an `enforcement_note` saying what the real mechanism is, and mean it. A `live`

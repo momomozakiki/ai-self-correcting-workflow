@@ -87,7 +87,8 @@ the remaining 19 (no Phase 0–3 obligation attaches).
 - [x] `--self-test` subcommand that validates config against
       `schemas/config_schema.json` and prints a health report. Ships with a
       stdlib schema-subset validator (no `jsonschema` dependency) and a
-      governance maturity level (1–5), reported but never enforced.
+      governance maturity level (1–5), reported but never enforced. **Removed
+      2026-08-29** — it rewrote a tracked file on every run.
 - [x] Agent loop detection: `PostToolUse` tracks a signature of
       `(tool_name, tool_input)` and flags consecutive identical calls at a
       configurable threshold. Advisory only; logs to
@@ -135,8 +136,9 @@ the remaining 19 (no Phase 0–3 obligation attaches).
       on them is a refactor, not an audit.
 - [ ] `06-components/`: write the first blueprint when a pattern has shipped and
       survived review twice. `BLUEPRINT_SCHEMA.md` defines the shape and the bar.
-- [ ] `--self-test --json` for CI consumption, so a pipeline can assert a
-      minimum maturity level without scraping the text report.
+- [ ] `--self-test --json` for CI consumption, so a pipeline can assert on the
+      health checks without scraping the text report. (Originally worded as
+      "assert a minimum maturity level" — that ladder was removed 2026-08-29.)
 - [x] Fold `GUIDE.md`'s revision history into a sibling changelog — the table hit 8
       rows at v5.0 and tripped the §6.3 threshold at the v5.1 edit. Relocated to
       `GUIDE_CHANGELOG.md` (`exclude_from_ai: true`), latest 3 rows kept in place.

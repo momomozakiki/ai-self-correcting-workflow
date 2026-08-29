@@ -549,9 +549,12 @@ root:   /repo
 [ ok ] tier-0 prohibitions: 4 defined
 [ ok ] retrospective has entries
 
-------------------------------------------------------------
-Governance maturity: level 5/5 (Optimized)
+RESULT: PASS - configuration is valid.
 ```
+
+> The sample above previously ended with a `Governance maturity: level 5/5` line.
+> The maturity ladder was removed on 2026-08-29; `--self-test` no longer derives a
+> level and no longer writes any file.
 
 **Validation** uses a stdlib subset of JSON Schema (`type`, `properties`,
 `required`, `additionalProperties`, `enum`, `minimum`, `items`) so the repo keeps
@@ -559,9 +562,9 @@ its no‑dependency promise. The root config object is deliberately open
 (`additionalProperties: true`) so a project can carry its own keys; nested blocks
 are closed, so a typo inside one is a real error rather than an extension point.
 
-**Exit code reflects validation only** — the maturity level is reported, never
-enforced. A young repository sits at level 1–2 and still exits 0. Full check‑to‑level
-mapping: [`schemas/hook_contract.md`](../../schemas/hook_contract.md).
+**Exit code reflects validation only** — the health checks are reported, never
+enforced. A young repository fails several and still exits 0. Full contract:
+[`schemas/hook_contract.md`](../../schemas/hook_contract.md).
 
 On a console that can't encode the report (Windows `cp1252` and the API‑key
 warning emoji), the output degrades to ASCII instead of crashing.
