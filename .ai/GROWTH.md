@@ -89,24 +89,23 @@ structure: a checklist item in `.claude/skills/adaptive-workflow/SKILL.md` and a
 reaching maturity level 5 requires that none are outstanding.
 
 ## Every new rule file needs
-`id`, `enforcement`, `enforcement_status` (live | convention | declarative), `risk_source`,
-`risk_weight`, and a `provenance` block.
+`id`, `enforcement`, `enforcement_status` (live | convention | declarative), and a
+`provenance` block.
 
-`risk_source` is one of the CISA five, each defined over a weight band
-(`docs/self-growing-checklist-ecosystem/03-risk-gates-and-metrics.md` §11.3):
+**`risk_source` and `risk_weight` are no longer required (2026-08-29).** The CISA five-risk
+taxonomy and its weight bands, the `RiskTaxonomy` tests that enforced them, and the
+`RISK_BANDS` table were all removed together. This document's own warning turned out to be the
+whole story: *"the bands were written for an agent fleet; some of them do not transfer to a
+single-operator repo."* Deciding whether a checklist question was `structural` or
+`accountability` was a judgement nobody could make the same way twice, and a taxonomy applied
+inconsistently is noise wearing the costume of rigour.
 
-| `risk_source` | What it covers | `risk_weight` |
-|---|---|---|
-| `component` | vulnerabilities in tools, APIs, data sources | 1-3 |
-| `design` | flaws in planning, reasoning, or action logic | 4-6 |
-| `capability` | risks from autonomous action execution | 7-10 |
-| `structural` | composition and interaction of multiple agents | 6-9 |
-| `accountability` | unclear or diffused responsibility | 8-10 |
+Existing files keep the fields as inert data until `.ai/` retires to `golden-rules/`. Do not
+add them to new ones.
 
-If your honest weight falls outside its band, **do not move the number**. Add a
-`risk_weight_note` saying why the imported band does not fit here. The bands were written
-for an agent fleet; some of them do not transfer to a single-operator repo, and fitting a
-number to a threshold is the same failure as claiming enforcement you do not have.
+Note the ledger's `**Risk:**` line is a **different** vocabulary (`privilege | design |
+behavioral | structural | accountability`) and is unaffected — see `history/FORMAT.md`, which
+has always said so.
 
 If you cannot name which hook or test makes it *live*, it is not live - say `convention`,
 give it an `enforcement_note` saying what the real mechanism is, and mean it. A `live`

@@ -157,9 +157,12 @@ go/no-go decision at each gate with you.
   > relies on whoever runs it to actually read the removals. If you would rather keep the hard
   > floor, say so and Stage 1 is not done.
   >
-  > **All 20 removals, and why**: 9 × `TestConfidenceDerivation` and
-  > `test_confidence_level_recomputes_from_the_items_own_fields` (the `derive_confidence`
-  > machinery, item 4); 4 × `RiskTaxonomy` (the CISA bands, item 4); 3 × `TemplateParity`
+  > **All 20 removals, and why** (corrected 2026-08-29 — the first version of this list said
+  > "9 ×" and summed to 19; the auditor caught it, and the case for replacing a count with a
+  > hand-read list rests entirely on the list being right): **10 ×**
+  > `TestConfidenceDerivation` and `test_confidence_level_recomputes_from_the_items_own_fields`
+  > (the `derive_confidence` machinery, item 4); 4 × `RiskTaxonomy` (the CISA bands, item 4);
+  > 3 × `TemplateParity`
   > (`templates/ai-library/` deleted, item 4); `test_writes_maturity_tracker` (**inverted**
   > into `test_self_test_does_not_write_to_the_repository` — the old test required the defect);
   > `test_low_maturity_still_passes` (**renamed** to `test_a_bare_project_still_passes`, same

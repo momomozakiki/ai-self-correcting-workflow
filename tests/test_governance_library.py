@@ -42,9 +42,11 @@ TIERS = ("live", "convention", "declarative")
 # RISK_BANDS (the CISA five-risk framework and its weight bands) was removed on
 # 2026-08-29 with the `RiskTaxonomy` class below. See the note at that site.
 
-# Keys GROWTH.md requires on every rule and prohibition file. `risk_source` and
-# `risk_weight` left this list on 2026-08-29: nothing validates them any more, so
-# requiring them would be demanding a field for the sake of the demand.
+# Keys `.ai/GROWTH.md` requires on every rule and prohibition file. `risk_source`
+# and `risk_weight` left both this list and GROWTH.md on 2026-08-29, in the same
+# commit -- the test that used to hold the two in step
+# (`RiskTaxonomy.test_growth_doc_documents_the_same_taxonomy`) was itself removed,
+# so nothing would have caught them drifting apart.
 REQUIRED_ARTIFACT_KEYS = (
     "id", "enforcement", "enforcement_status", "provenance",
 )

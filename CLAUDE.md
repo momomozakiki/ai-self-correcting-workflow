@@ -72,8 +72,8 @@ Split into `.claude/rules/`, which load alongside this file:
 - **[repo-conventions.md](.claude/rules/repo-conventions.md)** — stdlib-only constraint, the
   four documents that drift together, the health check, autonomous runs, runtime and model
   choice, commit hygiene, no heredoc stdin.
-- **[governance-library.md](.claude/rules/governance-library.md)** — `.ai/` enforcement tiers
-  and the `templates/ai-library/` mirror requirement.
+- **[governance-library.md](.claude/rules/governance-library.md)** — `.ai/` enforcement tiers.
+  The `templates/ai-library/` mirror requirement is **gone** (2026-08-29); the file says so.
 - **[claude-code-layout.md](.claude/rules/claude-code-layout.md)** — path-scoped to
   `.claude/**`; discovered-vs-registered, the mirrors, frontmatter near-misses.
 

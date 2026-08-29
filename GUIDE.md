@@ -81,7 +81,8 @@ workflow-core/
 │   │   ├── governance-library.md #   Unconditional
 │   │   └── claude-code-layout.md #   paths:-scoped to .claude/**
 │   └── agents/
-│       └── layout-auditor.md     # Read-only wiring audit
+│       ├── layout-auditor.md     # Read-only wiring audit
+│       └── stage-gate-auditor.md # Read-only stage-gate certification
 ├── schemas/
 │   ├── hook_contract.md          # Validated I/O shapes + --self-test contract
 │   └── config_schema.json        # Schema for project workflow_config.json
@@ -92,10 +93,10 @@ workflow-core/
 │   ├── skills/                   # Mirror of .claude/skills/ — adopters copy this
 │   ├── rules/                    # Mirror of .claude/rules/
 │   ├── agents/                   # Mirror of .claude/agents/
-│   └── ai-library/               # Governance library scaffold for adopters
 ├── tests/
 │   ├── test_hook.py              # Synthetic event tests for the hook dispatcher
 │   ├── test_governance_library.py  # Integrity of the .ai/ library
+│   ├── test_claude_layout.py     # Is configuration where Claude Code reads it?
 │   └── test_skills.py            # Skill structure, size, location and parity
 └── CONTRIBUTING.md               # How to propose improvements
 ```
@@ -776,8 +777,8 @@ rules instead of prose.
 
 ```
 .ai/
-├── 00-system/              config, agent registry, autonomy boundaries, maturity
-│                           tracker, checklist-selection.json (the one loading table)
+├── 00-system/              config, agent registry, autonomy boundaries,
+│                           checklist-selection.json (the one loading table)
 ├── 01-phases/              one rule file per workflow step (Phase 0-3 + v14 step mapping)
 ├── 02-market-rules/        immutable golden rules; prohibitions/ is Tier 0
 ├── 03-planning/            plan review, Phase 1  — 5 rules, 31 sourced items
@@ -815,9 +816,15 @@ those sentences into an assertion: a `live` artifact must carry `enforced_by`, a
 of `path::symbol` references resolved against the actual source; a `convention` must
 carry an `enforcement_note` saying what the real mechanism is; a `declarative` block
 must carry a `reason` and keep its values null. It also holds the manifests to the
-files on disk, `risk_source`/`risk_weight` to the CISA taxonomy in §11.3 of the
-imported spec, this section's step-mapping table to `01-phases/manifest.json`, and
-`.ai/` to its `templates/ai-library/` mirror. Written after an audit found seven
+files on disk and this section's step-mapping table to `01-phases/manifest.json`.
+
+Two of the checks this paragraph used to claim were **removed on 2026-08-29**: the
+CISA `risk_source`/`risk_weight` taxonomy check (`RiskTaxonomy`) and the
+`.ai/` → `templates/ai-library/` mirror check (`TemplateParity`, along with the
+mirror itself). Stated here rather than quietly deleted, because a paragraph
+asserting enforcement that no longer exists is precisely the defect §13 was written
+to prevent — and it survived the commit that removed the code for one revision.
+Written after an audit found seven
 taxonomy violations, a false step mapping and eight untraceable `live` claims in a
 library that had been correct-looking prose for exactly one commit.
 
@@ -853,8 +860,12 @@ which alternative was rejected, and can the proposed check actually fail. Never 
 tech stack — a plan's problem statement is no better for being written in Go.
 
 **Sixteen categories, 119 items, every one sourced.** Each item cites a document with an
-authority tier, and its `confidence_level` is *derived* by
-`.claude/hooks/workflow_hook.py::derive_confidence` and recomputed by test — never typed by hand.
+authority tier. Its `confidence_level` **was** derived by
+`.claude/hooks/workflow_hook.py::derive_confidence` and recomputed by test; both were removed
+on 2026-08-29 and the stored values are now inert data. The function had no callers in the
+hook — only its own tests — and a level computed from two hand-assigned numbers reads as
+precision without carrying any. The golden-rules format replacing this library drops the score
+and keeps the citation.
 An item that cannot be sourced does not ship. `--self-test` warns when an item's
 `last_validated` passes `revalidation_interval_days`. The full framework, both folders, and
 the citation defects found along the way — including **IEEE 1012-2016, superseded by
