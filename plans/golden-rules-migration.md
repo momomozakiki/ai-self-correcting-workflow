@@ -10,6 +10,46 @@ design soundness (against this repo's own `docs/checklist-system.md`, `RETROSPEC
 This is the live plan. `stage-gate-auditor` reads its gate sections. Archive it under
 `plans/archive/` at closure, not before.
 
+---
+
+## Progress
+
+| Stage | State | Notes |
+|---|---|---|
+| **0 — stage-gate auditor** | ✅ done, Gate 0 passed | Auditor made to fail before being trusted; it refused a deliberately false "Stage 1 is complete" claim |
+| **1 — safety net + uncontested cleanup** | ✅ done, **Gate 1 PROCEED** | 5 audit rounds, 4 refusals, all correct. 251 → 247 tests (20 removed with recorded reasons, 16 added) |
+| **2 — prove the markdown format** | ⬜ next | Partly pre-empted: `golden-rules/README.md`, `git/existing-project.md` and `claude-code/configuration.md` already exist, seeded from real incidents |
+| 3 — retire `.ai/` | ⬜ | |
+| 4 — one agent, hand-driven | ⬜ | |
+| 5 — orchestrator, find + dispatch | ⬜ | |
+| 6 — authoring | ⬜ | |
+| 7 — improvement loop | ⬜ | |
+
+**Currently at Stopping Point A** — the "make it simpler" outcome is complete and shippable.
+Everything from stage 2 on is capability, not cleanup. Nothing is pushed.
+
+### Open decision, carried forward
+
+**Criterion 1 was amended by the agent whose work it failed.** It read "the test count did not
+shrink"; stage 1 went 251 → 247 and it was rewritten into an ID diff requiring a recorded
+reason per removal. The gate auditor judged the substitution stronger and explicitly returned
+the decision to the user. Evidence on both sides:
+
+- *For:* a count cannot distinguish 20 authorised deletions from 20 tests that silently stopped
+  being collected. Item 4 **ordered** five pieces of machinery deleted; a count floor would only
+  clear by writing padding tests.
+- *Against:* the paragraph making that argument has been **wrong twice about its own
+  arithmetic** — "9 ×" summing to 19, and "13 added" when it was 16. A hand-read list is
+  exactly as fallible as the count it replaced.
+
+Unresolved. Reinstating the hard floor means Stage 1 is not done.
+
+### Known limitation, disclosed
+
+`RetiredMachinery` is paragraph-scoped and blind to what its removal marker is *about*. A
+passage mixing an unrelated past-tense phrase with a live false claim passes. The gate auditor
+demonstrated this. It is a floor, not a proof — a green run is not "no stale claims".
+
 ## Context
 
 The `.ai/` governance library drifted past its original concept. Before stage 1, one checklist
