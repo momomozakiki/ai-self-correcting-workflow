@@ -167,7 +167,13 @@ go/no-go decision at each gate with you.
   > (`templates/ai-library/` deleted, item 4); `test_writes_maturity_tracker` (**inverted**
   > into `test_self_test_does_not_write_to_the_repository` — the old test required the defect);
   > `test_low_maturity_still_passes` (**renamed** to `test_a_bare_project_still_passes`, same
-  > property, minus the maturity string). 13 tests added. Every removal is authorised by item 4
+  > property, minus the maturity string). **16** tests added — 3 × `CorpusNotEmpty`
+  > (layout), 5 × `SettingsWiring`, 3 × `RetiredMachinery`, 2 × `TestSelfTest`,
+  > 3 × `CorpusNotEmpty` (skills). *(Said "13" until 2026-08-29; the gate auditor recounted.
+  > That is the second arithmetic error in this paragraph — the one above it said "9 ×" and
+  > summed to 19. A paragraph arguing that a hand-read list beats a count has now been wrong
+  > twice about its own numbers, which is the strongest available argument for the count floor
+  > it replaced.)* Every removal is authorised by item 4
   > of this stage; none is a coverage loss that item 4 did not ask for.
 - **Test the tests:** temporarily empty one iterated directory and confirm the new non-empty
   assertion *fails*. A guard that never fires is not a guard.

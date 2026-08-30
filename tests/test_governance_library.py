@@ -975,9 +975,18 @@ class RetiredMachinery(unittest.TestCase):
     #: fragment carry suffixes no ordinary glob would catch, and
     #: `templates/CLAUDE.md.fragment` is named in the migration plan as a
     #: stage-3 silent-breakage site.
-    SCANNED_SUFFIXES = (".md", ".py", ".json", ".yaml", ".yml", ".fragment",
-                        ".hooks", ".txt", ".cfg", ".toml")
-    SCANNED_NAMES = (".gitignore",)
+    #: Binary and generated files, skipped by extension. Everything *else* that
+    #: git tracks is scanned. This is a **skip-list, not an allow-list**: the
+    #: gate auditor defeated the allow-list version on 2026-08-29 by putting a
+    #: live `TemplateParity` instruction in `docs/MIRRORING.mdx` -- `.mdx` was
+    #: simply not in the list, so the file was never opened. An allow-list of
+    #: extensions fails silently for every extension nobody thought of, which is
+    #: the exact shape of the defect this class exists to catch.
+    SKIPPED_SUFFIXES = (
+        ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp", ".pdf",
+        ".zip", ".gz", ".tar", ".whl", ".pyc", ".exe", ".dll", ".so",
+        ".woff", ".woff2", ".ttf", ".eot", ".mp4", ".mp3",
+    )
 
     def scanned_files(self):
         for path in sorted(REPO_ROOT.rglob("*")):
@@ -990,8 +999,7 @@ class RetiredMachinery(unittest.TestCase):
                 continue
             if rel == self.SELF:
                 continue
-            if not (path.suffix in self.SCANNED_SUFFIXES
-                    or path.name in self.SCANNED_NAMES):
+            if path.suffix.lower() in self.SKIPPED_SUFFIXES:
                 continue
             yield rel, path
 
