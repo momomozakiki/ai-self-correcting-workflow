@@ -1,6 +1,6 @@
 # Git — golden rules (existing project)
 
-Status: ratified 2026-08-29
+Status: drafted by orchestrator 2026-08-30, unreviewed
 Applies when the repo already has commits and a remote. For a repo that does not exist yet,
 see `new-project.md`.
 
@@ -48,7 +48,8 @@ Sources: Pro Git, 2nd ed. (2014) ch.3; Conventional Commits 1.0.0.
       bare invocation opens an editor that cannot be driven.
 - [ ] The message says **why**, not what — the diff already says what.
 
-Sources: Incident (recurring, ×2) — heredoc stdin mangled commit content without error;
+Sources: Incident 2026-08-04 (recurring, ×2 — the first was `git commit -F -` and heredoc
+commit messages) — heredoc stdin mangled content without error; `docs/RETROSPECTIVE.md`,
 codified in `.claude/rules/repo-conventions.md`.
 
 ## Before pushing

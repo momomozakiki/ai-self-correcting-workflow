@@ -18,7 +18,7 @@ This is the live plan. `stage-gate-auditor` reads its gate sections. Archive it 
 |---|---|---|
 | **0 — stage-gate auditor** | ✅ done, Gate 0 passed | Auditor made to fail before being trusted; it refused a deliberately false "Stage 1 is complete" claim |
 | **1 — safety net + uncontested cleanup** | ✅ done, **Gate 1 PROCEED** | 5 audit rounds, 4 refusals, all correct. 251 → 247 tests (20 removed with recorded reasons, 16 added) |
-| **2 — prove the markdown format** | ⬜ next | Partly pre-empted: `golden-rules/README.md`, `git/existing-project.md` and `claude-code/configuration.md` already exist, seeded from real incidents |
+| **2 — prove the markdown format** | 🟨 implemented 2026-08-30, **awaiting Gate 2** | Ran at reduced scope — three of six items were already satisfied. 6 files written, 2 corrected, 247 → 274 tests. `golden-rules/` had **zero** test coverage before this stage |
 | 3 — retire `.ai/` | ⬜ | |
 | 4 — one agent, hand-driven | ⬜ | |
 | 5 — orchestrator, find + dispatch | ⬜ | |
@@ -28,21 +28,25 @@ This is the live plan. `stage-gate-auditor` reads its gate sections. Archive it 
 **Currently at Stopping Point A** — the "make it simpler" outcome is complete and shippable.
 Everything from stage 2 on is capability, not cleanup. Nothing is pushed.
 
-### Open decision, carried forward
+### Decision taken 2026-08-30 — the ID diff stands, mechanically
 
-**Criterion 1 was amended by the agent whose work it failed.** It read "the test count did not
-shrink"; stage 1 went 251 → 247 and it was rewritten into an ID diff requiring a recorded
-reason per removal. The gate auditor judged the substitution stronger and explicitly returned
-the decision to the user. Evidence on both sides:
+**Criterion 1 was amended by the agent whose work it failed**, and that conflict of interest is
+why it went to the user. It read "the test count did not shrink"; stage 1 went 251 → 247 and it
+was rewritten into an ID diff requiring a recorded reason per removal. Evidence on both sides:
 
 - *For:* a count cannot distinguish 20 authorised deletions from 20 tests that silently stopped
   being collected. Item 4 **ordered** five pieces of machinery deleted; a count floor would only
-  clear by writing padding tests.
-- *Against:* the paragraph making that argument has been **wrong twice about its own
+  clear by writing four padding tests.
+- *Against:* the paragraph making that argument had been **wrong twice about its own
   arithmetic** — "9 ×" summing to 19, and "13 added" when it was 16. A hand-read list is
   exactly as fallible as the count it replaced.
 
-Unresolved. Reinstating the hard floor means Stage 1 is not done.
+**Resolved: keep the ID diff, and stop reading it by hand.** The objection was decisive against
+*reading* the diff and not against *taking* it, so the diff is now taken by
+`scripts/test_id_diff.py` against the pinned baseline `4353d8b`. Run on 2026-08-30 it
+reproduced 251 → 247, removed 20, added 16, matching the recorded list name for name.
+Gate 3's wording was changed to the same criterion in the same edit, so the two gates no longer
+disagree about the same question.
 
 ### Known limitation, disclosed
 
@@ -181,9 +185,38 @@ go/no-go decision at each gate with you.
 ### Gate 1 — must all pass before stage 2
 
 - `python -m unittest discover -s tests` passes, and **every removed test ID has a recorded
-  reason at the site it was removed from**. Diff the collected IDs against the baseline
-  (`git archive <base> | tar -x -C <tmp>`, run both, `comm`) rather than comparing counts.
+  reason at the site it was removed from**. Diff the collected IDs against the **pinned
+  baseline `4353d8b`** rather than comparing counts, by running the committed script:
 
+  ```
+  python scripts/test_id_diff.py
+  ```
+
+  The baseline rev is pinned in the criterion and in `scripts/test_id_diff.py:DEFAULT_BASELINE`.
+  An ID diff against a floating baseline is unfalsifiable — "nothing was removed since whatever
+  I happened to compare against" is not a claim two people can check and get the same answer to.
+
+  > **Resolved 2026-08-30 — the amendment stands; the hard count floor is not reinstated.**
+  >
+  > The argument that discredited the amendment was that a hand-read list of removals is as
+  > fallible as the count it replaced, and the paragraph making the case had been wrong twice
+  > about its own arithmetic. That is an argument against **reading** the diff, not against
+  > **taking** it. So the diff is now taken mechanically by a committed script, and the
+  > arithmetic is no longer anyone's to get wrong. Run on 2026-08-30, it reproduced the
+  > recorded figures exactly:
+  >
+  > ```
+  > baseline 4353d8b: 251 collected
+  > worktree        : 247 collected
+  > removed: 20   added: 16
+  > ```
+  >
+  > The 20 removed IDs match the list below name for name, and the 16 additions match too.
+  > Reinstating the floor at 251 was rejected on the merits, not on convenience: stage 1 item 4
+  > **ordered** five pieces of machinery deleted and 20 tests went with it, so a floor could
+  > only be cleared by writing four padding tests — a gate that can only be passed by writing
+  > tests nobody wants is not measuring coverage.
+  >
   > **Amended 2026-08-29, and flagged as a conflict of interest.** This criterion originally
   > read "and the **test count did not shrink**." My own Stage 1 work failed it — 251 → 244 —
   > and I am the one rewriting it, which is exactly the move the gate exists to prevent. Read
@@ -261,6 +294,75 @@ safety net, with the rule library intact. This is the "just make it simpler" opt
    with a non-future date; one `Sources:` line per `##` group **including a version pin**;
    ≤20 checkbox items) and the `fable` grep.
 
+### What stage 2 actually did, and at what scope (2026-08-30)
+
+Three of the six items above were already satisfied when the stage opened: `README.md`,
+`git/existing-project.md` and `claude-code/configuration.md` existed and were good. So the stage
+ran at **reduced scope**, and the work done was:
+
+1. `AUTHORING-GUIDE.md` — written in full from the appendix below.
+2. `GROWTH.md` — ported from `.ai/GROWTH.md` v1.4 and trimmed hard. Kept: the two-occurrence
+   threshold, "seeded empty", trial-before-keeping, the corrected strike criterion, the
+   planning-vs-domain altitude distinction. Dropped: manifests, `total_items`, confidence
+   fields, the CISA bands and the enforcement tiers — all retired in stage 1.
+3. `git/new-project.md` — new file only. `existing-project.md` already carried both hard-won
+   rules and needed no change.
+4. `.ai/03-planning/` (5 rules, 31 items) → `golden-rules/planning/`, **split into two files**
+   by the ≤20 ceiling: `problem-and-requirements.md` (18) and `risk-and-verification.md` (13).
+   The split was itself the test of the format, and it worked: the 8 original `group_condition`
+   values collapsed to 10 *when it applies* groups with no item losing its condition.
+5. `.ai/05-domains/rule-security-review.json` (12 items, 4 groups) → `golden-rules/security/`.
+6. `tests/test_golden_rules.py` — 27 tests. Was **zero** before: nothing in the suite touched
+   `golden-rules/` at all, so the replacement library was entirely unenforced while the library
+   it replaces carried a 959-line test file.
+7. The conditional-loading paragraph in `README.md`.
+
+**Assumption, recorded so it can be overruled:** `golden-rules/` gets **no** `templates/`
+mirror. `templates/ai-library/` was deleted on 2026-08-29 specifically to end that obligation,
+and re-creating it for the replacement library undoes the one uncontested win of stage 1. The
+mirror principle still binds `.claude/rules|agents|skills`, which is unaffected.
+
+**Second assumption:** no doc frontmatter on `golden-rules/**`. The format declares "no
+frontmatter, no ids, no schema", and provenance is carried by the `Status:` and `Sources:`
+lines, which the new shape test enforces. `--self-test` still reports
+`[ ok ] every doc carries frontmatter`, so nothing was weakened to allow this.
+
+### Findings measured on 2026-08-30, not read
+
+Each was produced by running the system. Scripts are in the session record; the counts
+reproduce.
+
+- **`source_version` was degenerate in 104 of 119 items** — a byte-identical copy of `source`.
+  Sharper and more useful: **50 of 119 carried no version token at all** ("The Pragmatic
+  Programmer, Hunt & Thomas", "Google SRE Book", "The Twelve-Factor App"). The two numbers
+  differ because a duplicated string can still be a pin — `OWASP ASVS 5.0.0` is in both fields
+  and is fine. Whole domains were duplicated 8/8, 10/10, 12/12; the single exception is
+  `rule-skill-authoring-review.json` at 0/8.
+  **Consequence for gate 2's first criterion:** it assumed the JSON carries pins the markdown
+  might lose. Mostly it does not. **Conversion cannot lose a pin that 50 items never had**, and
+  a shape test enforcing a real pin makes the new format *stricter* than the one it replaces.
+  That is why the security conversion was editorial work rather than transcription — and why
+  five unverified ASVS chapter references were written into it and then **removed**: the
+  original items never recorded a chapter, and inventing one would have looked more precise
+  than the citation is.
+- **The hook never revalidates `03-planning/`.** `run_self_test` globs
+  `05-domains/rule-*.json` only (`workflow_hook.py:1560`), so
+  `[ ok ] checklist sources validated within 180d (88 items)` covers 88 of 119 items — the 31
+  planning items have never been age-checked by anything. Not a stage-2 blocker. Recorded here
+  because **whatever replaces the revalidation loop must not inherit the gap.**
+- **Two undated incident citations were found by the new test**, in files written on 2026-08-29
+  and stamped `ratified`: `git/existing-project.md` ("Incident (recurring, ×2)") and
+  `claude-code/configuration.md` ("Incident —"). Both now carry their real dates (2026-08-04
+  and 2026-08-06, from `docs/RETROSPECTIVE.md`). This is the first thing the shape test caught
+  that nobody had noticed, and it is exactly the citation-defect class the old
+  `source_version` field was credited with catching.
+- **Measured selection behaviour** (`checklist-selection.json` applied over the live rule
+  files), reproducing the plan's "9 items for a typo fix, 34 for a REST API":
+  Phase 2 by size — `typo_fix` 9, `small_change` 50, `new_module` 88, `major_refactor` 88.
+  Phase 2 at `new_module` by context — `deployment` 13, `skill_work` 17, `authentication` 25,
+  `database_work` 26, `security_audit` 33, `new_api` 34, `code_review` 38.
+  Phase 1 by size — `typo_fix` 0, `small_change` 26, `new_module`/`major_refactor` 31.
+
 ### Gate 2 — the question this stage exists to answer
 
 - **Did the conversion lose anything?** Put the JSON and the markdown side by side. The old
@@ -319,7 +421,17 @@ protected path; the guard will deny it and corrections go by appending.
 
 - `grep -rn "\.ai/"` returns nothing outside `history/` and `plans/archive/`.
 - Run `--self-test`, then `git status` — **`.ai/` must not have reappeared.**
-- Full suite green, count not shrunk.
+- Full suite green, and the collected-ID diff taken mechanically —
+  `python scripts/test_id_diff.py` — with **every removed ID carrying a recorded reason at the
+  site it was removed from**. Same criterion, same tool, same pinned baseline `4353d8b` as
+  gate 1.
+
+  > **Amended 2026-08-30.** This read "count not shrunk" while gate 1 read as an ID diff, so
+  > the two gates asked the same question two different ways. That is not a survivable
+  > disagreement here: stage 3 deletes `tests/test_governance_library.py` outright and removes
+  > far more coverage than stage 1 did, so a count floor would fail by construction and the
+  > temptation to amend it *again* at the moment it fails is exactly the conflict of interest
+  > gate 1 already recorded. Deciding it now, before the stage that trips it, is the point.
 - **Start a fresh session** and confirm no instruction file points at a missing path. This is
   the failure mode with no error message.
 - **Deferred here from gate 1:** `--self-test` emits **no** `checklist sources validated` line

@@ -1,6 +1,6 @@
 # Claude Code configuration — golden rules
 
-Status: ratified 2026-08-29
+Status: drafted by orchestrator 2026-08-30, unreviewed
 Applies when adding or moving a skill, subagent, command, rule, hook or settings file.
 
 ## Before writing the file
@@ -40,9 +40,9 @@ the moment of use.
       in the same commit. Adopters read the template copy.
 - [ ] Verify byte-identity rather than trusting the copy: `cmp <source> <template>`.
 
-Sources: Incident — the adopter template once carried no `PreToolUse` block at all while four
-prohibitions declared themselves `live`, suite green throughout; recorded in
-`docs/RETROSPECTIVE.md`.
+Sources: Incident 2026-08-06 (recurring) — `templates/settings.json.hooks`, the fragment
+adopters merge, carried no `PreToolUse` block at all while four prohibitions declared
+themselves `live` and the suite stayed green throughout; recorded in `docs/RETROSPECTIVE.md`.
 
 ## Questions worth asking
 
