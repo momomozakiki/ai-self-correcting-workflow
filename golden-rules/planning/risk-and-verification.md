@@ -50,9 +50,22 @@ Sources: Threat Modeling Manifesto (2020); ISO 31000:2018.
       independent signal: a test, a reviewer, a measurement.
 - [ ] Is *"did we do a good enough job"* **scheduled as a step**, rather than left to memory? —
       add the retrospective to the plan's closing phase.
+- [ ] Does the check's **scope actually include the thing it is being cited for** — would it
+      pass identically if that thing were absent? A check that cannot fail on your subject is
+      not evidence about your subject, however green it is.
+- [ ] Is every count and measurement in the plan **reproducible by a command**, or was it
+      arrived at by reading and summing? — commit the command, not the number; a figure nobody
+      can re-derive is an assertion wearing the costume of a measurement.
 
 Sources: IEEE 1012-2024, *Standard for System, Software, and Hardware Verification and
-Validation*; Threat Modeling Manifesto (2020).
+Validation*; Threat Modeling Manifesto (2020). The last two items are promoted from this
+repository's own record on 2026-08-30, both past the two-occurrence threshold in `GROWTH.md`.
+**Scope:** `--self-test` printed `checklist sources validated` over an empty directory
+(2026-08-29); it now reports 88 items while 119 exist, because it globs one of two folders;
+and `[ ok ] every doc carries frontmatter` was cited as evidence about `golden-rules/`, which
+that check has never walked. **Counts:** the golden-rules migration plan has been wrong about
+its own arithmetic three times — "9 ×" summing to 19, "13 added" when it was 16, and "8 group
+conditions" when there were 11 — each caught only because something recounted independently.
 
 ## When the plan has more than a handful of criteria
 

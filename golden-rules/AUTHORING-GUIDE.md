@@ -86,6 +86,13 @@ inline" triple is the working form this repository's own checklists converged on
   token budget: a split is how a task pulls in the half that applies to it.
 - Cross-link the halves in the `Applies when` line, so a reader who opened the wrong one
   finds the right one immediately.
+- **When you merge two groups, check whether you wrote "and" where "or" was meant.** Merging
+  is how a conversion keeps the file under the ceiling, and it is where conditions quietly
+  narrow: two groups that each applied on their own condition become one that applies only
+  when *both* hold, and the items that used to fire for one case alone stop firing. This is
+  recorded here rather than as a checklist item because it has happened once, which is below
+  the promotion threshold in `GROWTH.md` — but it happened during the conversion this guide
+  was written for, and it cost two items their coverage until a second reader recounted.
 
 Sources: reasoned from first principles, 2026-08-30. The ceiling is enforced by
 `tests/test_golden_rules.py`; the number is a judgement, the enforcement is not.
