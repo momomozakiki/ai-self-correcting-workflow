@@ -107,6 +107,13 @@ Sources: reasoned from first principles, 2026-08-30. The ceiling is enforced by
   review, which a fabricated citation does not.
 - **Never cite what you have not read.** A plausible-looking standard number is worse than
   no citation, because it survives review by looking finished.
+- **The test will not save you here.** `tests/test_golden_rules.py` catches the *absence* of a
+  version, never a *wrong* one. `RFC 7231 (2014)` — obsoleted by 9110 — passes. `IEEE
+  1012-2016`, `OWASP ASVS 4.0.3`, `ISO 31000:2009` and `OWASP ASVS 5.0.0 Level 9` all pass.
+  Those are the five defect classes the old library's `source_version` field is credited with
+  catching, and **the pin check catches none of them**. Currency is yours to check, and the
+  honest move when you have not is to say so in the line, as
+  `golden-rules/security/review.md` does.
 
 Sources: `plans/golden-rules-migration.md` (stage 2 measurement, 2026-08-30, reproduced by
 script). In the JSON library this replaces, the mandatory `source_version` field was a

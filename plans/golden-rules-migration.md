@@ -18,8 +18,8 @@ This is the live plan. `stage-gate-auditor` reads its gate sections. Archive it 
 |---|---|---|
 | **0 — stage-gate auditor** | ✅ done, Gate 0 passed | Auditor made to fail before being trusted; it refused a deliberately false "Stage 1 is complete" claim |
 | **1 — safety net + uncontested cleanup** | ✅ done, **Gate 1 PROCEED** | 5 audit rounds, 4 refusals, all correct. 251 → 247 tests (20 removed with recorded reasons, 16 added) |
-| **2 — prove the markdown format** | 🟨 implemented 2026-08-30, **awaiting Gate 2** | Ran at reduced scope — three of six items were already satisfied. 6 files written, 2 corrected, 247 → 274 tests. `golden-rules/` had **zero** test coverage before this stage |
-| 3 — retire `.ai/` | ⬜ | |
+| **2 — prove the markdown format** | ✅ done, **Gate 2 PROCEED** | Ran at reduced scope — three of six items were already satisfied. 247 → 276 tests. `golden-rules/` had **zero** test coverage before this stage. Auditor found one real content loss (a conjunction where a union was meant), one latent hole in the pin check, and three arithmetic errors in this plan — all fixed |
+| 3 — retire `.ai/` | ⬜ next | **Two conditions carried in from Gate 2:** a successor to the 180-day revalidation loop, and a fidelity diff taken *before* `rm -r .ai/` |
 | 4 — one agent, hand-driven | ⬜ | |
 | 5 — orchestrator, find + dispatch | ⬜ | |
 | 6 — authoring | ⬜ | |
@@ -309,8 +309,30 @@ ran at **reduced scope**, and the work done was:
    rules and needed no change.
 4. `.ai/03-planning/` (5 rules, 31 items) → `golden-rules/planning/`, **split into two files**
    by the ≤20 ceiling: `problem-and-requirements.md` (18) and `risk-and-verification.md` (13).
-   The split was itself the test of the format, and it worked: the 8 original `group_condition`
-   values collapsed to 10 *when it applies* groups with no item losing its condition.
+   The split was itself the test of the format, and all 31 items survive it — verified
+   item-by-item by the gate auditor, 18 + 13 = 31.
+
+   > **Corrected 2026-08-30, twice over, by the gate auditor.** This first read *"the 8 original
+   > `group_condition` values collapsed to 10 groups with no item losing its condition."* Both
+   > halves were wrong.
+   >
+   > There are **11** distinct `group_condition` values, not 8. That is the third arithmetic
+   > error this plan has made about its own inputs, which is worth stating plainly rather than
+   > quietly fixing: the artifact was right and the sentence describing it was not, and the only
+   > reason it was caught is that something recounted independently.
+   >
+   > And two conditions did shift. One was a **defect and is fixed**: `When the work competes
+   > with other work` and `When the work is discretionary` were merged under a header reading
+   > *"— it competes with other work and could be declined"*, which is a **conjunction** where
+   > the union was meant, so mandated-but-competing work lost one item and non-competing
+   > discretionary work lost another. The header is now *"When the work is discretionary, **or**
+   > when it competes with other work"*, matching the disjunction the neighbouring group already
+   > used correctly. The other is **disclosed, not fixed**: `ALT-RAT-05` carried
+   > `group_condition: Always` but a rule-level `condition` of *"choosing between approaches, or
+   > committing to a design"*, and it now sits under *"Always, before a plan is written"* — asked
+   > of every plan. Widening is the safe direction and the item ("name the assumption that, if
+   > wrong, would invalidate the plan") is worth asking always. But it is a change, and "no item
+   > losing its condition" glossed it.
 5. `.ai/05-domains/rule-security-review.json` (12 items, 4 groups) → `golden-rules/security/`.
 6. `tests/test_golden_rules.py` — 27 tests. Was **zero** before: nothing in the suite touched
    `golden-rules/` at all, so the replacement library was entirely unenforced while the library
@@ -324,8 +346,23 @@ mirror principle still binds `.claude/rules|agents|skills`, which is unaffected.
 
 **Second assumption:** no doc frontmatter on `golden-rules/**`. The format declares "no
 frontmatter, no ids, no schema", and provenance is carried by the `Status:` and `Sources:`
-lines, which the new shape test enforces. `--self-test` still reports
-`[ ok ] every doc carries frontmatter`, so nothing was weakened to allow this.
+lines, which the new shape test enforces.
+
+> **Corrected 2026-08-30 by the gate auditor.** This first cited
+> `[ ok ] every doc carries frontmatter` as evidence that "nothing was weakened to allow this."
+> That proves nothing: `documentation_directories` is `['docs']`, so the frontmatter check
+> (`workflow_hook.py:1520-1538`) has only ever walked `docs/` and `golden-rules/` was never in
+> its scope. The claim is *true* but it is true vacuously, which is the exact species of
+> false-pass reasoning this repository keeps catching in itself. The honest statement is: the
+> assumption stands on the format's own declaration, and nothing enforces it either way.
+
+**Third assumption, surfaced by the auditor rather than by me:** adopters have no route to
+`golden-rules/`. `TemplateMirrors.PAIRS` (`tests/test_claude_layout.py:390`) covers `rules` and
+`agents`; skills are covered separately; `golden-rules/` is outside every mirror rule. Its own
+docstring warns that *"a directory added here and not there is a directory adopters never
+get."* Survivable now — `golden-rules/` is not a Claude-Code-discovered location, so an agent
+reaches it by explicit path — but **adopter distribution is an open question, not a settled
+one**, and stage 5 is the first thing that will trip on it.
 
 ### Findings measured on 2026-08-30, not read
 
@@ -376,6 +413,43 @@ reproduce.
 
 **If gate 2 fails**, stop. The format is the foundation of stages 3–7 and nothing built on a
 lossy one is worth having. Stage 1 still stands.
+
+### Gate 2 result — PROCEED, with two conditions attached to stage 3 (2026-08-30)
+
+All three criteria pass, verified independently by the gate auditor with raw output. Content
+preservation was checked item-by-item, not by summary: 18 + 13 = 31 planning items and 12
+security items, every group condition accounted for. The auditor planted its own malformed file
+in an isolated `git archive` copy and watched three checks fail naming its path.
+
+**Findings fixed in response** (the auditor never fixes; it reports):
+
+1. The conjunction/union defect in the discretionary group — a real content loss, now fixed.
+2. Three items of this plan's own arithmetic and two overstated claims — corrected above, in
+   place, with the corrections stated rather than absorbed.
+3. **The pin window was too wide.** `group_problems` took the citation as everything from the
+   `Sources:` line to the end of the group, so a stray year in unrelated prose satisfied the
+   pin. Narrowed to the citation's own paragraph, with two new tests: one for the auditor's
+   exact case, one proving a pin on a wrapped continuation line still counts. Latent rather
+   than exercised — all 29 live groups carried their pin inside the citation — which made it
+   the cheapest possible moment to close it.
+4. **The pin check catches absence, never wrongness**, and `AUTHORING-GUIDE.md` now says so
+   with the auditor's own evidence: `RFC 7231 (2014)`, `IEEE 1012-2016`, `OWASP ASVS 4.0.3`,
+   `ISO 31000:2009` and `OWASP ASVS 5.0.0 Level 9` **all pass the pin check**. Those are the
+   five defect classes gate 2's first criterion names. Currency is a human's job; the test only
+   stops the citation with no version at all.
+
+**Two conditions on stage 3, which are now part of its scope:**
+
+- **A successor to the revalidation loop.** The old field's currency was maintained by the
+  180-day check at `workflow_hook.py:1548-1577`, which prints `source_version` beside the stale
+  id so "clearing a warning is one lookup". `golden-rules/` has **no equivalent**: `Status:`
+  dates are checked for being real and non-future, never for age. `security/review.md` carries
+  a hand-written `**Revalidation due:**` note about OWASP Top 10:2025 — evidence the author saw
+  the problem, but prose is not a loop and nothing will ever surface it. Stage 3 deletes `.ai/`
+  and the loop with it. **Do not let stage 3 close with nothing in that slot.**
+- **A fidelity diff taken before `rm -r .ai/`.** The 31/31 and 12/12 mapping was hand-verified
+  by the auditor and by no test. Stage 3 ports the remaining ~88 items and then deletes the
+  source, at which point the comparison becomes permanently unrepeatable.
 
 ---
 

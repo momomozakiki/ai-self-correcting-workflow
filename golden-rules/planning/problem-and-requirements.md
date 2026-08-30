@@ -28,7 +28,7 @@ Sources: ISO/IEC/IEEE 29148:2018; ISO/IEC/IEEE 42010:2022; ISO 31000:2018; *Site
 Engineering* (Beyer et al., O'Reilly, 2016); INCOSE Systems Engineering Handbook, 5th ed.
 (2023).
 
-## When the work is discretionary — it competes with other work and could be declined
+## When the work is discretionary, **or** when it competes with other work
 
 - [ ] Is the **cost of doing nothing** stated, so the work can be declined on evidence rather
       than on preference?

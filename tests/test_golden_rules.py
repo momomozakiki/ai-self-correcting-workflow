@@ -181,9 +181,18 @@ def group_problems(text):
             problems.append("{}: {} `Sources:` lines; expected exactly one"
                             .format(heading, len(starts)))
             continue
-        # The citation wraps: take the Sources line and everything after it, so
-        # a version sitting on a continuation line still counts.
-        citation = "\n".join(block[starts[0]:])
+        # The citation wraps across lines, so take the `Sources:` line and its
+        # continuation -- but stop at the first blank line. Taking everything to
+        # the end of the group let a stray year in unrelated prose satisfy the
+        # pin; the gate auditor demonstrated that on 2026-08-30. Latent rather
+        # than exercised at the time (all 29 live groups carried their pin inside
+        # the citation), which is the cheapest moment to close it.
+        citation_lines = []
+        for line in block[starts[0]:]:
+            if not line.strip():
+                break
+            citation_lines.append(line)
+        citation = "\n".join(citation_lines)
         if not VERSION_PIN_RE.search(citation):
             problems.append(
                 "{}: `Sources:` carries no version pin -- no date, year, "
@@ -380,6 +389,24 @@ class NegativeControls(unittest.TestCase):
         text = self.WELL_FORMED.replace(
             "Sources: Pro Git, 2nd ed. (Chacon & Straub, 2014) ch.3.",
             "Sources: reasoned from first principles, 2026-08-30.")
+        self.assertEqual([], group_problems(text))
+
+    def test_a_stray_year_after_the_citation_does_not_satisfy_the_pin(self):
+        # The gate auditor's finding, 2026-08-30: with the window running to the
+        # end of the group, an unpinned citation passed because a later,
+        # unrelated paragraph happened to contain a year.
+        text = self.WELL_FORMED.replace(
+            "Sources: Pro Git, 2nd ed. (Chacon & Straub, 2014) ch.3.",
+            "Sources: Pro Git.\n\nAdded in 2026 after an incident.")
+        problems = group_problems(text)
+        self.assertTrue(problems)
+        self.assertIn("version pin", " ".join(problems))
+
+    def test_a_pin_on_a_continuation_line_still_counts(self):
+        # The narrowing above must not break the common case: citations wrap.
+        text = self.WELL_FORMED.replace(
+            "Sources: Pro Git, 2nd ed. (Chacon & Straub, 2014) ch.3.",
+            "Sources: Pro Git, by Chacon and Straub, the edition\npublished in 2014.")
         self.assertEqual([], group_problems(text))
 
     def test_an_undated_first_principles_line_is_caught(self):
