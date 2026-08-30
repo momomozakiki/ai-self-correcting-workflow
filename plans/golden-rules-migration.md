@@ -10,6 +10,12 @@ design soundness (against this repo's own `docs/checklist-system.md`, `RETROSPEC
 This is the live plan. `stage-gate-auditor` reads its gate sections. Archive it under
 `plans/archive/` at closure, not before.
 
+Checklists: planning/problem-and-requirements.md, planning/risk-and-verification.md
+
+Both worked on 2026-08-31 — reports under `plans/golden-rules-migration/checklists/`.
+**12 findings from 33 items**, including one this plan cannot answer: stages 4–7 do not trace
+back to its stated problem, and it says so itself.
+
 ---
 
 ## Progress

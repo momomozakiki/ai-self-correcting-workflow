@@ -108,11 +108,40 @@ intersection keeps SQL rules out of a NoSQL project and keeps a typo fix from
 pulling in eighty items. Phase-1 rules are never stack-gated — a plan's problem
 statement is no better for being written in Go.
 
+**Declare what you owe, in the plan, on one line.** `Checklists: <paths>`, naming the
+`golden-rules/` files this task will be reviewed against — or `Checklists: none — <reason>`
+when none applies, which below roughly `small_change` is the expected answer rather than an
+evasion. Declaring is a decision made while objecting is still cheap; an absent line is an
+omission nobody can see. `tests/test_checklist_reports.py` requires the line.
+
+**Then generate the report skeletons, before doing the work**, one per declared file at
+`plans/<plan>/checklists/<same path>`, every verdict `todo`:
+
+```
+python -c "import sys; sys.path.insert(0,'scripts'); import checklist_report as cr; ..."
+```
+
+or by hand from `golden-rules/REPORTING.md`. Writing them first is not bookkeeping: a checklist
+loaded at Phase 1 can fall out of context before Phase 2 ends, and a session that dies leaves
+its outstanding items named on disk.
+
 ## Phase 2 — Execute
 
 For each checklist item: **implement → run linter/formatter/tests → fix
 failures before moving on.** If blocked, log the obstacle, propose an updated
 plan, await approval, continue.
+
+**Work the report as your to-do list.** Replace each `todo` with `pass`, `finding`,
+`cannot tell from here`, or `n/a` as you answer it — the last three carry a reason. Report the
+answers *including the ones that pass*; a checklist that only ever surfaces problems reads as
+noise. Where a plan simply does not address an item, that absence **is** the answer: do not
+fill it in from what you intended.
+
+You may add to `## Working notes` freely — decomposition, steps you discover. You may **not**
+add or remove lines in the verdict block: an agent that can add items to the thing deciding
+whether it is finished can always reach "finished". A discovered step that recurs gets promoted
+into the golden file itself, per `GROWTH.md`. At Phase 3, `python scripts/checklist_status.py`
+must report CLOSED.
 
 **Four execution guards:**
 

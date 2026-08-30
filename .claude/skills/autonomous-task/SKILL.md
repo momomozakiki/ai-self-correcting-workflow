@@ -72,6 +72,13 @@ the code you wrote — and report the answers, including the ones that pass. A c
 only ever surfaces problems reads as noise. Where a plan simply does not address an item,
 that absence *is* the answer; do not fill it in from what you intended.
 
+**On an autonomous run the report file matters more, not less.** Nobody watched the work, so
+the report is the only evidence the questions were put at all. Declare `Checklists:` in the
+plan, generate the skeletons before starting, and work them down — format and limits in
+`golden-rules/REPORTING.md`. Finish with `python scripts/checklist_status.py` reporting CLOSED,
+and carry any `finding` and `cannot tell from here` verdicts into `plans/HANDOVER.md`: those
+are precisely the things the user would have interrupted you about.
+
 ## Researching a golden rule
 
 When the task touches a domain with no checklist in `.ai/03-planning/` or

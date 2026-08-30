@@ -42,9 +42,9 @@ anything fails there rather than passing forever -- and gate 2 requires exactly
 that demonstration before the format is trusted.
 
 **Scope, stated because it is the obvious hole.** Only *checklist* files are held
-to the full shape: ``golden-rules/<domain>/<file>.md``. The three top-level
-documents (``README.md``, ``AUTHORING-GUIDE.md``, ``GROWTH.md``) are prose
-contracts, not checklists an agent loads per task; they are held to the ``fable``
+to the full shape: ``golden-rules/<domain>/<file>.md``. The four top-level
+documents (``README.md``, ``AUTHORING-GUIDE.md``, ``GROWTH.md``, ``REPORTING.md``)
+are prose contracts, not checklists an agent loads per task; they are held to the ``fable``
 grep and, where they carry a ``Status:`` line at all, to its format. Nothing here
 checks whether an item is *good*. It checks that the file has not stopped being
 the format it claims to be.
@@ -243,7 +243,7 @@ class CorpusNotEmpty(unittest.TestCase):
                         "shape test below would pass over an empty corpus")
 
     def test_the_contract_documents_are_present(self):
-        for name in ("README.md", "AUTHORING-GUIDE.md", "GROWTH.md"):
+        for name in ("README.md", "AUTHORING-GUIDE.md", "GROWTH.md", "REPORTING.md"):
             with self.subTest(document=name):
                 self.assertTrue((GOLDEN_ROOT / name).is_file(),
                                 name + " is missing")
@@ -275,7 +275,7 @@ class ContractDocuments(unittest.TestCase):
     """The top-level prose documents, held to what applies to prose."""
 
     def test_a_status_line_if_present_is_well_formed(self):
-        for name in ("README.md", "AUTHORING-GUIDE.md", "GROWTH.md"):
+        for name in ("README.md", "AUTHORING-GUIDE.md", "GROWTH.md", "REPORTING.md"):
             path = GOLDEN_ROOT / name
             if not path.is_file():
                 continue

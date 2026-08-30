@@ -123,12 +123,28 @@ the remaining 19 (no Phase 0–3 obligation attaches).
       `.ai/00-system/checklist-selection.json` with a `workflow_phase` axis so one
       table serves both folders. Trialled against its own plan: 10 of 31 items
       found something.
-- [ ] Verify a plan actually gets reviewed. `VER-PLN-04` asked this of the plan that
-      built `03-planning/` and the answer was no: the tests check the checklists'
-      *structure*, nothing checks that the questions were ever put to a plan. Probably
-      a `Stop`-hook flag akin to `ledger_touched`, but a plan is not a file the hook
-      can see, so this may be honestly unenforceable — in which case say so in the
-      `enforcement_note` rather than leaving the gap unnamed.
+- [~] Verify a plan actually gets reviewed. **Partly done 2026-08-31; the unclosed half is
+      named below rather than left implicit.** The hook route predicted here is indeed dead —
+      checklist *loading* happens inside model reasoning, where no hook runs. But the
+      **report** is a file. A worked checklist now leaves one at
+      `plans/<plan>/checklists/<domain>/<file>.md`, written before the work with every verdict
+      `todo` and filled in as it goes; `tests/test_checklist_reports.py` reconciles it against
+      the golden file, and `scripts/checklist_status.py` is the closure gate. Format and full
+      limits: `golden-rules/REPORTING.md`.
+      **Still open, and these are the honest `enforcement_note`:** it catches *sloppiness* — a
+      checklist started and not finished — and not *avoidance*, because the `Checklists:` line
+      is self-declared and `none — trivial` passes. It cannot detect a fabricated `pass` at
+      all; that needs an independent verifier deriving answers from the artifact, which is
+      deliberately not built. And the verdict block is validated against the golden file, so an
+      agent that edits the golden file makes both consistent — closed only when ratified golden
+      files become Tier-0 protected paths.
+- [ ] **A checklist verifier that reads the artifact, not the report.** The one remaining
+      answer to fabrication. Modelled on `stage-gate-auditor`: read-only, never fixes, answers
+      the checklist itself from the code or plan, then diffs against the worked report and
+      treats disagreements as findings. It must never accept "the report says pass" as
+      evidence. Roughly doubles the cost of a review, so it needs a trigger rule rather than
+      running always. *Condition: worth building only once a corpus of reports exists to
+      disagree with — the reports are its prerequisite, not the other way round.*
 - [ ] Act on the SOLID/clean-code trial findings in `.claude/hooks/workflow_hook.py`:
       `run_self_test` (~166 lines) and `handle_stop` (~89) each fail the "describe it
       without saying *and*" question, and 16 `except Exception: pass/return/continue`

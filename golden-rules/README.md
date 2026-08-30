@@ -103,3 +103,12 @@ from a declared task size. Until an orchestrator does that (stage 5 of
 See `AUTHORING-GUIDE.md`. The short version: where there is one correct action, write the
 **command**; where the answer depends on context, write a **question**. Getting that altitude
 wrong is what makes a checklist feel useless.
+
+## What you produce after working one
+
+See `REPORTING.md`. A worked checklist leaves a report at
+`plans/<plan>/checklists/<domain>/<file>.md`, written **before** the work with every verdict
+`todo` and filled in as you go — so it doubles as the to-do list, and outstanding items survive
+both a compaction and an interrupted session. `tests/test_checklist_reports.py` holds its shape;
+`scripts/checklist_status.py` is the closure gate; `scripts/checklist_growth.py` harvests the
+reports for the strike and promotion evidence `GROWTH.md` asks for.
