@@ -58,6 +58,22 @@ nothing. Treat these as the default suspicion, not an edge case:
 ## How to verify
 
 Run things. `git status`, `git log --oneline -5`, the test suite, the self-test, `grep -rn`.
+
+**Never use a heredoc.** You hold no `Write` tool, so the obvious way to build a scratch
+script is `cat > file <<'EOF'` — and this repository's `PreToolUse` guard escalates exactly
+that to `ask`, on the rule `rule-no-heredoc-stdin`, because shell layers mangle escapes
+silently. The guard is right and it fires inside subagents too. Use one of these instead:
+
+- `python -c "..."` for anything that fits on a line or three.
+- `git archive <ref> | tar -x -C <dir>` to build an isolated copy, rather than scripting a copy.
+- `printf '%s\n' '...' >> file` to append a single test line to a scratch copy.
+
+If a check genuinely needs a multi-line script, say so in your report as **cannot verify**
+and name what would settle it. Do not route around the guard.
+
+Keep commands **unchained**: no `cd` prefix (the working directory is already set) and no
+`&&` / `;` chaining. Permission rules match each subcommand independently, so a chain of four
+needs four matching rules and prompts on the first miss.
 Feed the dispatcher a synthetic event and read the decision it returns rather than reasoning
 about what the code should do. When you assert a guard denies something, show the `deny`.
 
